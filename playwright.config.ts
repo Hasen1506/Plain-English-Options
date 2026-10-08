@@ -24,7 +24,8 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1100, height: 900 } } },
     { name: "mobile", use: { ...devices["Pixel 7"] }, grep: /@mobile/ },
   ],
-  webServer: [
+  // PW_EXTERNAL_SERVERS=1: mock + preview already running (slow sandboxes start them by hand)
+  webServer: process.env.PW_EXTERNAL_SERVERS ? undefined : [
     {
       command: `node --experimental-strip-types --no-warnings tests/mock/server.ts ${MOCK_PORT}`,
       port: MOCK_PORT,
