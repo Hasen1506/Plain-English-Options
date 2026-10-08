@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Say what you think a coin will do, in plain English, and get a defined-risk options spread on Derive.",
+  "description": "Say what you think a coin will do, in plain English: a defined-risk options spread or a perpetual on Derive.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -17,7 +17,8 @@
     "test:live": "vitest run --project live",
     "record": "node --experimental-strip-types scripts/record-fixtures.ts",
     "check:mainnet": "node --experimental-strip-types --no-warnings scripts/check-mainnet.ts",
-    "record:mainnet": "node --experimental-strip-types --no-warnings scripts/record-mainnet.ts"
+    "record:mainnet": "node --experimental-strip-types --no-warnings scripts/record-mainnet.ts",
+    "record:perps": "node --experimental-strip-types --no-warnings scripts/record-perps.ts"
   },
   "dependencies": {
     "ethers": "^6.13.4"
