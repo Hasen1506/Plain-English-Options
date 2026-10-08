@@ -15,7 +15,7 @@ const PORT = 4175;
 export default defineConfig({
   testDir: "tests/live",
   testMatch: /\.browser\.ts$/,
-  timeout: 15 * 60_000,
+  timeout: 45 * 60_000, // every Veranta step waits for the relayer and the fork: the whole flow can take 20+ minutes
   expect: { timeout: 60_000 },
   workers: 1,
   retries: 0,
