@@ -347,3 +347,16 @@ body.is-mainnet .x-bal { box-shadow: 0 0 0 2px #b3261e; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
+/* perps market list: category pills (same pills as the network switch) and builder-market tag */
+/* five pills do not fit one row of the popover: they wrap to two rows and share each row; the corners follow the pill radius (15px + 3px padding) */
+.x-seg--cats { display: flex; flex-wrap: wrap; max-width: 100%; box-sizing: border-box; margin: 0 2px 8px; background: #F2F1EE; border-radius: 18px; overflow-x: auto; scrollbar-width: none; }
+.x-seg--cats::-webkit-scrollbar { display: none; }
+.x-seg--cats.is-cut-r { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); }
+.x-seg--cats.is-cut-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%); mask-image: linear-gradient(90deg, transparent, #000 18%); }
+.x-seg--cats.is-cut-l.is-cut-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
+.x-seg--cats button { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.x-seg--cats button[aria-pressed="true"] .x-dot { box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
+.x-cat--crypto { background: #8b7cf6; } .x-cat--commodities { background: #e0a100; } .x-cat--stocks { background: #22a45a; } .x-cat--indices { background: #e2725b; } .x-cat--fx { background: #3b82f6; }
+.x-btag { font: 600 9.5px/1 var(--sans); font-style: normal; text-transform: lowercase; letter-spacing: .02em; color: #6b6b6b; background: #F2F1EE; border-radius: 999px; padding: 3px 5px; align-self: center; }
+.x-list button.is-sel .x-btag { color: #fff; background: rgba(255,255,255,.16); }
+#ppMarketList .x-arow small { white-space: nowrap; }
