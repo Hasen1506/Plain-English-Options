@@ -169,6 +169,7 @@ export function sessionSigner(h: SessionKeyHandle, owner: string, net: Network, 
     owner: getAddress(owner),
     signer: h.address,
     silent: true,
+    expiresAt: h.expirySec,
     signLogin: (ts) => h.key.signMessage(ts),
     signAction: async (a) => {
       if (!sessionKeyUsable(h.expirySec, now())) throw new SessionKeyExpired();
