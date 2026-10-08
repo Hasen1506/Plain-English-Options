@@ -267,6 +267,8 @@ export interface CompareRow {
   minOrder: string | null;
   selected: boolean;
   note?: string;
+  /** Listed for transparency only: not usable yet, no data is shown. */
+  comingSoon?: boolean;
 }
 
 const pct = (f: number | null) => (f == null ? "—" : (f * 100).toFixed(f * 100 < 0.01 && f > 0 ? 4 : 3).replace(/0+$/, "").replace(/\.$/, "") + "%");
@@ -277,7 +279,9 @@ export function compareHtml(asset: string, rows: CompareRow[]): string {
     `<div class="x-card" id="venueCompareCard"><h2>${h(asset)} perpetual on each venue</h2><table class="x-tbl" id="venueCompare"><thead><tr><th>Venue</th><th>Price</th><th>Funding</th><th>Fees (taker / maker)</th><th class="x-hide-s">Max</th><th class="x-hide-s">Min order</th></tr></thead><tbody>` +
     rows
       .map((r) =>
-        !r.listed
+        r.comingSoon
+          ? `<tr data-cmp="${r.venueIdx}" class="is-soon"><td><b>${h(r.venue)}</b></td><td colspan="5" class="x-empty">coming soon${r.note ? `: ${h(r.note)}` : ""}</td></tr>`
+          : !r.listed
           ? `<tr data-cmp="${r.venueIdx}"><td><b>${h(r.venue)}</b></td><td colspan="5" class="x-empty">${r.loading ? "loading…" : `${h(asset)} is not listed`}</td></tr>`
           : `<tr data-cmp="${r.venueIdx}"${r.selected ? ' class="is-sel" aria-selected="true"' : ""}><td><button type="button" class="x-link" data-cmp-pick="${r.venueIdx}"><b>${h(r.venue)}</b></button>${r.note ? `<br><small>${h(r.note)}</small>` : ""}</td><td class="n">${h(perpPrice(r.mark))}</td><td class="n">${h(fundingText(r.fundingRate))}</td><td class="n">${h(pct(r.taker))} / ${h(pct(r.maker))}</td><td class="n x-hide-s">${r.maxLeverage ? Math.floor(r.maxLeverage * 100) / 100 + "×" : "—"}</td><td class="n x-hide-s">${h(r.minOrder ?? "—")}</td></tr>`,
       )
