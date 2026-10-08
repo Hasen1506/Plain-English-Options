@@ -27,6 +27,8 @@ export interface DeriveHost {
   universes(): RiskUniverse[];
   loadSubs(): Promise<void>;
   newSubaccount(riskUniverse: number, product: string): void;
+  depositTo(subaccountId: number): void;
+  withdrawFrom(subaccountId: number): void;
 }
 
 export function createDeriveVenue(host: DeriveHost): PerpVenue {
@@ -116,6 +118,8 @@ export function createDeriveVenue(host: DeriveHost): PerpVenue {
       const u = ru(market);
       if (u !== null) host.newSubaccount(u, market);
     },
+    deposit: (acct) => host.depositTo(acct.id),
+    withdraw: (acct) => host.withdrawFrom(acct.id),
     refreshAccounts: () => host.loadSubs(),
     signer() {
       const w = host.wallet();
