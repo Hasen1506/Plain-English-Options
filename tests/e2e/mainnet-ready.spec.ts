@@ -108,7 +108,7 @@ test.describe("onboarding, deposit and withdraw", () => {
 
   test("mainnet deposits show the network fee and need REAL MONEY typed", async ({ page }) => {
     await openApp(page);
-    await page.locator("[data-net=mainnet]").click();
+    await page.locator("#builder [data-net=mainnet]").click();
     await expect(page.locator("#liveTxt")).toContainText("Live · Derive mainnet", { timeout: 15_000 });
     await expect(page.locator("#balNet .x-chip-real")).toHaveText("REAL MONEY");
     await connectWallet(page);
@@ -170,7 +170,7 @@ test.describe("dry run, kill switch, history, limits", () => {
 
   test("the mainnet per-trade limit is off by default, and when set it blocks a bigger trade", async ({ page }) => {
     await openApp(page);
-    await page.locator("[data-net=mainnet]").click();
+    await page.locator("#builder [data-net=mainnet]").click();
     await expect(page.locator("#liveTxt")).toContainText("Live · Derive mainnet", { timeout: 15_000 });
     await connectWallet(page);
     await toReview(page);
