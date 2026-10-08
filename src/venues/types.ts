@@ -161,6 +161,10 @@ export interface PerpVenue {
   /** Orders that are open (resting limits) for the account, when the venue tracks them separately. */
   openOrders?(acct: VenueAccount): Promise<{ orderId: string; instrument: string; direction: "buy" | "sell"; amount: number; limitPrice: number }[]>;
   cancelOrder?(acct: VenueAccount, orderId: string, instrument: string): Promise<void>;
+  /** Last 24 h of hourly closes for the market list's sparkline (oldest first; [] = none). */
+  sparkline?(market: string): Promise<number[]>;
+  /** Venues that price markets one by one (Veranta): also price these on the next tickers() call. */
+  prime?(markets: string[]): void;
 }
 
 export type MarginMode = "cross" | "isolated";
