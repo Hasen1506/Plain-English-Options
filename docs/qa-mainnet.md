@@ -51,6 +51,19 @@ Tick each box. If something does not match, screenshot it and note the step.
 - [ ] **Close all positions** with a perp and an option open → everything cancelled and closed.
 - [ ] History → Perps shows the fills, fees, funding and realised P&L.
 
+## 4c. Hyperliquid (testnet) — NOT live-tested yet
+The app labels Hyperliquid "not live-tested". Hyperliquid testnet only opens accounts for
+addresses that already have a Hyperliquid **mainnet** account, so this section needs a
+wallet that has deposited at least 5 USDC on Hyperliquid mainnet (or used it before).
+- [ ] Perps → venue picker shows **Derive** and **Hyperliquid (not live-tested)**; the amber banner explains why. The comparison table lists ETH on both with price, funding, fees ($10 minimum, 0.045% / 0.015% on Hyperliquid).
+- [ ] Pick Hyperliquid → chip **Live · Hyperliquid testnet**. **Connect wallet to Hyperliquid** → MetaMask shows one typed-data request, primary type `HyperliquidTransaction:ApproveAgent`. Sign.
+- [ ] Deposit with an address that has **no** mainnet Hyperliquid account → "Deposit was not sent" and no MetaMask prompt.
+- [ ] Deposit 10 USDC from Arbitrum Sepolia (Circle faucet: faucet.circle.com) → MetaMask adds/switches to Arbitrum Sepolia, asks for one `ReceiveWithAuthorization` for exactly 10 USDC, then one transaction to `0x8E4e…eB8D`. About 9.80 arrives within minutes.
+- [ ] ETH goes UP, $10 at 2× with TP and SL → fills with **no** wallet prompt; the card shows the position, liq price and two triggers.
+- [ ] Close ½ → Flip → Close → flat. Post-only limit below the bid rests; Cancel removes it.
+- [ ] Check order (no trade) → "Hyperliquid recovered our signature exactly … nothing was traded.". History shows the fills.
+- [ ] Disconnect → the agent is revoked. Withdraw 5 → one `HyperliquidTransaction:Withdraw` signature; $1 fee.
+
 ## 5. Mainnet without money (free)
 - [ ] Tap **Mainnet**. The banner says orders use real money; the pill has a red **REAL MONEY** chip and a red outline.
 - [ ] Signing in with an unfunded wallet opens **Open your Derive mainnet account** (risk universe 1, PRIME, minimum $5). Close it without depositing.
@@ -61,6 +74,11 @@ Tick each box. If something does not match, screenshot it and note the step.
 - [ ] The button stays disabled until you type **REAL MONEY**.
 - [ ] MetaMask's approve is for **USDC `0xA0b8…eB48`** and exactly your amount.
 - [ ] After ~2 minutes the new subaccount appears with your balance and **RU1**.
+
+## 6b. Hyperliquid mainnet (real money) — only after 4c passes
+- [ ] Do not fund Hyperliquid mainnet for trading until section 4c has passed end to end; until then the app correctly says "not live-tested".
+- [ ] Mainnet deposit (Arbitrum One USDC `0xaf88…5831`, CctpExtension `0xA95d…4fcE`): the button stays disabled until you type **REAL MONEY**; minimum 5 USDC; Circle's fee ~0.20 USDC; a brand-new Hyperliquid account also pays Hyperliquid's one-time 1 USDC activation fee on its first outbound action.
+- [ ] Check order (no trade) on mainnet first. Confirm needs **REAL MONEY**; the per-trade limit and leverage cap apply.
 
 ## 7. Mainnet first trade (real money, after funding)
 - [ ] Review → **Check order (no trade)** first → "Derive verified both signatures on mainnet. No order was sent." Same in Perps for ETH-PERP.
