@@ -4,15 +4,18 @@
 import type { PerpVenue } from "./types.ts";
 import { createDeriveVenue, type DeriveHost } from "./derive.ts";
 import { createHyperliquidVenue, type HlHost } from "./hyperliquid/index.ts";
+import { createVerantaVenue, type VerantaHost } from "./veranta/index.ts";
 
 export interface VenueHosts {
   derive: DeriveHost;
   hyperliquid?: HlHost;
+  veranta?: VerantaHost;
 }
 
 export function createVenues(h: VenueHosts): PerpVenue[] {
   const out: PerpVenue[] = [createDeriveVenue(h.derive)];
   if (h.hyperliquid) out.push(createHyperliquidVenue(h.hyperliquid));
+  if (h.veranta) out.push(createVerantaVenue(h.veranta));
   return out;
 }
 
