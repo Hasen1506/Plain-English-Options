@@ -109,10 +109,16 @@ test("Veranta testnet in the browser: practice account → long with TP/SL → c
   // 6. history in the app and from Veranta's own history API; account flat
   await expect(card.locator("#venuePnl")).toContainText("ETH-PERP", { timeout: 120_000 });
   const c = new Veranta({ network: "testnet", env: {} });
-  const hist = (await c.info.tradeHistory(trader as `0x${string}`, 0, 50)) as { trades: { type: string; side: string; orderId: number; txHash: string; collateral: number; leverage: number; openPrice: number; closePrice: number | null; netPnl: number | null; isPartialClose: boolean }[] };
-  const types = hist.trades.map((t) => t.type);
-  expect(types.filter((t) => t === "MARKET_OPEN").length).toBeGreaterThanOrEqual(3); // long, flipped short, short
-  expect(types.filter((t) => t === "MARKET_CLOSE").length).toBeGreaterThanOrEqual(4); // half, rest, flipped short, short
+  type H = { trades: { type: string; side: string; orderId: number; txHash: string; collateral: number; leverage: number; openPrice: number; closePrice: number | null; netPnl: number | null; isPartialClose: boolean }[] };
+  let hist: H = { trades: [] };
+  const count = (t: string) => hist.trades.filter((x) => x.type === t).length;
+  // the history indexer can trail the chain by a few seconds
+  await expect
+    .poll(async () => {
+      hist = (await c.info.tradeHistory(trader as `0x${string}`, 1, 50)) as H; // pages start at 1
+      return [count("MARKET_OPEN") >= 3, count("MARKET_CLOSE") >= 4]; // long, flipped short, short / half, rest, flipped short, short
+    }, { timeout: 120_000, intervals: [3000] })
+    .toEqual([true, true]);
   const ud = (await c.account.positions(trader as `0x${string}`)) as unknown as { positions: unknown[]; limitOrders: unknown[] };
   expect(ud.positions.length).toBe(0);
   expect(ud.limitOrders.length).toBe(0);
