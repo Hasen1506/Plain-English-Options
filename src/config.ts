@@ -67,9 +67,10 @@ export const SLIPPAGE = 0.02;
 /** Typed phrase required to confirm a mainnet trade. */
 export const MAINNET_PHRASE = "REAL MONEY";
 
-/** One-tap trading: a browser-held session key that can only place option orders. */
+/** One-tap trading: a browser-held session key that can only place option and perp orders. */
 export const SESSION_TTL_SEC = 24 * 3600;
-export const SESSION_SCOPES = ["trade:orderbook:option"] as const;
+export const SESSION_SCOPES = ["trade:orderbook:option", "trade:orderbook:perp"] as const;
+export const PERP_SCOPE = "trade:orderbook:perp";
 export const SESSION_OFFCHAIN_SCOPES = ["account_info"] as const;
 export const SESSION_LABEL = "plain-english-options";
 /** Derive rejects a session-key expiry closer than 5 minutes (error 14039); revoke = expire at the earliest allowed time. */
@@ -79,3 +80,21 @@ export const SESSION_REVOKE_LEAD_SEC = 360;
 export const SESSION_SAFETY_SEC = 120;
 /** Localstorage key of the optional mainnet per-trade cost limit (off when absent). */
 export const MAX_COST_STORAGE_KEY = "peo.mainnetMaxCost";
+
+// ---------- perpetuals ----------
+/** Market (IOC) perp orders may fill at most this far through the touch. */
+export const PERP_SLIPPAGE = 0.005;
+/** Take-profit / stop-loss fire as reduce-only market orders bounded this far past the trigger. */
+export const TRIGGER_SLIPPAGE = 0.03;
+/** Signature lifetime of a resting (GTC / post-only) limit order: orders expire with their signature. */
+export const RESTING_ORDER_TTL_SEC = 7 * 86_400;
+/**
+ * Trigger (TP/SL) orders: Derive v3 rejects a signature expiry outside 30–90 days
+ * ("Order signature expiry must be between 2592000 and 7776000 sec from now",
+ * testnet 2026-10-08). 31 days.
+ */
+export const TRIGGER_ORDER_TTL_SEC = 31 * 86_400;
+/** The leverage slider never goes above this, whatever the exchange allows (ETH-PERP allows 15.15×). */
+export const LEVERAGE_UI_MAX = 10;
+export const LEVERAGE_DEFAULT_CAP = 5;
+export const LEVERAGE_STORAGE_KEY = "peo.leverageCap";
