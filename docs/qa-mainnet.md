@@ -40,6 +40,17 @@ Tick each box. If something does not match, screenshot it and note the step.
 - [ ] Portfolio → Safety → set a limit of 1 → switch to Mainnet → Review shows *Above your $1.00 limit per trade*. Clear the field and **Save limit** → the limit is off again (it is off by default).
 - [ ] Pill → **Withdraw** 5 → MetaMask typed-data prompt → "Withdrawal accepted · operation …".
 
+## 4b. Perps (testnet)
+- [ ] **Perps** tab lists ETH-PERP, BTC-PERP and the rest with mark, index, 24h, funding and OI.
+- [ ] "ETH goes UP, risk $30 at 5×": size, entry, liquidation, fees, funding per hour + APR and the max-loss sentence all show. Subaccount picker shows only RU1 subaccounts (with Deposit / Withdraw).
+- [ ] Market long with a take-profit and stop-loss → one-tap fills the entry with no prompt; MetaMask asks for the TP/SL signatures (they last 30 days). Portfolio shows the position, liq price, funding and the two triggers.
+- [ ] Portfolio → **Close ½**, then **Flip**, then **Close** → flat.
+- [ ] Post-only limit above the ask → blocked with "Post-only buy must be below the ask". Below the bid → resting; **Cancel all orders** removes it.
+- [ ] **Check order (no trade)** in Perps → "Derive verified the ETH-PERP order signature on testnet. No order was sent."
+- [ ] Portfolio → Safety → leverage cap 3 → a 5× quote is blocked with "Leverage is capped at 3× (your setting)".
+- [ ] **Close all positions** with a perp and an option open → everything cancelled and closed.
+- [ ] History → Perps shows the fills, fees, funding and realised P&L.
+
 ## 5. Mainnet without money (free)
 - [ ] Tap **Mainnet**. The banner says orders use real money; the pill has a red **REAL MONEY** chip and a red outline.
 - [ ] Signing in with an unfunded wallet opens **Open your Derive mainnet account** (risk universe 1, PRIME, minimum $5). Close it without depositing.
@@ -52,10 +63,11 @@ Tick each box. If something does not match, screenshot it and note the step.
 - [ ] After ~2 minutes the new subaccount appears with your balance and **RU1**.
 
 ## 7. Mainnet first trade (real money, after funding)
-- [ ] Review → **Check order (no trade)** first → "Derive verified both signatures on mainnet. No order was sent."
+- [ ] Review → **Check order (no trade)** first → "Derive verified both signatures on mainnet. No order was sent." Same in Perps for ETH-PERP.
+- [ ] Perps on mainnet: Confirm stays disabled until you type **REAL MONEY**; the per-trade limit (if set) caps the money put in; the leverage cap applies.
 - [ ] Optionally set a per-trade limit in Portfolio → Safety.
 - [ ] Smallest size you are comfortable with → tick → type **REAL MONEY** → *Pay real money: $…*. Check the amount, then confirm.
 - [ ] Result screen shows both legs filled with order ids. Portfolio shows the spread. **Cancel all orders** is available as a kill switch.
 
 ## Desktop alternative for section 7's dry run
-`DERIVE_SESSION_KEY=… DERIVE_WALLET=… DERIVE_SUBACCOUNT_ID=… npm run check:mainnet` signs a spread and sends it only to `private/order_debug`. The script cannot send `private/order` (enforced by `ReadOnlyRpc` and unit tests).
+`DERIVE_SESSION_KEY=… DERIVE_WALLET=… DERIVE_SUBACCOUNT_ID=… npm run check:mainnet` signs a spread plus the smallest ETH-PERP market and post-only orders and sends them only to `private/order_debug` (and simulates the perp with read-only `private/get_margin`; `CHECK_PERPS=0` skips perps). The script cannot send `private/order` (enforced by `ReadOnlyRpc` and unit tests).
