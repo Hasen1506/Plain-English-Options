@@ -18,10 +18,12 @@ const state = (page: Page) =>
   page.evaluate(() => (window as unknown as { __peo: { state: () => { perps: { quote: { amount: string; n: number; liqPrice: number | null; entry: number } | null; venue: string; scope: string | null; oneTap: boolean }; wallet: { sessionKey: string | null; scopes: string[] }; leverageCap: number } } }).__peo.state());
 
 test.describe("perps: markets and the plain-English builder", () => {
-  test("every recorded perp is listed with mark, index, 24h, funding and OI; the sentence sizes the order @mobile", async ({ page }) => {
+  test("every recorded perp of the selected category is listed with mark, index, 24h, funding and OI; the sentence sizes the order @mobile", async ({ page }) => {
     await openApp(page);
     await toPerps(page);
-    await expect(page.locator("#perpMarkets tbody tr")).toHaveCount(15);
+    // 15 recorded perps: 14 crypto in the table; XAUT (Tether Gold) sits under Commodities
+    await expect(page.locator("#perpMarkets tbody tr")).toHaveCount(14);
+    await expect(page.locator("#perpMarkets")).not.toContainText("XAUT");
     await expect(page.locator("#perpMarkets tbody tr").first()).toContainText("ETH");
     await expect(page.locator("#perpMarkets tbody tr").nth(1)).toContainText("BTC");
     await expect(page.locator("#perpMarkets")).toContainText("/h");

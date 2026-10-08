@@ -7,7 +7,8 @@
 //   * fills: side "B" = buy, "A" = sell; fee and closedPnl in USDC
 //   * one account per address; cross margin unless the coin's leverage is isolated
 
-import type { PerpMarket, PerpTicker } from "../../lib/perp.ts";
+import type { MarketBuilder, PerpMarket, PerpTicker } from "../../lib/perp.ts";
+import type { MarketCategory } from "../../lib/categories.ts";
 import type { OpenOrder, Position } from "../../lib/ticker.ts";
 import type { TradeRow } from "../../lib/history.ts";
 import type { FundingEvent } from "../../lib/perpHistory.ts";
@@ -15,8 +16,10 @@ import type { VenueAccount, VenueTrigger } from "../types.ts";
 import { lotSize, MIN_ORDER_USD, priceStep } from "./rules.ts";
 
 export interface HlAsset {
-  index: number; // asset id used in orders
-  coin: string; // "ETH"
+  index: number; // asset id used in orders (builder dexes: 100000 + dex × 10000 + i)
+  coin: string; // "ETH" | "xyz:GOLD" (builder coins are "<dex>:<COIN>", case-sensitive)
+  /** "" = Hyperliquid's own dex; else the builder dex's name ("xyz"). */
+  dex?: string;
   szDecimals: number;
   maxLeverage: number;
   onlyIsolated: boolean;
@@ -37,35 +40,73 @@ const num = (v: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-/** Our market name for a coin: "ETH" → "ETH-PERP" (same naming as Derive, so the picker can match venues). */
-export const hlName = (coin: string) => `${coin.toUpperCase()}-PERP`;
+/**
+ * Our market name for a coin: "ETH" → "ETH-PERP" (same naming as Derive, so the picker can
+ * match venues). Builder coins keep their exact case: "xyz:GOLD" → "xyz:GOLD-PERP".
+ */
+export const hlName = (coin: string) => (coin.includes(":") ? `${coin}-PERP` : `${coin.toUpperCase()}-PERP`);
+/** The dex of a coin or market name: "" for Hyperliquid's own, "xyz" for "xyz:GOLD(-PERP)". */
+export const hlDexOf = (coinOrName: string) => (coinOrName.includes(":") ? coinOrName.slice(0, coinOrName.indexOf(":")) : "");
+/** A perp coin as the info API names it: "ETH", "xyz:GOLD" (spot fills are "@123" or "PURR/USDC"). */
+export const isHlPerpCoin = (coin: string) => /^([a-z0-9]{1,10}:)?[A-Za-z0-9]+$/.test(coin);
 
-export function parseMeta(raw: unknown, fees = { taker: HL_TAKER, maker: HL_MAKER }): { markets: HlMarket[]; tickers: Record<string, PerpTicker> } {
+/** How a builder dex's meta is read: its index (for asset ids), categories and words. */
+export interface HlDexMeta {
+  name: string;
+  index: number;
+  /** coin → deployer annotation (category, display name) */
+  categories: Map<string, { category: MarketCategory; displayName?: string }>;
+  builder: (maxLeverage: number, isolatedOnly: boolean) => Omit<MarketBuilder, "isolatedOnly">;
+  fees: (deployerFeeScale: number, growthMode: boolean) => { taker: number; maker: number };
+}
+
+/**
+ * metaAndAssetCtxs → markets + tickers. Without `dex`: Hyperliquid's own (crypto) perps.
+ * With `dex`: one builder dex; only coins whose deployer-set category is one of ours are kept,
+ * each with its HIP-3 asset id, margin mode, fee scale and builder words.
+ */
+export function parseMeta(raw: unknown, fees = { taker: HL_TAKER, maker: HL_MAKER }, dex?: HlDexMeta): { markets: HlMarket[]; tickers: Record<string, PerpTicker> } {
   const markets: HlMarket[] = [];
   const tickers: Record<string, PerpTicker> = {};
   if (!Array.isArray(raw) || !isObj(raw[0]) || !Array.isArray(raw[0].universe)) return { markets, tickers };
   const ctxs = Array.isArray(raw[1]) ? raw[1] : [];
   raw[0].universe.forEach((u: unknown, index: number) => {
     if (!isObj(u) || typeof u.name !== "string" || u.isDelisted === true) return;
-    if (!/^[A-Za-z0-9]+$/.test(u.name)) return; // HIP-3 / builder-deployed names (dex:COIN) are out of scope
+    let category: MarketCategory | undefined;
+    let display: string | undefined;
+    let id = index;
+    if (dex) {
+      // builder coins are "<dex>:<COIN>"; anything else in this universe is not ours to trade
+      if (!u.name.startsWith(dex.name + ":") || !/^[A-Za-z0-9]+$/.test(u.name.slice(dex.name.length + 1))) return;
+      const ann = dex.categories.get(u.name);
+      if (!ann) return; // no category from the deployer (or pre-IPO, rates…): not listed
+      category = ann.category;
+      display = ann.displayName;
+      if (index >= 10_000 || dex.index < 1) return;
+      id = 100_000 + dex.index * 10_000 + index;
+    } else if (!/^[A-Za-z0-9]+$/.test(u.name)) return;
     const sz = num(u.szDecimals), lev = num(u.maxLeverage);
     if (sz === null || !Number.isInteger(sz) || sz < 0 || sz > 6 || lev === null || !(lev >= 1)) return;
     const ctx = isObj(ctxs[index]) ? ctxs[index] : null;
     const mark = ctx ? num(ctx.markPx) : null;
-    const asset: HlAsset = { index, coin: u.name, szDecimals: sz, maxLeverage: lev, onlyIsolated: u.onlyIsolated === true };
+    const isoOnly = u.onlyIsolated === true || u.marginMode === "noCross" || u.marginMode === "strictIsolated";
+    const asset: HlAsset = { index: id, coin: u.name, dex: dex?.name ?? "", szDecimals: sz, maxLeverage: lev, onlyIsolated: isoOnly };
     const name = hlName(u.name);
     const ref = mark && mark > 0 ? mark : 1;
+    const f = dex ? dex.fees(num(u.deployerFeeScale) ?? 1, u.growthMode === "enabled") : fees;
+    const shown = dex ? (display ?? u.name.slice(dex.name.length + 1)) : u.name.toUpperCase();
     markets.push({
+      ...(dex ? { category, builder: { ...dex.builder(lev, isoOnly), isolatedOnly: isoOnly } } : {}),
       name,
-      currency: u.name.toUpperCase(),
+      currency: shown,
       isActive: !!mark && mark > 0,
       tickSize: priceStep(ref, sz),
       minAmount: lotSize(sz),
       minNotional: MIN_ORDER_USD, // $10 per order (docs); quotePerp sizes up to it and says so
       maxAmount: "1000000000",
       amountStep: lotSize(sz),
-      takerFeeRate: fees.taker,
-      makerFeeRate: fees.maker,
+      takerFeeRate: f.taker,
+      makerFeeRate: f.maker,
       baseFee: 0,
       imReq: 1 / lev,
       mmReq: 1 / (2 * lev),
@@ -101,7 +142,11 @@ export function parseMeta(raw: unknown, fees = { taker: HL_TAKER, maker: HL_MAKE
       };
     }
   });
-  markets.sort((a, b) => rank(a.currency) - rank(b.currency) || a.name.localeCompare(b.name));
+  if (dex) {
+    // builder markets: busiest first (the deployer's universe order is listing order)
+    const vol = (m: HlMarket) => tickers[m.name]?.volume24h ?? 0;
+    markets.sort((a, b) => vol(b) - vol(a) || a.name.localeCompare(b.name));
+  } else markets.sort((a, b) => rank(a.currency) - rank(b.currency) || a.name.localeCompare(b.name));
   return { markets, tickers };
 }
 const rank = (c: string) => (c === "ETH" ? 0 : c === "BTC" ? 1 : 2);
@@ -228,7 +273,7 @@ export function parseFills(raw: unknown): TradeRow[] {
   if (!Array.isArray(raw)) return [];
   const out: TradeRow[] = [];
   for (const f of raw) {
-    if (!isObj(f) || typeof f.coin !== "string" || !/^[A-Za-z0-9]+$/.test(f.coin)) continue; // spot fills are "@123" / "PURR/USDC"
+    if (!isObj(f) || typeof f.coin !== "string" || !isHlPerpCoin(f.coin)) continue; // spot fills are "@123" / "PURR/USDC"
     const px = num(f.px), sz = num(f.sz);
     if (px === null || sz === null || !(sz > 0)) continue;
     out.push({

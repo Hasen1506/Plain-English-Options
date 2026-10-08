@@ -77,6 +77,8 @@ export interface PerpPanelModel {
   marginModes?: readonly string[];
   marginMode?: string;
   collateral?: string | null;
+  /** Builder (HIP-3) market: who deployed it and what is different, in plain words. */
+  builder?: { label: string; note: string } | null;
 }
 
 export function perpPanelHtml(m: PerpPanelModel): string {
@@ -93,8 +95,9 @@ export function perpPanelHtml(m: PerpPanelModel): string {
         : `<div><dt><label for="perpSub">Subaccount</label></dt><dd><select id="perpSub" class="x-pick">${m.accounts.map((s) => `<option value="${s.id}"${s.id === m.selectedSub ? " selected" : ""}>#${s.id} · ${h(usd2(s.value))}</option>`).join("")}</select>${m.accountScope ? `<br><small>${h(m.venueName)} · ${h(m.accountScope)}</small>` : ""}${m.canDeposit ? ` <button type="button" class="x-edit x-small" id="perpDeposit">Deposit</button>` : ""}${m.canWithdraw ? ` <button type="button" class="x-edit x-small" id="perpWithdraw">Withdraw</button>` : ""}</dd></div>`
       : `<div><dt>${h(label)}</dt><dd class="x-dn" id="perpNoSub">None in ${h(m.accountScope ?? "this market's account")} <button type="button" class="x-edit x-small" id="perpNewSub">${m.canConnect ? "Deposit" : "Deposit into a new one"}</button></dd></div>`;
   const subRow = subRow0 + modeRow;
+  const builderRow = m.builder ? `<div><dt>Market</dt><dd id="perpBuilder">${h(m.builder.label)}<br><small>${h(m.builder.note)}</small></dd></div>` : "";
   if (!q) {
-    return `<div class="x-card" id="perpDetails"><p class="x-empty" id="perpFail">${h(m.fail ?? "Waiting for a live price")}</p><dl class="x-rows">${subRow}</dl></div>`;
+    return `<div class="x-card" id="perpDetails"><p class="x-empty" id="perpFail">${h(m.fail ?? "Waiting for a live price")}</p><dl class="x-rows">${builderRow}${subRow}</dl></div>`;
   }
   const side = q.dir === "long" ? "Buy" : "Sell";
   const prompts = (m.oneTap ? 0 : 1) + (q.takeProfit || q.stopLoss ? (m.triggersNeedWallet ? (q.takeProfit ? 1 : 0) + (q.stopLoss ? 1 : 0) : 0) : 0);
@@ -106,6 +109,7 @@ export function perpPanelHtml(m: PerpPanelModel): string {
     : "";
   const fundingHr = q.fundingHourly;
   const rows =
+    builderRow +
     `<div><dt>Size</dt><dd id="perpSize">${side} ${h(q.amount)} <span class="x-mono">${h(q.inst.name)}</span> · ${h(usd2(q.notional))} position</dd></div>` +
     `<div><dt>Leverage</dt><dd>${q.leverage.toFixed(2)}× on ${h(usd2(q.putIn))} put in · cap ${m.leverageCap}×</dd></div>` +
     `<div><dt>${q.orderType === "market" ? "Expected entry" : "Limit price"}</dt><dd id="perpEntry">${h(perpPrice(q.entry))}${q.orderType === "market" ? ` · ${q.side === "buy" ? "ask" : "bid"} now` : q.tif === "post_only" ? " · post-only (maker)" : " · good till cancelled"}</dd></div>` +

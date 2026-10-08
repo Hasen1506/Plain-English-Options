@@ -13,6 +13,7 @@
 
 import { alignDown, alignUp, fromE18, toE18 } from "./units.ts";
 import { parseTicker, type Ticker } from "./ticker.ts";
+import type { MarketCategory } from "./categories.ts";
 
 /**
  * A perpetual market as any venue describes it. Everything the order builder,
@@ -37,6 +38,21 @@ export interface PerpMarket {
   minRatePerHour: number | null;
   /** Smallest order value the venue accepts, USD (Hyperliquid: $10). */
   minNotional?: number;
+  /** Trading category from the venue's own data; absent = crypto. */
+  category?: MarketCategory;
+  /** Set when a third party (not the venue itself) deployed the market (Hyperliquid HIP-3). */
+  builder?: MarketBuilder;
+}
+
+/** Who deployed a builder market, in plain words. */
+export interface MarketBuilder {
+  dex: string; // "xyz"
+  /** "xyz · trade.xyz builder market" */
+  label: string;
+  /** One plain-English paragraph on what is different about this market. */
+  note: string;
+  /** Only isolated margin is allowed on this market. */
+  isolatedOnly: boolean;
 }
 
 /** Derive v3's perp instrument: a PerpMarket plus what its order signature needs. */

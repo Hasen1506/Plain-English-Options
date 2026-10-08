@@ -12,7 +12,8 @@ import { escapeHtml as h } from "../../lib/format.ts";
 import type { MarginMode, PerpVenue, VenueAccount, VenueTrigger } from "../types.ts";
 import { HL_NETWORKS, HL_MIN_DEPOSIT, HL_SLIPPAGE, HL_WITHDRAW_FEE, type HlNetwork } from "./config.ts";
 import { HlClient, agentUsable, approveNewAgent, revokeAgent, withdrawUsdc, type AgentSession, type Fetch } from "./client.ts";
-import { applyBook, exchangeStatuses, hlName, parseClearinghouse, parseFills, parseMeta, parseOpenOrders, parseUserFees, parseUserFunding, restingOrders, triggerOrders, type HlAccountState, type HlMarket, type HlOrder } from "./parse.ts";
+import { HL_MAKER, HL_TAKER, applyBook, exchangeStatuses, hlName, parseClearinghouse, parseFills, parseMeta, parseOpenOrders, parseUserFees, parseUserFunding, restingOrders, triggerOrders, type HlAccountState, type HlDexMeta, type HlMarket, type HlOrder } from "./parse.ts";
+import { HL_BUILDER_DEXES, agentSendAssetAction, builderLabel, builderNote, collateralTokenWire, findDex, hip3Fees, parseCategories, shortfall, type HlDex } from "./hip3.ts";
 import { cancelAction, closeOrder, entryOrders, hlLeverage, iocNoFill, leverageAction, orderAction, outcome, type Grouping, type OrderWire } from "./orders.ts";
 import { depositUsdc } from "./deposit.ts";
 import { SigningKey, Wallet } from "ethers";
@@ -22,7 +23,7 @@ import { signL1 } from "./signing.ts";
 export const HL_STATUS = {
   tag: "not live-tested",
   detail:
-    "Order signing is checked against Hyperliquid's own servers, but this app has not yet placed a real Hyperliquid order, even on testnet (Hyperliquid's testnet only opens accounts for addresses that have deposited on mainnet). Treat trading here as unproven.",
+    "Order signing is checked against Hyperliquid's own servers, but this app has not yet placed a real Hyperliquid order, even on testnet (Hyperliquid's testnet only opens accounts for addresses that have deposited on mainnet). Treat trading here as unproven. Builder (HIP-3) markets such as trade.xyz's stocks, commodities, indices and FX use the same order path with their own asset ids, isolated margin and a collateral move to their dex, all wired from Hyperliquid's docs and equally untested.",
   usable: true,
 } as const;
 
@@ -40,7 +41,10 @@ export interface HlHost {
   changed(): void;
 }
 
-const isPerp = (n: string) => /^[A-Z0-9]+-PERP$/.test(n);
+const isPerp = (n: string) => /^([a-z0-9]{1,10}:[A-Za-z0-9]+|[A-Z0-9]+)-PERP$/.test(n);
+
+/** userAbstraction values under which Hyperliquid moves builder-dex collateral itself. */
+const AUTO_COLLATERAL = new Set(["unifiedAccount", "portfolioMargin", "dexAbstraction"]);
 
 export function createHyperliquidVenue(host: HlHost) {
   let client: HlClient | null = null;
@@ -48,7 +52,14 @@ export function createHyperliquidVenue(host: HlHost) {
   let user: string | null = null;
   let agent: AgentSession | null = null;
   let mode: MarginMode = "cross";
-  let state: HlAccountState | null = null;
+  let state: HlAccountState | null = null; // Hyperliquid's own dex ("")
+  let dexStates: Record<string, HlAccountState | null> = {}; // builder dexes, by name
+  let abstraction: string | null = null;
+  let builders: HlDex[] = [];
+  let categories: ReturnType<typeof parseCategories> = new Map();
+  let buildersAt = 0;
+  const collateral: Record<string, number> = {}; // builder dex → collateral token index
+  let tokenWire: Record<number, string> = {};
   let orders: HlOrder[] = [];
   let markets = new Map<string, HlMarket>();
   let tk: Record<string, PerpTicker> = {};
@@ -66,6 +77,12 @@ export function createHyperliquidVenue(host: HlHost) {
       // a network switch invalidates everything that belongs to the other network
       agent = null;
       state = null;
+      dexStates = {};
+      abstraction = null;
+      builders = [];
+      categories = new Map();
+      buildersAt = 0;
+      tokenWire = {};
       orders = [];
       markets = new Map();
       tk = {};
@@ -84,14 +101,111 @@ export function createHyperliquidVenue(host: HlHost) {
     return m;
   };
 
+  /** Which builder dexes exist on this network (perpDexs) and the deployers' categories and names (perpConciseAnnotations); refreshed every 10 minutes. */
+  let buildersBusy: Promise<void> | null = null;
+  function loadBuilders(): Promise<void> {
+    if (buildersAt && host.now() - buildersAt < 600_000) return Promise.resolve();
+    // one perpDexs + perpConciseAnnotations round trip at a time: overlapping market loads share it
+    buildersBusy ??= fetchBuilders().finally(() => (buildersBusy = null));
+    return buildersBusy;
+  }
+  async function fetchBuilders() {
+    const cl = c();
+    const [dx, ct] = await Promise.allSettled([cl.info({ type: "perpDexs" }), cl.info({ type: "perpConciseAnnotations" })]);
+    if (cl !== client || dx.status !== "fulfilled" || ct.status !== "fulfilled") return; // try again next refresh
+    builders = HL_BUILDER_DEXES.map((n) => findDex(dx.value, n)).filter((d): d is HlDex => d !== null);
+    categories = parseCategories(ct.value);
+    buildersAt = host.now();
+  }
+  function dexMeta(d: HlDex): HlDexMeta {
+    return {
+      name: d.name,
+      index: d.index,
+      categories,
+      builder: (lev, iso) => ({ dex: d.name, label: builderLabel(host.net(), d), note: builderNote(host.net(), d, lev, iso) }),
+      fees: (scale, growth) => hip3Fees(fees ?? { taker: HL_TAKER, maker: HL_MAKER }, scale, growth),
+    };
+  }
   async function loadMarkets() {
-    const raw = await c().info({ type: "metaAndAssetCtxs" });
+    await loadBuilders().catch(() => {});
+    const [raw, ...dexRaw] = await Promise.all([c().info({ type: "metaAndAssetCtxs" }), ...builders.map((d) => c().info({ type: "metaAndAssetCtxs", dex: d.name }).catch(() => null))]);
     const r = parseMeta(raw, fees ?? undefined);
+    builders.forEach((d, i) => {
+      const x = dexRaw[i];
+      if (!x) return;
+      const b = parseMeta(x, fees ?? undefined, dexMeta(d));
+      const ct = Array.isArray(x) && typeof (x[0] as { collateralToken?: unknown })?.collateralToken === "number" ? (x[0] as { collateralToken: number }).collateralToken : null;
+      if (ct !== null) collateral[d.name] = ct;
+      r.markets.push(...b.markets);
+      Object.assign(r.tickers, b.tickers);
+    });
     markets = new Map(r.markets.map((m) => [m.name, m]));
     for (const [k, v] of Object.entries(r.tickers)) tk[k] = { ...v, ...(tk[k] && tk[k]!.askSize ? { bid: tk[k]!.bid, ask: tk[k]!.ask, bidSize: tk[k]!.bidSize, askSize: tk[k]!.askSize } : {}) };
     liveAt = host.now();
     return r;
   }
+  /** Isolated is the only mode for this market: the exchange says so, or it is a builder market. */
+  const isolatedHere = (name: string) => {
+    const m = markets.get(name);
+    return !!m && (m.asset.onlyIsolated || !!m.asset.dex);
+  };
+  /** The account state that margins this market (each perp dex margins separately). */
+  const stateFor = (m: HlMarket | null | undefined): HlAccountState | null => (m?.asset.dex ? (dexStates[m.asset.dex] ?? null) : state);
+  /** USDC Hyperliquid will move into a builder dex for this user without being asked. */
+  const autoCollateral = () => abstraction !== null && AUTO_COLLATERAL.has(abstraction);
+  /**
+   * The VenueAccount for a market: positions and orders of every dex (one address, one
+   * portfolio), value summed, free margin of the dex that margins this market (for a builder
+   * market, plus what the app can move over from the main balance).
+   */
+  function accountFor(name: string): VenueAccount | null {
+    if (!user || !state) return null;
+    const m = markets.get(name) ?? null;
+    const own = stateFor(m) ?? (m?.asset.dex ? null : state);
+    const all = [state, ...Object.values(dexStates)].filter((x): x is HlAccountState => !!x);
+    const free = m?.asset.dex ? (own?.withdrawable ?? 0) + state.withdrawable : state.account.initialMargin;
+    return {
+      id: 0,
+      value: all.reduce((a, x) => a + x.account.value, 0),
+      initialMargin: free,
+      maintenanceMargin: own ? own.account.maintenanceMargin : state.withdrawable,
+      underLiquidation: all.some((x) => x.account.underLiquidation),
+      positions: all.flatMap((x) => x.account.positions),
+      openOrders: restingOrders(orders),
+    };
+  }
+  /** "USDC:0x…" for the collateral token of a builder dex (spotMeta, cached). */
+  async function collateralWire(dex: string): Promise<string> {
+    const idx = collateral[dex] ?? 0;
+    if (!tokenWire[idx]) {
+      const w = collateralTokenWire(await c().info({ type: "spotMeta" }), idx);
+      if (!w) throw new Error("Could not read the collateral token of the " + dex + " dex");
+      tokenWire[idx] = w;
+    }
+    return tokenWire[idx]!;
+  }
+  /**
+   * Builder dexes margin separately from Hyperliquid's main USDC balance. Before an order on
+   * one, move exactly the shortfall (rounded up to the cent, +1% for the price protection) from
+   * the main balance with agentSendAsset, unless the account already has Hyperliquid move
+   * collateral itself (unified / portfolio margin / dex abstraction).
+   */
+  async function ensureCollateral(m: HlMarket, need: number, key: SigningKey, onStep?: (s: string) => void) {
+    const dex = m.asset.dex;
+    if (!dex || autoCollateral() || !user) return;
+    const free = dexStates[dex]?.withdrawable ?? 0;
+    const amt = shortfall(need * 1.01, free);
+    if (!amt) return;
+    const main = state?.withdrawable ?? 0;
+    if (main + 1e-9 < Number(amt)) throw new Error(`${m.currency} is a builder market with its own collateral: it needs $${amt} more on the ${dex} dex, and your main Hyperliquid balance has $${main.toFixed(2)} free`);
+    const token = await collateralWire(dex);
+    onStep?.(`Moving ${amt} USDC from your main Hyperliquid balance to the ${dex} dex (builder markets keep their own collateral)…`);
+    const u = user;
+    exchangeStatuses(await c().l1((nonce) => agentSendAssetAction({ destination: u.toLowerCase(), sourceDex: "", destinationDex: dex, token, amount: amt, nonce }), key));
+    const st = dexStates[dex];
+    if (st) st.withdrawable += Number(amt);
+  }
+
   async function book(name: string): Promise<PerpTicker> {
     const m = market(name);
     const base = tk[name];
@@ -113,12 +227,13 @@ export function createHyperliquidVenue(host: HlHost) {
   /** Leverage on Hyperliquid is a per-coin setting; set it when it differs from what this order needs. */
   async function ensureLeverage(m: HlMarket, lev: number, key: SigningKey) {
     const want = hlLeverage(lev, m.asset.maxLeverage);
-    const isCross = mode === "cross" && !m.asset.onlyIsolated;
-    const cur = state?.leverage[m.asset.coin];
+    const isCross = mode === "cross" && !isolatedHere(m.name);
+    const st = stateFor(m);
+    const cur = st?.leverage[m.asset.coin];
     if (cur && cur.value === want && (cur.type === "cross") === isCross) return;
     const r = await c().l1(leverageAction(m.asset.index, isCross, want), key);
     exchangeStatuses(r); // throws with Hyperliquid's own words on rejection
-    if (state) state.leverage[m.asset.coin] = { type: isCross ? "cross" : "isolated", value: want };
+    if (st) st.leverage[m.asset.coin] = { type: isCross ? "cross" : "isolated", value: want };
   }
 
   async function send(wires: OrderWire[], grouping: Grouping, key: SigningKey, m: HlMarket): Promise<OrderOutcome[]> {
@@ -131,20 +246,32 @@ export function createHyperliquidVenue(host: HlHost) {
     if (!user) return;
     const marks: Record<string, number> = {};
     for (const [k, v] of Object.entries(tk)) marks[k] = v.mark;
-    const [ch, oo, uf] = await Promise.all([
+    const u = user;
+    const [ch, oo, uf, ab, ...dx] = await Promise.all([
       c().info({ type: "clearinghouseState", user }),
       c().info({ type: "frontendOpenOrders", user }),
       fees ? Promise.resolve(null) : c().info({ type: "userFees", user }).catch(() => null),
+      builders.length && abstraction === null ? c().info({ type: "userAbstraction", user }).catch(() => null) : Promise.resolve(abstraction),
+      ...builders.map((d) => Promise.all([c().info({ type: "clearinghouseState", user: u, dex: d.name }).catch(() => null), c().info({ type: "frontendOpenOrders", user: u, dex: d.name }).catch(() => [])])),
     ]);
     state = parseClearinghouse(ch, marks);
+    abstraction = typeof ab === "string" ? ab : null;
+    dexStates = {};
     orders = parseOpenOrders(oo);
+    builders.forEach((d, i) => {
+      const [dch, doo] = dx[i] as [unknown, unknown];
+      dexStates[d.name] = parseClearinghouse(dch, marks);
+      orders.push(...parseOpenOrders(doo));
+    });
     if (state) state.account.openOrders = restingOrders(orders);
     const f = parseUserFees(uf);
     if (f) {
+      const base = fees ?? { taker: HL_TAKER, maker: HL_MAKER };
       fees = f;
       for (const m of markets.values()) {
-        m.takerFeeRate = f.taker;
-        m.makerFeeRate = f.maker;
+        // builder coins keep their HIP-3 multiplier (2× / growth mode 0.2×) on top of the user's own rate
+        m.takerFeeRate = m.asset.dex ? (m.takerFeeRate / base.taker) * f.taker : f.taker;
+        m.makerFeeRate = m.asset.dex ? (base.maker ? (m.makerFeeRate / base.maker) * f.maker : f.maker) : f.maker;
       }
     }
     host.changed();
@@ -248,7 +375,14 @@ export function createHyperliquidVenue(host: HlHost) {
     caps: { triggers: true, postOnly: true, oneTap: true, dryRun: true, deposit: true, withdraw: true, crossMargin: true },
     slippage: HL_SLIPPAGE,
     status: HL_STATUS,
-    marginModes: ["cross", "isolated"],
+    /**
+     * Builder markets are traded isolated only: each margins on its own dex, and the app moves
+     * exactly one position's margin there, so cross margin on that dex would rest on whatever
+     * else happened to sit there.
+     */
+    get marginModes(): readonly MarginMode[] {
+      return isolatedHere(focused) ? ["isolated"] : ["cross", "isolated"];
+    },
 
     networkName: () => N().name,
     isMainnet: () => host.net() === "mainnet",
@@ -283,13 +417,24 @@ export function createHyperliquidVenue(host: HlHost) {
       } finally {
         user = null;
         state = null;
+        dexStates = {};
+        abstraction = null;
         orders = [];
         host.changed();
       }
     },
-    accountsFor: () => (user && state ? [state.account] : []),
-    accountScope: () => (user ? `your Hyperliquid account (${mode === "cross" ? "cross margin" : "isolated margin"})` : null),
-    selectedAccount: () => (user && state ? state.account : null),
+    accountsFor: (name) => {
+      const a = accountFor(name);
+      return a ? [a] : [];
+    },
+    accountScope: (name) => {
+      if (!user) return null;
+      const m = markets.get(name);
+      if (m?.asset.dex) return `your Hyperliquid account, ${m.asset.dex} dex (isolated margin${autoCollateral() ? "" : ", its own collateral"})`;
+      if (m?.asset.onlyIsolated) return "your Hyperliquid account (isolated margin)";
+      return `your Hyperliquid account (${mode === "cross" ? "cross margin" : "isolated margin"})`;
+    },
+    selectedAccount: (name) => accountFor(name),
     selectAccount: () => {},
     newAccount: () => depositSheet(),
     deposit: () => depositSheet(),
@@ -299,7 +444,7 @@ export function createHyperliquidVenue(host: HlHost) {
       if (!user) return null;
       return { oneTap: agentUsable(agent, host.now()), triggersNeedWallet: false };
     },
-    marginMode: () => mode,
+    marginMode: () => (isolatedHere(focused) ? "isolated" : mode),
     setMarginMode(m) {
       mode = m;
       host.changed();
@@ -309,22 +454,35 @@ export function createHyperliquidVenue(host: HlHost) {
       return m ? hlLeverage(lev, m.asset.maxLeverage) : Math.max(1, Math.floor(lev));
     },
     riskWords: () =>
-      mode === "cross"
+      markets.get(focused)?.builder
+        ? `I understand ${markets.get(focused)!.currency} is a builder (HIP-3) market deployed by a third party on Hyperliquid, that this isolated-margin perpetual can lose all the margin I put in, pays or receives funding every hour, can trade while its underlying market is closed, and can be liquidated under Hyperliquid's rules.`
+        : (isolatedHere(focused) ? "isolated" : mode) === "cross"
         ? "I understand perpetuals use leverage on my whole Hyperliquid account balance (cross margin), pay or receive funding every hour, and can be liquidated under Hyperliquid's rules."
         : "I understand this isolated-margin perpetual can lose all the margin I put in, pays or receives funding every hour, and can be liquidated under Hyperliquid's rules.",
-    collateralWords: () => `USDC deposited on Hyperliquid (from ${N().depositChainName})`,
+    collateralWords: () => {
+      const m = markets.get(focused);
+      return m?.asset.dex
+        ? `USDC on Hyperliquid's ${m.asset.dex} dex (kept apart from your main balance; ${autoCollateral() ? "your account moves it over automatically" : "the app moves the margin over from your main balance before the order"})`
+        : `USDC deposited on Hyperliquid (from ${N().depositChainName})`;
+    },
 
     async marginCheck(acct, q) {
       if (!state) return { valid: true, postIM: null, postMM: null };
-      const lev = hlLeverage(q.leverage, (q.inst as HlMarket).asset?.maxLeverage ?? q.leverage);
+      const m = markets.get(q.inst.name) ?? (q.inst as HlMarket);
+      const lev = hlLeverage(q.leverage, m.asset?.maxLeverage ?? q.leverage);
       const need = q.reducesExisting ? 0 : (q.n * q.entry) / lev + q.estFee;
-      const free = state.withdrawable;
+      // a builder dex can be topped up from the main balance before the order
+      const free = m.asset?.dex ? (dexStates[m.asset.dex]?.withdrawable ?? 0) + state.withdrawable : state.withdrawable;
       return { valid: need <= free + 1e-9, postIM: free - need, postMM: null };
     },
 
     async open(_acct, q, onStep) {
       const m = market(q.inst.name);
       const key = await ensureAgent(onStep);
+      if (m.asset.dex && !q.reducesExisting) {
+        const lev = hlLeverage(q.leverage, m.asset.maxLeverage);
+        await ensureCollateral(m, (q.n * Number(q.limitPrice || q.entry)) / lev + q.worstFee, key, onStep);
+      }
       onStep?.("Setting leverage…");
       await ensureLeverage(m, q.leverage, key);
       const { wires, grouping } = entryOrders(m.asset, q);
@@ -419,6 +577,14 @@ export function createHyperliquidVenue(host: HlHost) {
       });
       exchangeStatuses(await c().l1(cancelAction(cancels), key));
       await refreshAccounts().catch(() => {});
+    },
+
+    async sparkline(name) {
+      const m = markets.get(name);
+      if (!m) return [];
+      const end = host.now();
+      const r = await c().info({ type: "candleSnapshot", req: { coin: m.asset.coin, interval: "1h", startTime: end - 86_400_000, endTime: end } });
+      return Array.isArray(r) ? r.map((x) => Number((x as { c?: unknown })?.c)).filter((v) => Number.isFinite(v) && v > 0) : [];
     },
 
     async history(_acct: VenueAccount) {
