@@ -130,6 +130,17 @@ test.describe("perps: trading", () => {
     await expect(page.locator("#portfolio")).toContainText("No open orders.", { timeout: 10_000 });
   });
 
+  test("Deposit and Withdraw from the Perps tab open the venue's own sheets for the selected subaccount", async ({ page }) => {
+    await openApp(page);
+    await connectWallet(page);
+    await toPerps(page);
+    await page.locator("#perpDeposit").click();
+    await expect(page.locator("#sheetBody")).toContainText("Deposit");
+    await page.locator("#sheetClose").click();
+    await page.locator("#perpWithdraw").click();
+    await expect(page.locator("#sheetBody")).toContainText("Withdraw");
+  });
+
   test("Check order (no trade) signs the perp order and sends it only to private/order_debug", async ({ page }) => {
     const app = await openApp(page);
     await connectWallet(page);
