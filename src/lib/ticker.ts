@@ -207,6 +207,7 @@ export interface OpenOrder {
 export interface SubaccountInfo {
   id: number;
   riskUniverse: number | null;
+  managerId: number | null;
   value: number;
   initialMargin: number;
   positions: Position[];
@@ -249,6 +250,7 @@ export function parseSubaccount(raw: unknown): SubaccountInfo | null {
   return {
     id,
     riskUniverse: num(raw.risk_universe_id, null),
+    managerId: num(raw.manager_id, null),
     value,
     initialMargin: num(raw.initial_margin, 0),
     positions: list(raw.positions, parsePosition).filter((p) => p.amount !== 0),
