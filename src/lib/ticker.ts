@@ -17,6 +17,13 @@ export interface Ticker {
   change24h: number | null; // fraction, e.g. -0.046 = -4.6%
 }
 
+/** What an order signature needs from any instrument (option or perp). */
+export interface Tradable {
+  name: string;
+  assetAddress: string;
+  subId: string;
+}
+
 export interface Instrument {
   name: string;
   currency: string;
@@ -192,6 +199,12 @@ export interface Position {
   markPrice: number;
   unrealizedPnl: number;
   totalFees: number;
+  instrumentType: string; // option | perp | erc20
+  liquidationPrice: number | null; // exchange estimate (perps)
+  cumulativeFunding: number; // perps: funding settled so far (+ = received)
+  pendingFunding: number; // perps: accrued, not yet settled
+  leverage: number | null;
+  realizedPnl: number;
 }
 
 export interface OpenOrder {
@@ -209,7 +222,10 @@ export interface SubaccountInfo {
   riskUniverse: number | null;
   managerId: number | null;
   value: number;
-  initialMargin: number;
+  initialMargin: number; // NET: value − initial requirement (positive = free margin)
+  maintenanceMargin: number; // NET: value − maintenance requirement (≤ 0 = liquidatable)
+  collateralsValue: number;
+  underLiquidation: boolean;
   positions: Position[];
   openOrders: OpenOrder[];
 }
@@ -225,6 +241,12 @@ export function parsePosition(p: unknown): Position | null {
     markPrice: num(p.mark_price, 0),
     unrealizedPnl: num(p.unrealized_pnl, 0),
     totalFees: num(p.total_fees, 0),
+    instrumentType: typeof p.instrument_type === "string" ? p.instrument_type : /-PERP$/.test(p.instrument_name) ? "perp" : "option",
+    liquidationPrice: pos(num(p.liquidation_price, null)),
+    cumulativeFunding: num(p.cumulative_funding, 0),
+    pendingFunding: num(p.pending_funding, 0),
+    leverage: pos(num(p.leverage, null)),
+    realizedPnl: num(p.realized_pnl, 0),
   };
 }
 
@@ -253,6 +275,9 @@ export function parseSubaccount(raw: unknown): SubaccountInfo | null {
     managerId: num(raw.manager_id, null),
     value,
     initialMargin: num(raw.initial_margin, 0),
+    maintenanceMargin: num(raw.maintenance_margin, num(raw.initial_margin, 0)),
+    collateralsValue: num(raw.collaterals_value, value),
+    underLiquidation: raw.is_under_liquidation === true,
     positions: list(raw.positions, parsePosition).filter((p) => p.amount !== 0),
     openOrders: list(raw.open_orders, parseOrder),
   };
