@@ -128,4 +128,27 @@ export interface PerpVenue {
   // ---- history ----
   history(acct: VenueAccount): Promise<{ trades: TradeRow[]; funding: FundingEvent[] }>;
   isPerp(instrument: string): boolean;
+
+  // ---- optional: venues with their own wallet connection (Hyperliquid, Veranta) ----
+  /** Connect the injected wallet to this venue (Derive uses the app's own sign-in instead). */
+  connect?(): Promise<void>;
+  /** Revoke/expire the one-tap key and forget the wallet. */
+  disconnect?(): Promise<void>;
+  /** The market on screen (venues that fetch a book per market). */
+  focus?(market: string): void;
+  /** Margin modes for new positions; absent = cross only. */
+  readonly marginModes?: readonly MarginMode[];
+  marginMode?(): MarginMode;
+  setMarginMode?(m: MarginMode): void;
+  /** Words for the risk checkbox (what backs the trade, who liquidates). */
+  riskWords?(): string;
+  /** Where the collateral lives, in plain words ("USDC deposited on Hyperliquid (from Arbitrum)"). */
+  collateralWords?(): string;
+  /** Leverage the venue will actually use for a requested one (Hyperliquid: whole numbers). */
+  effectiveLeverage?(market: string, lev: number): number;
+  /** Orders that are open (resting limits) for the account, when the venue tracks them separately. */
+  openOrders?(acct: VenueAccount): Promise<{ orderId: string; instrument: string; direction: "buy" | "sell"; amount: number; limitPrice: number }[]>;
+  cancelOrder?(acct: VenueAccount, orderId: string, instrument: string): Promise<void>;
 }
+
+export type MarginMode = "cross" | "isolated";
