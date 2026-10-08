@@ -9,6 +9,8 @@ export interface ActionSigner {
   signer: string; // address that signs (owner itself, or a registered session key)
   /** true when signing needs no user interaction (re-login on reconnect is automatic) */
   silent: boolean;
+  /** Unix seconds after which this signer's signatures stop being valid (session keys). Undefined = never. */
+  expiresAt?: number;
   signLogin(timestamp: string): Promise<string>;
   signAction(a: ActionFields): Promise<string>;
 }
