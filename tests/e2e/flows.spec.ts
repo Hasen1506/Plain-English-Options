@@ -160,10 +160,14 @@ test.describe("trading against the mock exchange", () => {
 
   test("a subaccount in the wrong risk universe cannot trade and the app says how to fix it", async ({ page }) => {
     await openApp(page, "wrongru");
-    await connectWallet(page);
+    await connectWallet(page, { oneTap: "none" });
+    // signed in but nothing in ETH's universe: the app offers the deposit that creates one
+    await expect(page.locator("#sheetBody h2")).toHaveText("New ETH subaccount");
+    await page.locator("#sheetClose").click();
     await expect(page.locator("#balNet")).toContainText("#87138 · RU0");
     await toReview(page);
     await expect(page.locator("#noSubHint")).toContainText("risk universe 1");
+    await expect(page.locator("#newSubBtn")).toBeVisible();
     await page.locator("#agree").check();
     await expect(page.locator("#confirm")).toHaveText("Pick a subaccount for this asset");
   });
