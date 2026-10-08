@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import { confirmState, type ConfirmInput } from "../../src/lib/guards.ts";
+import { confirmState, parseMaxCost, type ConfirmInput } from "../../src/lib/guards.ts";
 import { MAINNET_PHRASE, QUOTE_MAX_AGE_MS } from "../../src/config.ts";
 import type { SpreadQuote } from "../../src/lib/spread.ts";
 
@@ -22,6 +22,7 @@ const inputArb = fc.record({
   network: fc.constantFrom("testnet" as const, "mainnet" as const),
   typed: fc.oneof(fc.constant(MAINNET_PHRASE), fc.constant("real money "), fc.string()),
   busy: fc.boolean(),
+  maxCost: fc.option(fc.double({ min: 0, max: 2e6, noNaN: true })),
 });
 
 const cast = (i: unknown) => i as ConfirmInput & { quote: SpreadQuote | null };
@@ -56,5 +57,31 @@ describe("confirm guard (property)", () => {
     expect(confirmState(cast({ ...base, balance: 101 })).reason).toBe("balance"); // covers the cost but not the slippage cap
     expect(confirmState(cast({ ...base, subaccountRU: 0 })).reason).toBe("wrong-universe");
     expect(confirmState(cast({ ...base, quoteAgeMs: QUOTE_MAX_AGE_MS + 1 })).reason).toBe("stale");
+  });
+});
+
+describe("optional mainnet per-trade limit", () => {
+  it("is off by default: with no limit set, the cap never blocks", () => {
+    fc.assert(fc.property(inputArb, (i) => confirmState(cast({ ...i, maxCost: undefined })).reason !== "cap" && confirmState(cast({ ...i, maxCost: null })).reason !== "cap"), { numRuns: 2000 });
+  });
+
+  it("when set, a mainnet trade whose worst case exceeds it is never enabled; testnet ignores it", () => {
+    fc.assert(
+      fc.property(inputArb, (i) => {
+        const c = confirmState(cast(i));
+        const over = i.network === "mainnet" && i.maxCost != null && i.maxCost > 0 && !!i.quote && i.quote.worstLoss > i.maxCost;
+        return !(over && c.enabled) && !(i.network === "testnet" && c.reason === "cap");
+      }),
+      { numRuns: 3000 },
+    );
+  });
+
+  it("parses the setting: empty, zero and junk mean off", () => {
+    expect(parseMaxCost(null)).toBeNull();
+    expect(parseMaxCost("")).toBeNull();
+    expect(parseMaxCost("0")).toBeNull();
+    expect(parseMaxCost("abc")).toBeNull();
+    expect(parseMaxCost("$1,250")).toBe(1250);
+    expect(parseMaxCost(" 75.5 ")).toBe(75.5);
   });
 });
