@@ -233,7 +233,7 @@ export function venueAccountHtml(m: VenueAccountModel): string {
   const a = m.account;
   const head =
     `<p class="x-step" id="venueWho">${h(m.venue)} ${h(m.netName.toLowerCase())} · <span class="x-mono" data-address="${h(m.address)}">${h(m.address.slice(0, 6) + "…" + m.address.slice(-4))}</span>` +
-    (m.oneTapKey ? ` · one-tap key <span class="x-mono">${h(m.oneTapKey.slice(0, 6) + "…" + m.oneTapKey.slice(-4))}</span> (${h(m.oneTapWords)})` : " · no one-tap key yet (your first order asks for one signature)") +
+    (m.oneTapKey ? ` · one-tap key <span class="x-mono" data-session="${h(m.oneTapKey)}">${h(m.oneTapKey.slice(0, 6) + "…" + m.oneTapKey.slice(-4))}</span> (${h(m.oneTapWords)})` : " · no one-tap key yet (your first order asks for one signature)") +
     `</p>`;
   const orders = m.orders.length
     ? `<table class="x-tbl" id="venueOrders"><thead><tr><th>Open order</th><th>Side</th><th>Limit</th><th></th></tr></thead><tbody>${m.orders
