@@ -1,9 +1,15 @@
 // DOM controller: wires the pure modules to the page.
 
-import { ASSETS, NETWORKS, QUOTE_MAX_AGE_MS, TICKER_REFRESH_MS, type Asset, type NetworkId } from "../config.ts";
+import { ASSETS, MAINNET_PHRASE, MAX_COST_STORAGE_KEY, NETWORKS, QUOTE_MAX_AGE_MS, SESSION_TTL_SEC, TICKER_REFRESH_MS, type Asset, type NetworkId } from "../config.ts";
 import { DeriveClient, type Status } from "../net/client.ts";
-import { walletSigner, type ActionSigner, type Eip1193 } from "../net/signer.ts";
+import { ensureChain, friendlyWalletError, walletSigner, type ActionSigner, type Eip1193 } from "../net/signer.ts";
 import { cancelOrder, closePosition, closeSpread, placeSpread, preTradeCheck, type PreTrade, type SpreadResult } from "../net/trader.ts";
+import { registerSessionKey, revokeSessionKey, sessionKeyUsable, sessionSigner, type SessionKeyHandle } from "../net/sessionKey.ts";
+import { checkDepositAmount, collateralFor, depositRoute, estimateDepositGas, fromUnits, parseRiskUniverses, planDeposit, readToken, calldata, riskUniverseForOptions, sendStep, waitReceipt, withdraw, type DepositPlan, type RiskUniverse } from "../net/onchain.ts";
+import { ReadOnlyRpc, debugSpread } from "../net/dryrun.ts";
+import { isNoAccount } from "../net/account.ts";
+import { closedSpreads, parseOrders, parseTrades, type ClosedSpread, type LegSummary, type OrderRow, type TradeRow } from "../lib/history.ts";
+import { parseMaxCost } from "../lib/guards.ts";
 import {
   parseCurrencies,
   parseInstrument,
@@ -20,10 +26,10 @@ import { initialState, reduce, sentence, type Action, type BuilderState, type Po
 import { expiriesFor, liveQuote, probabilityFor, spotOf } from "../lib/market.ts";
 import { confirmState } from "../lib/guards.ts";
 import { escapeHtml as h, money, pct, price, signedMoney, usd2, type ExpiryLabel } from "../lib/format.ts";
-import { chartSvg, portfolioHtml, resultHtml, reviewHtml } from "./views.ts";
+import { chartSvg, depositSheetHtml, historyHtml, oneTapHtml, planHtml, portfolioHtml, resultHtml, reviewHtml, withdrawSheetHtml } from "./views.ts";
 
-type View = "build" | "review" | "done" | "portfolio";
-type WalletSt = "none" | "busy" | "on" | "reconnect" | "err" | "nosub";
+type View = "build" | "review" | "done" | "portfolio" | "history";
+type WalletSt = "none" | "busy" | "on" | "reconnect" | "err" | "nosub" | "noaccount";
 
 interface TkEntry {
   tk: Record<string, Ticker>;
@@ -58,8 +64,31 @@ export function startApp(opts: AppOptions = {}) {
   const instLoaded: Partial<Record<Asset, boolean>> = {};
   const perp: Partial<Record<Asset, Ticker>> = {};
   const TK: Record<string, TkEntry> = {};
+  let universes: RiskUniverse[] = [];
 
-  const W = { st: "none" as WalletSt, account: "", signer: null as ActionSigner | null, subs: [] as SubaccountInfo[], sel: null as number | null, msg: "" };
+  const W = {
+    st: "none" as WalletSt,
+    account: "",
+    owner: "", // Derive wallet, also known before the account exists
+    provider: null as Eip1193 | null,
+    signer: null as ActionSigner | null, // the wallet itself
+    session: null as SessionKeyHandle | null, // one-tap key, memory only
+    tap: null as ActionSigner | null,
+    tapAsked: false,
+    subs: [] as SubaccountInfo[],
+    sel: null as number | null,
+    msg: "",
+  };
+  const storage = (() => {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  })();
+  const settings = { maxCost: parseMaxCost(storage?.getItem(MAX_COST_STORAGE_KEY)) };
+  /** Orders are signed by the one-tap key while it is valid, otherwise by the wallet. */
+  const orderSigner = (): ActionSigner | null => (W.session && W.tap && sessionKeyUsable(W.session.expirySec, now()) ? W.tap : W.signer);
   const R = { agreed: false, typed: "", busy: false, pre: null as PreTrade | null, preKey: "", step: "" };
 
   // ---------- market data ----------
@@ -67,7 +96,9 @@ export function startApp(opts: AppOptions = {}) {
   const curExpiry = (): ExpiryLabel | null => expiries().find((e) => e.key === S.expiryKey) ?? null;
   const tkKey = (a: string, k: string) => `${a}|${k}`;
   const curTk = (): TkEntry | null => (S.expiryKey ? (TK[tkKey(S.asset, S.expiryKey)] ?? null) : null);
-  const assetRU = (a: Asset = S.asset): number | null => currencies[a]?.riskUniverse ?? null;
+  // the universe whose managers list <ASSET>-OPTION (get_all_currencies lists ETH as collateral in every universe)
+  const assetRU = (a: Asset = S.asset): number | null => riskUniverseForOptions(universes, a) ?? currencies[a]?.riskUniverse ?? null;
+  const ruName = (id: number | null) => universes.find((u) => u.id === id)?.name ?? "";
 
   function spotFor(a: Asset): number | null {
     const e = S.asset === a ? curTk() : null;
@@ -147,6 +178,18 @@ export function startApp(opts: AppOptions = {}) {
       .then((r) => {
         if (g !== gen) return;
         Object.assign(currencies, parseCurrencies(r));
+        refresh();
+      })
+      .catch(() => {});
+  }
+
+  function loadUniverses() {
+    const g = gen;
+    client
+      .call("public/get_risk_universes", {})
+      .then((r) => {
+        if (g !== gen) return;
+        universes = parseRiskUniverses(r);
         refresh();
       })
       .catch(() => {});
@@ -366,6 +409,7 @@ export function startApp(opts: AppOptions = {}) {
       network: net,
       typed: R.typed,
       busy: R.busy,
+      maxCost: settings.maxCost,
     });
   }
 
@@ -392,7 +436,9 @@ export function startApp(opts: AppOptions = {}) {
       connected: W.st === "on",
       balance: sp?.value ?? null,
       preTrade: R.pre,
-      createUrl: net === "mainnet" ? "https://app.derive.xyz" : "https://testnet.app.derive.xyz",
+      createUrl: NETWORKS[net].appUrl,
+      oneTap: !!(W.session && sessionKeyUsable(W.session.expirySec, now())),
+      maxCost: net === "mainnet" ? settings.maxCost : null,
     });
     rvAt = curTk()?.at ?? 0;
     const ag = $<HTMLInputElement>("agree");
@@ -422,6 +468,10 @@ export function startApp(opts: AppOptions = {}) {
     }
     $("edit").onclick = () => showView("build");
     $<HTMLButtonElement>("confirm").onclick = () => void doConfirm();
+    const chk = document.getElementById("checkOrder") as HTMLButtonElement | null;
+    if (chk) chk.onclick = () => void doCheckOrder();
+    const mk = document.getElementById("newSubBtn");
+    if (mk) mk.onclick = () => void openDepositSheet("new");
     const tip = $("tip"), chart = $("chart"), ch = chartSvg(q.quote);
     chart.querySelectorAll<SVGRectElement>("rect").forEach(
       (r) =>
@@ -479,9 +529,29 @@ export function startApp(opts: AppOptions = {}) {
     }, 1000);
   }
 
+  /** Sign both legs and send them ONLY to private/order_debug: proves signatures with zero risk. */
+  async function doCheckOrder() {
+    const q = quote().quote, s = sub(), signer = orderSigner();
+    const out = document.getElementById("checkStep");
+    const say = (t: string) => {
+      if (out) out.textContent = t;
+    };
+    if (!q || !s || !signer || W.st !== "on") return say("Connect your wallet and pick a subaccount first");
+    say(signer.silent ? "Checking with your one-tap key…" : "Sign the two check orders in your wallet (nothing is traded)…");
+    try {
+      const r = await debugSpread(new ReadOnlyRpc(client), signer, NETWORKS[net], s.id, q);
+      const ok = r.every((x) => x.ok);
+      say(ok ? `Derive verified both signatures on ${NETWORKS[net].name.toLowerCase()}. No order was sent.` : "Check failed: " + r.map((x) => `${x.instrument}: ${x.error ?? (x.exchangeHash === x.ourDigest ? "signer mismatch" : "hash mismatch")}`).join(" · "));
+      if (out) out.dataset.ok = String(ok);
+    } catch (e) {
+      say("Check failed: " + friendlyWalletError(e).message);
+    }
+  }
+
   async function doConfirm() {
     const c = confirmInput(), q = quote().quote, s = sub();
-    if (!c.enabled || !q || !s || !W.signer) return;
+    const signer = orderSigner();
+    if (!c.enabled || !q || !s || !signer) return;
     R.busy = true;
     R.step = "";
     setConfirm();
@@ -492,10 +562,10 @@ export function startApp(opts: AppOptions = {}) {
     };
     let res: SpreadResult;
     try {
-      res = await placeSpread({ rpc: client, signer: W.signer, net: NETWORKS[net], subaccountId: s.id, now }, q, step);
+      res = await placeSpread({ rpc: client, signer, net: NETWORKS[net], subaccountId: s.id, now }, q, step);
     } catch (e) {
       R.busy = false;
-      step("Not sent: " + (e instanceof Error ? e.message : String(e)));
+      step("Not sent: " + friendlyWalletError(e).message);
       setConfirm();
       return;
     }
@@ -518,7 +588,7 @@ export function startApp(opts: AppOptions = {}) {
   const port = $("portfolio");
   let portMsg = "";
   function renderPortfolio() {
-    port.innerHTML = portfolioHtml(sub(), NETWORKS[net].name, W.st === "on");
+    port.innerHTML = portfolioHtml(sub(), NETWORKS[net].name, W.st === "on", { mainnet: net === "mainnet", maxCost: settings.maxCost });
     const st = (t: string) => {
       portMsg = t; // survives the re-render that follows every refresh
       const el = document.getElementById("portStep");
@@ -546,12 +616,35 @@ export function startApp(opts: AppOptions = {}) {
       if (!i || !t) throw new Error("no market data for " + name);
       return { i, t };
     };
-    const ctx = () => ({ rpc: client, signer: W.signer!, net: NETWORKS[net], subaccountId: W.sel!, now });
+    const killBtn = document.getElementById("cancelAll") as HTMLButtonElement | null;
+    if (killBtn)
+      killBtn.onclick = async () => {
+        killBtn.disabled = true;
+        st("Cancelling every open order…");
+        try {
+          await client.call("private/cancel_all", { subaccount_id: W.sel });
+          st("All open orders cancelled");
+        } catch (e) {
+          st("Cancel all failed: " + (e as Error).message);
+        }
+        await loadSubs();
+      };
+    const capIn = document.getElementById("maxCostIn") as HTMLInputElement | null;
+    const capSave = document.getElementById("maxCostSave");
+    if (capIn && capSave)
+      capSave.onclick = () => {
+        settings.maxCost = parseMaxCost(capIn.value);
+        if (settings.maxCost === null) storage?.removeItem(MAX_COST_STORAGE_KEY);
+        else storage?.setItem(MAX_COST_STORAGE_KEY, String(settings.maxCost));
+        st(settings.maxCost === null ? "Mainnet limit off" : `Mainnet trades are limited to ${money(settings.maxCost)} each`);
+        renderPortfolio();
+      };
+    const ctx = () => ({ rpc: client, signer: orderSigner()!, net: NETWORKS[net], subaccountId: W.sel!, now });
     port.querySelectorAll<HTMLButtonElement>("[data-close]").forEach(
       (b) =>
         (b.onclick = async () => {
           const name = b.dataset.close!, p = sub()?.positions.find((x) => x.instrument === name);
-          if (!p || !W.signer) return;
+          if (!p || !orderSigner()) return;
           if (net === "mainnet" && !window.confirm("Close this position with real money on mainnet?")) return;
           b.disabled = true;
           st("Sign the closing order in your wallet");
@@ -570,7 +663,7 @@ export function startApp(opts: AppOptions = {}) {
         (b.onclick = async () => {
           const names = b.dataset.closeSpread!.split("|");
           const ps = names.map((n) => sub()?.positions.find((x) => x.instrument === n));
-          if (ps.some((p) => !p) || !W.signer) return;
+          if (ps.some((p) => !p) || !orderSigner()) return;
           if (net === "mainnet" && !window.confirm("Close this spread with real money on mainnet?")) return;
           b.disabled = true;
           st("Sign the closing orders in your wallet");
@@ -586,6 +679,31 @@ export function startApp(opts: AppOptions = {}) {
     );
   }
 
+  // ---------- history ----------
+  const hist = $("history");
+  const H = { spreads: [] as ClosedSpread[], singles: [] as LegSummary[], trades: [] as TradeRow[], orders: [] as OrderRow[], loading: false, error: null as string | null, sub: null as number | null };
+  function renderHistory() {
+    hist.innerHTML = historyHtml({ connected: W.st === "on", netName: NETWORKS[net].name, subId: W.sel, spreads: H.sub === W.sel ? H.spreads : [], closedSingles: H.sub === W.sel ? H.singles : [], trades: H.sub === W.sel ? H.trades : [], orders: H.sub === W.sel ? H.orders : [], loading: H.loading, error: H.error });
+  }
+  async function loadHistory() {
+    if (W.st !== "on" || W.sel === null) return renderHistory();
+    const id = W.sel, g = gen;
+    H.loading = true;
+    H.error = null;
+    renderHistory();
+    try {
+      const [t, o] = await Promise.all([client.call("private/get_trade_history", { subaccount_id: id, page_size: 200 }), client.call("private/get_order_history", { subaccount_id: id, page_size: 100 })]);
+      if (g !== gen) return;
+      const trades = parseTrades(t);
+      const cs = closedSpreads(trades);
+      Object.assign(H, { trades, orders: parseOrders(o), spreads: cs.spreads, singles: cs.closedSingles, sub: id });
+    } catch (e) {
+      H.error = "Could not load history: " + (e as Error).message;
+    }
+    H.loading = false;
+    if (view === "history") renderHistory();
+  }
+
   // ---------- views ----------
   function showView(v: View) {
     closePop();
@@ -594,8 +712,9 @@ export function startApp(opts: AppOptions = {}) {
     rv.hidden = v !== "review";
     $("done").hidden = v !== "done";
     port.hidden = v !== "portfolio";
+    hist.hidden = v !== "history";
     $("buy").hidden = $("dockSep").hidden = v !== "build";
-    document.querySelectorAll<HTMLElement>(".x-ic").forEach((b) => b.classList.toggle("is-on", b.dataset.view === (v === "portfolio" ? "portfolio" : "build")));
+    document.querySelectorAll<HTMLElement>(".x-ic").forEach((b) => b.classList.toggle("is-on", b.dataset.view === (v === "portfolio" || v === "history" ? v : "build")));
     if (cdTimer && v !== "review") {
       clearInterval(cdTimer);
       cdTimer = null;
@@ -613,6 +732,10 @@ export function startApp(opts: AppOptions = {}) {
       renderPortfolio();
       void loadSubs();
     }
+    if (v === "history") {
+      renderHistory();
+      void loadHistory();
+    }
     window.scrollTo(0, 0);
   }
   function refresh() {
@@ -628,34 +751,45 @@ export function startApp(opts: AppOptions = {}) {
     (b) =>
       (b.onclick = (e) => {
         e.stopPropagation();
-        showView(b.dataset.view === "portfolio" ? "portfolio" : "build");
+        const v = b.dataset.view;
+        showView(v === "portfolio" || v === "history" ? v : "build");
       }),
   );
 
   // ---------- wallet ----------
+  const isMain = () => net === "mainnet";
   function renderBal() {
     const s = sub();
-    const t: Record<WalletSt, string> = { none: "Connect wallet", busy: "Signing in…", reconnect: "Reconnect wallet", nosub: "No Derive subaccount on this network", err: W.msg, on: "" };
+    const t: Record<WalletSt, string> = { none: "Connect wallet", busy: "Signing in…", reconnect: "Reconnect wallet", nosub: "No Derive subaccount on this network", noaccount: "Open a Derive account", err: W.msg, on: "" };
     $("bal").textContent = W.st === "on" ? (s ? usd2(s.value) : "Pick a subaccount") : t[W.st];
-    $("balNet").textContent = W.st === "on" && s ? `${NETWORKS[net].name} · #${s.id}${s.riskUniverse !== null ? " · RU" + s.riskUniverse : ""}` : "";
-    $("balBtn").setAttribute("aria-label", W.st === "on" && s ? `Derive balance ${usd2(s.value)}, ${NETWORKS[net].name} subaccount ${s.id}` : $("bal").textContent ?? "");
+    const tap = W.session && sessionKeyUsable(W.session.expirySec, now()) ? " · one-tap" : "";
+    $("balNet").innerHTML = W.st === "on" && s ? `${h(NETWORKS[net].name)} · #${s.id}${s.riskUniverse !== null ? " · RU" + s.riskUniverse : ""}${tap}${isMain() ? '<span class="x-chip-real">REAL MONEY</span>' : ""}` : isMain() ? '<span class="x-chip-real">REAL MONEY</span>' : "";
+    $("balBtn").setAttribute("aria-label", W.st === "on" && s ? `Derive balance ${usd2(s.value)}, ${NETWORKS[net].name} subaccount ${s.id}${isMain() ? ", real money" : ""}` : ($("bal").textContent ?? ""));
+    document.body.classList.toggle("is-mainnet", isMain());
+  }
+  function forgetSession() {
+    W.session = null; // the private key is dropped with the object
+    W.tap = null;
   }
   function walletLost() {
     const had = W.st === "on" || W.st === "nosub" || W.st === "reconnect";
     W.signer = null;
+    forgetSession();
     W.subs = [];
     W.sel = null;
     W.st = had ? "reconnect" : "none";
     renderBal();
     if (view === "review") renderReview();
     if (view === "portfolio") renderPortfolio();
+    if (view === "history") renderHistory();
   }
   let errT: ReturnType<typeof setTimeout> | null = null;
   function flashErr(e: unknown) {
     W.signer = null;
+    forgetSession();
     W.subs = [];
     W.sel = null;
-    W.msg = (e as { message?: string })?.message || String(e);
+    W.msg = friendlyWalletError(e).message;
     W.st = "err";
     renderBal();
     if (errT) clearTimeout(errT);
@@ -667,15 +801,19 @@ export function startApp(opts: AppOptions = {}) {
     }, 4000);
   }
   const sheet = $("sheet"), sheetBody = $("sheetBody");
+  let sheetGen = 0;
   function closeSheet() {
+    sheetGen++;
     sheet.hidden = true;
     $("balBtn").focus();
   }
   function openSheet(html: string) {
+    sheetGen++;
     sheetBody.innerHTML = html + '<div class="x-sheet__btns"><button class="x-edit" type="button" id="sheetClose">Close</button></div>';
     sheet.hidden = false;
     $("sheetClose").onclick = closeSheet;
     ((sheetBody.querySelector("input, .x-buy, select") as HTMLElement | null) ?? $("sheetClose")).focus();
+    return sheetGen;
   }
   sheet.onclick = (e) => {
     if (e.target === sheet) closeSheet();
@@ -684,11 +822,39 @@ export function startApp(opts: AppOptions = {}) {
     if (e.key === "Escape" && !sheet.hidden) closeSheet();
   });
 
+  let listening = false;
+  function listenWallet(p: Eip1193) {
+    const ev = p as Eip1193 & { on?: (e: string, f: (x: unknown) => void) => void };
+    if (listening || typeof ev.on !== "function") return;
+    listening = true;
+    // a different account in the wallet must never keep trading as the old one
+    ev.on("accountsChanged", (a) => {
+      const next = Array.isArray(a) && typeof a[0] === "string" ? a[0].toLowerCase() : "";
+      if (W.account && next !== W.account.toLowerCase()) {
+        W.st = W.st === "none" ? "none" : "reconnect";
+        W.signer = null;
+        forgetSession();
+        W.subs = [];
+        W.sel = null;
+        W.account = "";
+        renderBal();
+        toast("Wallet account changed · connect again");
+        if (view !== "build") showView("build");
+      }
+    });
+  }
+
   async function openWallet() {
     if (W.st === "busy") return;
     if (W.st === "on") return openSubSheet();
+    if (W.st === "noaccount" && W.provider) return void openDepositSheet("new");
     const p = eth();
-    if (!p) return openSheet("<h2>No wallet found</h2><p>Open this page in a browser with MetaMask, Rabby or another injected wallet to trade on Derive.</p>");
+    if (!p) {
+      const here = location.host + location.pathname;
+      return void openSheet(
+        `<h2>No wallet found</h2><p>Open this page in a browser with MetaMask, Rabby or another injected wallet to trade on Derive.</p><p>On a phone: <a id="mmLink" href="https://metamask.app.link/dapp/${h(here)}" rel="noopener">open it in the MetaMask app</a>.</p>`,
+      );
+    }
     let accounts: unknown;
     try {
       accounts = await p.request({ method: "eth_requestAccounts" });
@@ -697,8 +863,9 @@ export function startApp(opts: AppOptions = {}) {
     }
     const acct = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
     if (!acct) return flashErr(new Error("No account shared by the wallet"));
+    listenWallet(p);
     openSheet(
-      `<h2>Sign in to Derive ${h(NETWORKS[net].name.toLowerCase())}</h2><p>Signing in proves you own the wallet. It never sends an order. Orders are only sent when you press Confirm, and each one is signed in your wallet.</p><label for="walletIn">Derive wallet address</label><input id="walletIn" autocomplete="off" spellcheck="false"><div class="x-sheet__btns" style="margin-bottom:8px"><button class="x-buy" type="button" id="signIn">Sign in</button></div>`,
+      `<h2>Sign in to Derive ${h(NETWORKS[net].name.toLowerCase())}</h2><p>Signing in proves you own the wallet. It never sends an order. Orders are only sent when you press Confirm.</p><label for="walletIn">Derive wallet address</label><input id="walletIn" autocomplete="off" spellcheck="false"><div class="x-sheet__btns" style="margin-bottom:8px"><button class="x-buy" type="button" id="signIn">Sign in</button></div>`,
     );
     $<HTMLInputElement>("walletIn").value = acct;
     $("signIn").onclick = () => void signIn(p, acct, $<HTMLInputElement>("walletIn").value.trim());
@@ -706,11 +873,18 @@ export function startApp(opts: AppOptions = {}) {
 
   function openSubSheet() {
     const ru = assetRU();
+    const s = sub();
     const opts = W.subs
-      .map((s) => `<option value="${s.id}"${s.id === W.sel ? " selected" : ""}>#${s.id} · ${h(usd2(s.value))} · RU${s.riskUniverse ?? "?"}${s.riskUniverse === ru ? " · " + h(S.asset) : ""}</option>`)
+      .map((x) => `<option value="${x.id}"${x.id === W.sel ? " selected" : ""}>#${x.id} · ${h(usd2(x.value))} · RU${x.riskUniverse ?? "?"}${x.riskUniverse === ru ? " · " + h(S.asset) : ""}</option>`)
       .join("");
+    const live = W.session && sessionKeyUsable(W.session.expirySec, now());
+    const tapRow = live
+      ? `<div class="x-tap" id="tapState"><span>One-tap trading on until ${h(new Date(W.session!.expirySec * 1000).toISOString().slice(11, 16))} UTC</span><button class="x-edit x-small" type="button" id="tapOff">Turn off</button></div>`
+      : `<div class="x-tap" id="tapState"><span>One-tap trading is off · every order asks your wallet</span><button class="x-edit x-small" type="button" id="tapEnable">Enable</button></div>`;
     openSheet(
-      `<h2>Subaccount</h2><p>${h(S.asset)} options trade in risk universe ${ru ?? "?"}.</p><label for="subSheet">Subaccount</label><select id="subSheet" class="x-pick">${opts}</select><div class="x-sheet__btns" style="margin:12px 0 8px"><button class="x-edit" type="button" id="signOut">Disconnect</button></div>`,
+      `<h2>Subaccount</h2><p>${h(S.asset)} options trade in risk universe ${ru ?? "?"}${ruName(ru) ? " (" + h(ruName(ru)) + ")" : ""}.</p><label for="subSheet">Subaccount</label><select id="subSheet" class="x-pick">${opts}</select>` +
+        tapRow +
+        `<div class="x-sheet__btns" style="margin:12px 0 8px;flex-wrap:wrap"><button class="x-edit" type="button" id="depBtn"${s ? "" : " disabled"}>Deposit</button><button class="x-edit" type="button" id="wdBtn"${s ? "" : " disabled"}>Withdraw</button><button class="x-edit" type="button" id="newSub">New ${h(S.asset)} subaccount</button><button class="x-edit x-kill" type="button" id="killAll"${s ? "" : " disabled"}>Cancel all orders</button><button class="x-edit" type="button" id="signOut">Disconnect</button></div><p class="x-step" id="subStep" role="status"></p>`,
     );
     const sel = $<HTMLSelectElement>("subSheet");
     sel.onchange = () => {
@@ -718,14 +892,279 @@ export function startApp(opts: AppOptions = {}) {
       renderBal();
       refresh();
     };
-    $("signOut").onclick = () => {
-      W.st = "none";
-      W.signer = null;
-      W.subs = [];
-      W.sel = null;
-      renderBal();
-      closeSheet();
-      refresh();
+    $("depBtn").onclick = () => void openDepositSheet("existing");
+    $("wdBtn").onclick = () => openWithdrawSheet();
+    $("newSub").onclick = () => void openDepositSheet("new");
+    $("killAll").onclick = async () => {
+      const say = (t: string) => ($("subStep").textContent = t);
+      try {
+        await client.call("private/cancel_all", { subaccount_id: W.sel });
+        say(`All open orders on #${W.sel} cancelled`);
+        void loadSubs();
+      } catch (e) {
+        say("Cancel all failed: " + (e as Error).message);
+      }
+    };
+    const on = document.getElementById("tapEnable");
+    if (on) on.onclick = () => openOneTapSheet();
+    const off = document.getElementById("tapOff");
+    if (off) off.onclick = () => void revokeTap($("subStep")).then(() => openSubSheet());
+    $("signOut").onclick = () => void disconnect();
+  }
+
+  async function revokeTap(out: HTMLElement | null): Promise<void> {
+    const h0 = W.session;
+    if (!h0 || !W.signer) return forgetSession();
+    if (out) out.textContent = "Sign in your wallet to revoke the one-tap key…";
+    try {
+      await revokeSessionKey(client, W.signer, h0, now());
+      if (out) out.textContent = "One-tap key revoked (Derive retires it within 6 minutes)";
+      toast("One-tap key revoked");
+    } catch (e) {
+      if (out) out.textContent = "Not revoked (" + friendlyWalletError(e).message + "). The key is forgotten here and expires on its own.";
+    }
+    forgetSession();
+    renderBal();
+  }
+
+  async function disconnect() {
+    if (W.session) await revokeTap(document.getElementById("subStep"));
+    W.st = "none";
+    W.signer = null;
+    forgetSession();
+    W.subs = [];
+    W.sel = null;
+    W.provider = null;
+    renderBal();
+    closeSheet();
+    refresh();
+    if (view === "portfolio" || view === "history") showView(view);
+  }
+
+  function openOneTapSheet() {
+    const ids = W.subs.filter((x) => x.riskUniverse !== 0 && x.value > 0).map((x) => x.id);
+    const subIds = ids.length ? ids : W.sel !== null ? [W.sel] : [];
+    if (!subIds.length || !W.signer) return;
+    openSheet(oneTapHtml({ subIds, hours: Math.round(SESSION_TTL_SEC / 3600), mainnet: isMain() }));
+    $("tapLater").onclick = closeSheet;
+    $("tapOn").onclick = async () => {
+      const say = (t: string) => ($("tapStep").textContent = t);
+      ($("tapOn") as HTMLButtonElement).disabled = true;
+      say("Sign once in your wallet…");
+      try {
+        const hnd = await registerSessionKey(client, W.signer!, subIds, now());
+        W.session = hnd;
+        W.tap = sessionSigner(hnd, W.signer!.owner, NETWORKS[net], now);
+        renderBal();
+        toast("One-tap trading on");
+        closeSheet();
+        refresh();
+      } catch (e) {
+        ($("tapOn") as HTMLButtonElement).disabled = false;
+        say("Not enabled: " + friendlyWalletError(e).message);
+      }
+    };
+  }
+
+  // ---------- deposit / withdraw ----------
+  const ethUsd = () => perp.ETH?.index ?? currencies.ETH?.spot ?? null;
+  function gasText(wei: bigint, approx: boolean): string {
+    const eth = Number(wei) / 1e18;
+    const usd = ethUsd();
+    return `${approx ? "about " : "≈ "}${eth < 0.0001 ? eth.toExponential(2) : eth.toFixed(5)} ETH${usd ? ` (${usd2(eth * usd)})` : ""} paid to the network from your wallet`;
+  }
+
+  async function openDepositSheet(mode: "new" | "existing") {
+    const p = W.provider, owner = W.signer?.owner ?? W.owner, from = W.account;
+    if (!p || !owner || !from) return;
+    const NET = NETWORKS[net];
+    const target = sub();
+    const ru = assetRU();
+    let route: { managerId: number; collateral: ReturnType<typeof collateralFor> };
+    try {
+      if (!universes.length) universes = parseRiskUniverses(await client.call("public/get_risk_universes", {}));
+      if (mode === "new") {
+        if (ru === null) throw new Error(`No risk universe lists ${S.asset} options`);
+        route = depositRoute(universes, NET, ru);
+      } else {
+        if (!target || target.managerId === null) throw new Error("Pick a subaccount first");
+        route = { managerId: target.managerId, collateral: collateralFor(universes, NET, target.managerId) };
+      }
+    } catch (e) {
+      openSheet(`<h2>Deposit</h2><p class="x-warn">${h((e as Error).message)}</p>`);
+      return;
+    }
+    const c = route.collateral;
+    const my = openSheet(depositSheetHtml({ mode, netName: NET.name, mainnet: isMain(), asset: S.asset, riskUniverse: ru, riskUniverseName: ruName(ru), subId: target?.id ?? null, walletUsdc: null, minDeposit: c.minDepositUsd, noAccount: W.st === "noaccount" }));
+    const live = () => my === sheetGen;
+    const amt = $<HTMLInputElement>("depAmt"), go = $<HTMLButtonElement>("depGo"), step = $("depStep");
+    const real = document.getElementById("depReal") as HTMLInputElement | null;
+    let walletUnits: bigint | null = null;
+    let plan: DepositPlan | null = null;
+    let phase: "input" | "review" | "sending" | "sent" = "input";
+    const before = W.subs.map((x) => x.id);
+    const v0 = target?.value ?? 0;
+    const sync = () => {
+      if (phase === "input") {
+        const r = checkDepositAmount(amt.value, c, walletUnits);
+        go.disabled = !r.ok;
+        go.textContent = "Review deposit";
+        step.textContent = amt.value.trim() && !r.ok ? r.reason! : "";
+      } else if (phase === "review") {
+        const phraseOk = !isMain() || (real?.value.trim().toUpperCase() ?? "") === MAINNET_PHRASE;
+        go.disabled = !phraseOk;
+        go.textContent = !phraseOk ? `Type ${MAINNET_PHRASE} to deposit` : plan && plan.steps.length > 1 ? (isMain() ? "Approve and deposit real money" : "Approve and deposit") : isMain() ? "Deposit real money" : "Deposit";
+      }
+    };
+    amt.oninput = () => {
+      if (phase === "review") {
+        phase = "input";
+        plan = null;
+        $("depPlan").innerHTML = "";
+      }
+      sync();
+    };
+    if (real) real.oninput = sync;
+    try {
+      await ensureChain(p, NET.chainId); // reads on the wrong chain would show the wrong balance
+      walletUnits = await readToken(p, c.erc20, calldata.balanceOf(from));
+      if (!live()) return;
+      $("depWallet").textContent = `In your wallet: ${fromUnits(walletUnits, c.decimals)} USDC`;
+    } catch (e) {
+      if (!live()) return;
+      $("depWallet").textContent = "Could not read your wallet: " + friendlyWalletError(e).message;
+    }
+    sync();
+    const steps = (states: ("todo" | "now" | "done")[], hashes: string[], gas: string | null) =>
+      ($("depPlan").innerHTML = planHtml(plan!.steps.map((x, i) => ({ label: x.label, state: states[i]!, hash: hashes[i], explorer: NET.explorer })), gas));
+    let gasLine: string | null = null;
+    go.onclick = async () => {
+      if (phase === "input") {
+        go.disabled = true;
+        step.textContent = "Preparing…";
+        try {
+          plan = await planDeposit(p, NET, from, c, route.managerId, amt.value, mode === "new" ? { kind: "new", managerId: route.managerId, owner } : { kind: "existing", subaccountId: target!.id, fallback: owner });
+          const g = await estimateDepositGas(p, plan);
+          gasLine = gasText(g.totalWei, g.approximate);
+          if (!live()) return;
+          phase = "review";
+          steps(plan.steps.map(() => "todo"), [], gasLine);
+          step.textContent = isMain() ? "Check the amount and network fee. This moves real money." : "";
+        } catch (e) {
+          step.textContent = friendlyWalletError(e).message;
+        }
+        return sync();
+      }
+      if (phase !== "review" || !plan) return;
+      phase = "sending";
+      go.disabled = true;
+      amt.disabled = true;
+      const st = plan.steps.map(() => "todo" as "todo" | "now" | "done"), hs: string[] = [];
+      try {
+        for (let i = 0; i < plan.steps.length; i++) {
+          st[i] = "now";
+          steps(st, hs, gasLine);
+          step.textContent = `Confirm step ${i + 1} of ${plan.steps.length} in your wallet`;
+          const hash = await sendStep(p, NET, from, plan.steps[i]!);
+          hs[i] = hash;
+          steps(st, hs, gasLine);
+          step.textContent = "Waiting for the transaction to be mined…";
+          await waitReceipt(p, hash);
+          st[i] = "done";
+          steps(st, hs, gasLine);
+        }
+      } catch (e) {
+        phase = "review";
+        amt.disabled = false;
+        step.textContent = "Stopped: " + friendlyWalletError(e).message;
+        return sync();
+      }
+      phase = "sent";
+      go.hidden = true;
+      step.textContent = "Deposit confirmed on-chain. Derive credits it after about 2 minutes of confirmations.";
+      if (W.st === "noaccount") {
+        step.insertAdjacentHTML("afterend", `<div class="x-sheet__btns" style="margin:8px 0"><button class="x-buy" type="button" id="depSignIn">Sign in to your new account</button></div><p class="x-step" id="depPending"></p>`);
+        $("depSignIn").onclick = () => void signIn(p, from, owner);
+        void pollPending(owner, live);
+        return;
+      }
+      // signed in: wait for the credit, then refresh
+      for (let i = 0; i < 90 && live(); i++) {
+        try {
+          const r = await client.call<{ subaccount_ids?: number[] }>("private/get_subaccounts", { wallet: owner });
+          const ids = r?.subaccount_ids ?? [];
+          let done = mode === "new" ? ids.some((id) => !before.includes(id)) : false;
+          if (mode === "existing" && target) {
+            const x = parseSubaccount(await client.call("private/get_subaccount", { subaccount_id: target.id }));
+            done = !!x && x.value > v0 + 1e-9;
+          }
+          if (done) {
+            await loadSubs();
+            if (mode === "new") {
+              const fresh = W.subs.filter((x) => !before.includes(x.id) && x.riskUniverse === ru);
+              if (fresh[0]) W.sel = fresh[0].id;
+              renderBal();
+            }
+            if (live()) step.textContent = "Credited. Your balance is updated.";
+            return;
+          }
+        } catch {
+          /* keep polling */
+        }
+        await new Promise((r) => setTimeout(r, i < 3 ? 1500 : 10_000));
+      }
+    };
+  }
+
+  async function pollPending(owner: string, live: () => boolean) {
+    for (let i = 0; i < 60 && live(); i++) {
+      try {
+        const r = await client.call<{ pending_deposits?: { status?: string }[] }>("public/get_pending_deposits", { wallet: owner });
+        const list = r?.pending_deposits ?? [];
+        const el = document.getElementById("depPending");
+        if (el) el.textContent = list.length ? `Derive sees your deposit: ${list.map((d) => d.status ?? "pending").join(", ")}` : "Waiting for Derive to see the deposit…";
+        if (list.some((d) => d.status && d.status !== "pending")) return;
+      } catch {
+        /* public call; keep trying */
+      }
+      await new Promise((r) => setTimeout(r, i < 3 ? 1500 : 10_000));
+    }
+  }
+
+  function openWithdrawSheet() {
+    const s = sub();
+    if (!s || !W.signer || s.managerId === null) return;
+    let c: ReturnType<typeof collateralFor>;
+    try {
+      c = collateralFor(universes, NETWORKS[net], s.managerId);
+    } catch (e) {
+      openSheet(`<h2>Withdraw</h2><p class="x-warn">${h((e as Error).message)}</p>`);
+      return;
+    }
+    openSheet(withdrawSheetHtml({ subId: s.id, balance: s.value, owner: W.signer.owner, mainnet: isMain(), netName: NETWORKS[net].name }));
+    const amt = $<HTMLInputElement>("wdAmt"), go = $<HTMLButtonElement>("wdGo"), out = $("wdStep");
+    const real = document.getElementById("wdReal") as HTMLInputElement | null;
+    const sync = () => {
+      const n = Number(amt.value);
+      const okAmt = /^\d+(\.\d{1,6})?$/.test(amt.value.trim()) && n > 0 && n <= s.value;
+      const okPhrase = !isMain() || (real?.value.trim().toUpperCase() ?? "") === MAINNET_PHRASE;
+      go.disabled = !okAmt || !okPhrase;
+      go.textContent = !okPhrase && okAmt ? `Type ${MAINNET_PHRASE} to withdraw` : isMain() ? "Withdraw real money" : "Withdraw";
+    };
+    amt.oninput = sync;
+    if (real) real.oninput = sync;
+    sync();
+    go.onclick = async () => {
+      go.disabled = true;
+      out.textContent = "Sign the withdrawal in your wallet…";
+      try {
+        const r = (await withdraw(client, W.signer!, { subaccountId: s.id, collateral: c, amount: amt.value.trim(), recipient: W.signer!.owner, maxFeeUsd: "1" }, now())) as { operation_id?: unknown; op_uuid?: unknown };
+        out.textContent = `Withdrawal accepted · operation ${String(r?.op_uuid ?? r?.operation_id ?? "")}. It is paid to your wallet when Derive settles the batch.`;
+        void loadSubs();
+      } catch (e) {
+        go.disabled = false;
+        out.textContent = "Withdrawal failed: " + friendlyWalletError(e).message;
+      }
     };
   }
 
@@ -739,6 +1178,9 @@ export function startApp(opts: AppOptions = {}) {
       return flashErr(e);
     }
     W.st = "busy";
+    W.provider = p;
+    W.account = account;
+    W.owner = signer.owner;
     renderBal();
     const g = gen;
     try {
@@ -747,10 +1189,18 @@ export function startApp(opts: AppOptions = {}) {
       await client.call("public/login", { wallet: signer.owner, timestamp: ts, signature: sig });
       if (g !== gen) return;
       W.signer = signer;
-      W.account = account;
       await loadSubs(true);
     } catch (e) {
-      if (g === gen) flashErr(e);
+      if (g !== gen) return;
+      if (isNoAccount(e)) {
+        // a wallet that never deposited: guide it through the first deposit
+        W.st = "noaccount";
+        W.signer = null;
+        renderBal();
+        void openDepositSheet("new");
+        return;
+      }
+      flashErr(e);
     }
   }
 
@@ -778,6 +1228,12 @@ export function startApp(opts: AppOptions = {}) {
       renderBal();
       if (view === "review" && !R.busy) renderReview();
       if (view === "portfolio") renderPortfolio();
+      if (first && W.st === "on" && !W.session && !W.tapAsked && sheet.hidden) {
+        W.tapAsked = true;
+        const ru = assetRU();
+        if (subs.some((s) => s.riskUniverse === ru)) openOneTapSheet();
+        else void openDepositSheet("new"); // signed in, but nothing in this asset's universe yet
+      }
     } catch (e) {
       if (g === gen) flashErr(e);
     }
@@ -789,16 +1245,26 @@ export function startApp(opts: AppOptions = {}) {
 
   // ---------- network ----------
   function connect() {
-    const url = opts.wsOverride || NETWORKS[net].wsUrl;
+    // e2e builds only: the mock is told which network the app thinks it is on
+    const url = opts.wsOverride ? `${opts.wsOverride}${opts.wsOverride.includes("?") ? "&" : "?"}net=${net}` : NETWORKS[net].wsUrl;
     client = new DeriveClient(url, {
+      // after a dropped connection, a live one-tap key logs back in silently (no wallet prompt)
+      onOpen: async (c) => {
+        const k = W.tap, hnd = W.session;
+        if (!k || !hnd || !sessionKeyUsable(hnd.expirySec, now()) || W.st !== "on") return;
+        const ts = String(now());
+        await c.callRaw("public/login", { wallet: k.owner, timestamp: ts, signature: await k.signLogin(ts) });
+      },
       onStatus: (s) => {
         wsStatus = s;
-        if (s === "closed" && W.signer) walletLost();
+        if (s === "closed" && W.signer && !(W.session && sessionKeyUsable(W.session.expirySec, now()))) walletLost();
         if (s === "open") {
           loadCurrencies();
+          loadUniverses();
           ASSETS.forEach(loadPerp);
           if (!inst[S.asset]) loadInstruments(S.asset);
           if (S.expiryKey) fetchTk(S.asset, S.expiryKey, true);
+          if (W.st === "on" && W.session) void loadSubs();
         }
         renderLive();
       },
@@ -871,7 +1337,7 @@ export function startApp(opts: AppOptions = {}) {
   renderBuilder();
 
   // test hook: lets e2e read state without scraping
-  (window as unknown as { __peo?: unknown }).__peo = { state: () => ({ S, net, view, wallet: { st: W.st, sel: W.sel }, q: quote() }) };
+  (window as unknown as { __peo?: unknown }).__peo = { state: () => ({ S, net, view, wallet: { st: W.st, sel: W.sel, oneTap: !!W.session, sessionKey: W.session?.address ?? null }, q: quote(), maxCost: settings.maxCost }) };
 }
 
 export { money };
