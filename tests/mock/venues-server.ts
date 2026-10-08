@@ -2,7 +2,7 @@
 //   POST /hl/<net>/<sid>/info | /exchange      Hyperliquid (tests/mock/hyperliquid.ts)
 //   POST /hl/<net>/<sid>/mock/credit           side channel: a CCTP deposit landing {user, usdc}
 //   GET  /hl/<net>/<sid>/mock/state            side channel: the mock's state (agents, log, withdrawals)
-//   …/veranta/… is added by tests/mock/veranta.ts when present
+//   POST /vr/<net>/<sid>/<method>               Veranta (tests/mock/veranta.ts), GET …/mock/state
 // State is per (venue, net, sid), so parallel Playwright tests never share an account.
 //
 //   node --experimental-strip-types tests/mock/venues-server.ts [port]
@@ -10,9 +10,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { hlCredit, hlExchange, hlInfo, newHlState, HL_RECORDED_AT, type HlMockState, type Net } from "./hyperliquid.ts";
 import { TEST_ADDRESS, TEST_START_USDC } from "./venue-constants.ts";
+import { verantaRoute } from "./veranta.ts";
 
 type Extra = (path: string[], body: unknown, method: string) => Promise<unknown> | unknown;
-const extras: Record<string, Extra> = {};
+const extras: Record<string, Extra> = { vr: verantaRoute };
 export function registerVenue(prefix: string, f: Extra) {
   extras[prefix] = f;
 }
