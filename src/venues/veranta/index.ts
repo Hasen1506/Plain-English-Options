@@ -39,6 +39,7 @@ export function createVerantaVenue(host: VerantaHost) {
   const prices: Record<number, number> = {};
   let tk: Record<string, PerpTicker> = {};
   let focused = "ETH-PERP";
+  let primed: string[] = []; // markets the open list wants priced (Veranta prices pair by pair)
   let liveAt = 0;
   let positions: VPosition[] = [];
   let limits: ReturnType<typeof limitsFrom> = [];
@@ -81,7 +82,7 @@ export function createVerantaVenue(host: VerantaHost) {
       pairs = await A().pairs();
       pairsAt = host.now();
     }
-    const want = new Set([focused, ...VERANTA_PRICED]);
+    const want = new Set([focused, ...VERANTA_PRICED, ...primed]);
     const idx = pairs.filter((p) => want.has(`${p.from}-PERP`) && p.to === "USD").map((p) => p.index);
     await Promise.all(idx.map((i) => A().price(i).then((px) => (prices[i] = px), () => null)));
     const r = marketsFrom(pairs, prices, host.now());
@@ -324,6 +325,17 @@ export function createVerantaVenue(host: VerantaHost) {
       return historyFrom(await A().history());
     },
     isPerp: (n) => /^[A-Z0-9]+-PERP$/.test(n),
+    prime(names) {
+      primed = names.slice(-60); // the rows on screen (newest last), bounded
+    },
+    async sparkline(name) {
+      const m = markets.get(name);
+      const sym = m ? pairs.find((p) => p.index === m.pairIndex)?.feed?.attributes?.symbol : undefined;
+      const a = A();
+      if (!sym || !a.candles) return [];
+      const end = Math.floor(host.now() / 1000);
+      return a.candles(sym, end - 86_400, end);
+    },
     sessionAddress: () => (practice ? practice.session : null),
     user: () => (practice ? practice.trader : null),
   };
