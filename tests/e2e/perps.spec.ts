@@ -26,7 +26,7 @@ test.describe("perps: markets and the plain-English builder", () => {
     await expect(page.locator("#perpMarkets tbody tr").nth(1)).toContainText("BTC");
     await expect(page.locator("#perpMarkets")).toContainText("/h");
     await expect(page.locator("#perpMarkets")).toContainText("/yr");
-    await expect(page.locator("#venuePick button")).toHaveCount(2); // Derive + Hyperliquid
+    await expect(page.locator("#venuePick button")).toHaveCount(3); // Derive + Hyperliquid + Veranta
     await expect(page.locator("#perpLiveTxt")).toContainText("Live · Derive testnet");
     await pill(page, "risk", "100");
     await pill(page, "lev", "5");
