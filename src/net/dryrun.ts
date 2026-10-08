@@ -6,7 +6,8 @@
 
 import { getAddress, recoverAddress } from "ethers";
 import type { Network } from "../config.ts";
-import type { Instrument, Ticker } from "../lib/ticker.ts";
+import type { Instrument, Ticker, Tradable } from "../lib/ticker.ts";
+import { signPerpEntry, type DeriveQuote } from "./perpTrader.ts";
 import { maxFeePerUnit, type SpreadQuote } from "../lib/spread.ts";
 import { digest, encodeTradeData, type ActionFields } from "./signing.ts";
 import type { ActionSigner } from "./signer.ts";
@@ -23,10 +24,30 @@ export const READ_ONLY_METHODS: ReadonlySet<string> = new Set([
   "private/get_subaccounts",
   "private/get_subaccount",
   "private/order_debug",
+  "public/get_funding_rate_history",
+  "private/get_margin",
+  "private/get_positions",
+  "private/get_trigger_orders",
+  "private/get_open_orders",
+  "private/get_trade_history",
+  "private/get_funding_history",
 ]);
 
 /** Methods that must never pass through a dry-run connection, whatever the allowlist says. */
-export const NEVER_IN_DRY_RUN: ReadonlySet<string> = new Set(["private/order", "private/replace", "private/send_rfq", "private/execute_quote", "private/withdraw", "private/transfer_erc20", "private/set_session_key"]);
+export const NEVER_IN_DRY_RUN: ReadonlySet<string> = new Set([
+  "private/order",
+  "private/replace",
+  "private/send_rfq",
+  "private/execute_quote",
+  "private/withdraw",
+  "private/transfer_erc20",
+  "private/set_session_key",
+  "private/cancel",
+  "private/cancel_all",
+  "private/cancel_trigger_order",
+  "private/cancel_all_trigger_orders",
+  "private/liquidate",
+]);
 
 export class DryRunViolation extends Error {
   constructor(method: string) {
@@ -58,7 +79,7 @@ export interface DebugReport {
   error: string | null;
 }
 
-function actionOf(o: SignedOrder, inst: Instrument, owner: string, net: Network): ActionFields {
+function actionOf(o: SignedOrder, inst: Tradable, owner: string, net: Network): ActionFields {
   return {
     subaccountId: Number(o.subaccount_id),
     nonce: String(o.nonce),
@@ -84,6 +105,17 @@ export async function debugOrder(rpc: ReadOnlyRpc, signer: ActionSigner, net: Ne
     { inst, direction: side, amount, limitPrice, maxFee: maxFeePerUnit(inst, t.index, Number(limitPrice), Number(amount)), tif: "gtc", label: "peo-check" },
     { rpc, signer, net, subaccountId },
   );
+  return debugSigned(rpc, signer, net, o, inst);
+}
+
+/** A perp order exactly as Confirm would send it (market IOC / limit / post-only), checked by private/order_debug only. */
+export async function debugPerp(rpc: ReadOnlyRpc, signer: ActionSigner, net: Network, subaccountId: number, q: DeriveQuote): Promise<DebugReport> {
+  const o = await signPerpEntry({ rpc, signer, net, subaccountId }, q, "peo-check");
+  return debugSigned(rpc, signer, net, o, q.inst);
+}
+
+export async function debugSigned(rpc: ReadOnlyRpc, signer: ActionSigner, net: Network, o: SignedOrder, inst: Tradable): Promise<DebugReport> {
+  if (!(rpc instanceof ReadOnlyRpc)) throw new Error("order checks need a ReadOnlyRpc connection");
   const ours = digest(actionOf(o, inst, signer.owner, net), net);
   try {
     const r = await rpc.call<Record<string, unknown>>("private/order_debug", o);
