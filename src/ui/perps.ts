@@ -83,7 +83,7 @@ export function createPerps(d: PerpDeps) {
       // isolated: only this position's margin (notional ÷ leverage) backs it
       const q = r.quote;
       const signed = q.side === "buy" ? q.n : -q.n;
-      const liq = liquidationPrice({ size: signed, price: q.entry, headroom: q.putIn - mmRequirement(q.inst, q.n, q.entry) - q.estFee, mmReq: q.inst.mmReq });
+      const liq = v.liquidationPrice ? v.liquidationPrice(q) : liquidationPrice({ size: signed, price: q.entry, headroom: q.putIn - mmRequirement(q.inst, q.n, q.entry) - q.estFee, mmReq: q.inst.mmReq });
       return { q: { ...q, liqPrice: liq, liqMove: moveTo(q.entry, liq) }, fail: null };
     }
     if (r.ok) return { q: r.quote, fail: null };
@@ -185,6 +185,7 @@ export function createPerps(d: PerpDeps) {
       ticker: tk[P.name] ?? null,
       asset: inst()?.currency ?? P.name,
       venueName: v.name,
+      connectLabel: v.connectLabel?.(),
       netName: v.networkName(),
       mainnet: v.isMainnet(),
       connected: v.connected(),
@@ -531,7 +532,7 @@ export function createPerps(d: PerpDeps) {
       historyError: mine?.historyError ?? null,
       canDeposit: v.caps.deposit,
       canWithdraw: v.caps.withdraw,
-      oneTapWords: v.id === "hyperliquid" ? "can trade, cannot withdraw · expires in 24 h or on Disconnect" : "can trade, cannot withdraw or approve · revoked on Disconnect",
+      oneTapWords: v.id === "hyperliquid" ? "can trade, cannot withdraw · expires in 24 h or on Disconnect" : v.id === "veranta" ? "can trade, cannot withdraw or approve · 30 days, revoked on Disconnect" : "can trade, cannot withdraw or approve · revoked on Disconnect",
     });
     const st = (t: string) => {
       acctMsg = t;
@@ -716,6 +717,12 @@ export function createPerps(d: PerpDeps) {
   }
 
   function renderVenues() {
+    // a network switch can make the venue on screen unavailable (Veranta mainnet: coming soon)
+    if (venue().status?.usable === false && venueIdx !== 0) {
+      venueIdx = -1;
+      pickVenue(0);
+      return;
+    }
     const box = $("venuePick");
     box.hidden = d.venues.length < 2; // one venue: no picker
     if (box.hidden) return;
