@@ -1,16 +1,16 @@
 {
-  "at": "2026-10-08T03:44:56.523Z",
+  "at": "2026-10-08T04:26:50.907Z",
   "network": "testnet",
   "instrument": "ETH-PERP",
   "riskUniverse": 1,
   "subaccount": 87142,
   "baseline": {
     "size": 0,
-    "value": 1035.147801455023,
+    "value": 1034.266670554552,
     "openOrders": 0
   },
   "sessionKey": {
-    "address": "0x53a29E3C4388d3320B6dAb9ac15B5cD77487Da75",
+    "address": "0xb69aB03f9B699CCdb2349A3b5cc2Ac4270B7Dd5D",
     "scopes": [
       "trade:orderbook:option",
       "trade:orderbook:perp"
@@ -19,24 +19,24 @@
   "marginCheck": {
     "amount": "0.101",
     "valid": true,
-    "preIM": 1035.147804985852,
-    "postIM": 1018.039249745665,
-    "postMM": 1022.18677829788,
+    "preIM": 1034.267112323622,
+    "postIM": 1017.15032893423,
+    "postMM": 1021.299852189293,
     "ourLiqEstimate": null
   },
   "openLong": {
     "amount": "0.101",
-    "avg": 2567.51,
-    "fee": 0.087766160055,
+    "avg": 2568.62,
+    "fee": 0.087805106813,
     "liqEstimate": null,
     "triggers": [
       {
-        "id": "a1b73ccc-de67-4ebe-aedb-4a9094d73b4f",
+        "id": "d4f04f76-1c5e-46a2-87b6-56e7e3c881fe",
         "status": "untriggered",
         "error": null
       },
       {
-        "id": "a8cd96ce-220e-4100-b919-0e8e25df1276",
+        "id": "82970ae7-db0a-43ee-9771-aade867d27b8",
         "status": "untriggered",
         "error": null
       }
@@ -44,24 +44,24 @@
   },
   "positionAfterLong": {
     "size": 0.101,
-    "avg": 2568.378971881732,
+    "avg": 2569.489357493198,
     "liq": null,
-    "funding": 0,
-    "leverage": 0.250520736779,
+    "funding": -0.00000180093,
+    "leverage": 0.250912261605,
     "ourLiqEstimate": null
   },
   "triggersListed": [
     {
-      "id": "a1b73ccc-de67-4ebe-aedb-4a9094d73b4f",
-      "type": "takeprofit",
-      "price": 3080.79,
+      "id": "82970ae7-db0a-43ee-9771-aade867d27b8",
+      "type": "stoploss",
+      "price": 2054.73,
       "side": "sell",
       "amount": 0.101
     },
     {
-      "id": "a8cd96ce-220e-4100-b919-0e8e25df1276",
-      "type": "stoploss",
-      "price": 2053.86,
+      "id": "d4f04f76-1c5e-46a2-87b6-56e7e3c881fe",
+      "type": "takeprofit",
+      "price": 3082.1,
       "side": "sell",
       "amount": 0.101
     }
@@ -69,40 +69,40 @@
   "triggerOrdersSupported": true,
   "short": {
     "amount": "0.101",
-    "open": 2567.11,
+    "open": 2568.36,
     "half": 0.05,
     "rest": 0.051
   },
   "flip": "Flipped: now short 0.101.",
   "resting": {
-    "price": "2528.43",
+    "price": "2529.74",
     "tif": "post_only",
     "cancelled": true
   },
   "history": {
     "trades": 9,
-    "ourRealisedExFees": -0.16909000000006424,
-    "fees": 0.712047353246,
-    "ourRealisedNet": -0.8811373532460642,
-    "exchangeRealisedSum": -0.8811373532390001,
-    "fundingEvents": 42
+    "ourRealisedExFees": -0.2393699999998971,
+    "fees": 0.712763523657,
+    "ourRealisedNet": -0.9521335236568971,
+    "exchangeRealisedSum": -0.95213352365,
+    "fundingEvents": 56
   },
-  "valueAfter": 1034.266670554552,
-  "valueChange": -0.8811309004709074,
+  "valueAfter": 1033.314981294144,
+  "valueChange": -0.9516892604081022,
   "sessionKeyRevoked": true,
   "orders": {
-    "openLong": "f2e33aa3-7e6c-4c0a-bde6-39fda78f9cf2",
-    "takeProfit": "a1b73ccc-de67-4ebe-aedb-4a9094d73b4f",
-    "stopLoss": "a8cd96ce-220e-4100-b919-0e8e25df1276",
-    "closeLong": "92af51fd-3e9b-4d67-b4ce-5184e0212c5b",
-    "openShort": "4c9222bc-8aa5-49bd-b60f-648958ce6544",
-    "closeShortHalf": "fac0e60a-bba3-4621-8ec4-7e3f6e37e359",
-    "closeShortRest": "c1911ef7-9f66-4b5d-9bd9-036e5068bcdb",
-    "flipOpenLong": "8f8f9fef-87f3-446e-8442-f356d9f3fe5f",
-    "flipClose": "66f25063-c928-427b-9b5b-2a483ffb4d54",
-    "flipOpenShort": "706a6197-b8a4-44bc-99a7-833e1fda1f97",
-    "flipCloseShort": "9ccc5e8e-56f1-4369-8d0c-7d1e9dc892bb",
-    "restingLimit": "ac2dd0c4-0499-4f8d-a7f3-7b99cecf6406"
+    "openLong": "e2297bfc-d4f7-4a4d-835b-0ca68893f2c6",
+    "takeProfit": "d4f04f76-1c5e-46a2-87b6-56e7e3c881fe",
+    "stopLoss": "82970ae7-db0a-43ee-9771-aade867d27b8",
+    "closeLong": "ca321ae9-177d-497b-bf08-f8bcb68495ab",
+    "openShort": "54727d7c-a992-4e3c-8e47-03d24d901932",
+    "closeShortHalf": "a8db3259-9d47-467b-9a08-421dcc10a495",
+    "closeShortRest": "94da31a2-d57e-420c-a2fe-9e3f8a566f63",
+    "flipOpenLong": "79c8d29e-c7f1-45be-9a01-027469a8a8a4",
+    "flipClose": "7813ff44-fd3a-4785-89ac-dbb8db59488d",
+    "flipOpenShort": "069b64de-15bf-4aac-8cf1-c65b912785ea",
+    "flipCloseShort": "f47baa13-828d-4474-9d2f-8c7af1190010",
+    "restingLimit": "5db47845-36ec-404a-bd06-7a9454ce77b9"
   },
   "ok": true
 }
