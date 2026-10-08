@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plain English Options</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap"
+    />
+    <link rel="stylesheet" href="hark.css" />
+    <link rel="stylesheet" href="hark-hero.css" />
+    <style>
+      body.x-app { background: #EFEDE8; color: #151515; font-family: var(--sans); }
+      .x-root { max-width: 1040px; margin: 0 auto; padding: 16px 20px 140px; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; }
+      .x-bal { align-self: center; display: inline-flex; align-items: center; gap: 10px; background: #1d1d1f; color: #fff; border-radius: 999px; padding: 6px 6px 6px 16px; font: 600 15px/1 var(--sans); box-shadow: 0 6px 20px rgba(0,0,0,.14); }
+      .x-bal i { font-style: normal; opacity: .5; }
+      .x-av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#b9c7d8,#8a8f99 60%,#d8c6b0); }
+      button.x-bal { border: 0; cursor: pointer; min-height: 44px; max-width: calc(100vw - 40px); text-align: left; }
+      .x-bal__t { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+      .x-bal__t span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .x-bal__t small { font: 500 12px/1 var(--sans); opacity: .65; }
+      .x-bal__t small:empty { display: none; }
+      .x-seg { display: inline-flex; background: #fff; border-radius: 999px; padding: 3px; gap: 2px; }
+      .x-seg button { border: 0; background: none; border-radius: 999px; font: 500 12px/1 var(--sans); color: #555; padding: 0 11px; min-height: 30px; cursor: pointer; }
+      .x-seg button[aria-pressed="true"] { background: #1d1d1f; color: #fff; }
+      .x-amber { margin: 0 0 14px; font: 500 13px/1.4 var(--sans); color: #7a4f00; background: #FCEBC4; border-radius: 999px; padding: 7px 12px; display: inline-block; }
+      .x-amber[hidden] { display: none; }
+      .x-scrim { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.28); display: flex; align-items: flex-end; justify-content: center; padding: 12px; box-sizing: border-box; }
+      .x-scrim[hidden] { display: none; }
+      .x-sheet { width: min(420px, 100%); background: #fff; border-radius: 22px; padding: 18px; box-shadow: 0 18px 50px rgba(0,0,0,.14); box-sizing: border-box; margin-bottom: 4vh; }
+      .x-sheet h2 { font: 600 20px/1.3 var(--sans); letter-spacing: -0.02em; margin: 0 0 8px; }
+      .x-sheet p { font: 400 14px/1.5 var(--sans); color: #555; margin: 0 0 14px; }
+      .x-sheet label { display: block; font: 500 12px/1.3 var(--sans); color: #555; margin: 0 0 6px; }
+      .x-sheet input { width: 100%; box-sizing: border-box; border: 0; background: #F2F1EE; border-radius: 14px; padding: 12px 14px; min-height: 44px; font: 500 14px/1.2 var(--sans); color: #151515; outline-color: #151515; margin-bottom: 14px; }
+      .x-sheet__btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+      .x-sheet__btns .x-buy { padding: 0 18px; }
+      .x-builder { position: relative; margin: auto 0; padding: 48px 0 24px; }
+      .x-tags { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+      .x-tag { font: 500 12px/1 var(--sans); padding: 7px 11px; border-radius: 999px; background: #fff; }
+      .x-tag--dark { background: #1d1d1f; color: #fff; }
+      .x-tag b { color: #22a45a; }
+      .x-tag.is-sim b { color: #9a9a9a; } .x-tag.is-sim { color: #555; }
+      .x-tag.is-amber { background: #FCEBC4; color: #7a4f00; } .x-tag.is-amber b { color: #c98a00; }
+      .x-mk { font: 500 12px/1 var(--sans); color: #555; background: #F2F1EE; border-radius: 999px; padding: 3px 7px; margin-left: 6px; vertical-align: 1px; }
+      .x-sent { font: 600 34px/1.35 var(--sans); letter-spacing: -0.035em; margin: 0; }
+      .x-pill { font: inherit; letter-spacing: inherit; color: inherit; border: 2.5px solid transparent; border-radius: 999px; padding: 0 .32em 0 .36em; margin: .06em 0; cursor: pointer; display: inline-flex; align-items: center; gap: .18em; vertical-align: baseline; line-height: 1.25; min-height: 44px; }
+      .x-pill svg { width: .42em; height: .42em; flex: none; }
+      .x-pill.is-on { border-color: #151515; }
+      .x-amt { background: #F3DE9A; } .x-lav { background: #D9D6FB; } .x-sal { background: #F7C6BC; } .x-mint { background: #BDEFCB; }
+      .x-pct { font-size: .4em; letter-spacing: 0; background: rgba(255,255,255,.55); color: #137a3d; border-radius: 999px; padding: .25em .55em; }
+      .x-pct.is-down { color: #b3261e; }
+      .x-quote { display: flex; gap: 12px; align-items: center; margin-top: 18px; flex-wrap: wrap; font: 500 14px/1.3 var(--sans); }
+      .x-cost { background: #fff; border-radius: 999px; padding: 9px 14px; font-weight: 600; }
+      .x-grey { color: #6b6b6b; }
+      .x-hint { color: #b3261e; font: 500 14px/1.4 var(--sans); margin-top: 10px; }
+      .x-pop { position: absolute; z-index: 20; width: min(320px, calc(100vw - 40px)); background: #fff; border-radius: 22px; padding: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.14); box-sizing: border-box; }
+      .x-pop[hidden] { display: none; }
+      .x-pop__cap { font: 500 12px/1.3 var(--sans); color: #555; margin: 2px 6px 10px; }
+      .x-field { display: flex; align-items: center; gap: 6px; background: #F2F1EE; border-radius: 14px; padding: 10px 14px; }
+      .x-field span { font: 600 28px/1 var(--sans); color: #888; }
+      .x-field input { flex: 1; min-width: 0; border: 0; background: none; font: 600 28px/1 var(--sans); letter-spacing: -0.03em; outline: none; color: #151515; }
+      .x-field small { font: 400 12px/1 var(--sans); color: #777; white-space: nowrap; }
+      .x-range { width: 100%; margin: 14px 0 6px; accent-color: #151515; height: 28px; }
+      .x-ends { display: flex; justify-content: space-between; gap: 8px; font: 500 12px/1.3 var(--sans); color: #666; }
+      .x-ends b { color: #151515; font-weight: 600; text-align: center; }
+      .x-list { list-style: none; margin: 0; padding: 0; }
+      .x-list button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 44px; border: 0; background: none; border-radius: 12px; padding: 8px 10px; font: 500 15px/1.2 var(--sans); color: #151515; cursor: pointer; text-align: left; }
+      .x-list button:hover, .x-list button.is-sel { background: #F2F1EE; }
+      .x-list em { font-style: normal; font-size: 13px; color: #666; }
+      .x-up { color: #137a3d !important; } .x-dn { color: #b3261e !important; }
+      .x-dock { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.1); z-index: 30; max-width: calc(100vw - 24px); box-sizing: border-box; }
+      .x-ic { width: 44px; height: 44px; border-radius: 50%; border: 0; background: none; display: grid; place-items: center; cursor: pointer; color: #222; flex: none; }
+      .x-ic.is-on { background: #1d1d1f; color: #fff; }
+      .x-ic svg, .x-buy svg { width: 18px; height: 18px; }
+      .x-sep { width: 1px; height: 26px; background: #e2e0db; margin: 0 6px; }
+      .x-buy { display: inline-flex; align-items: center; gap: 10px; border: 0; border-radius: 999px; background: #1d1d1f; color: #fff; font: 600 15px/1 var(--sans); padding: 6px 6px 6px 18px; min-height: 44px; cursor: pointer; white-space: nowrap; }
+      .x-buy span.x-arr { width: 32px; height: 32px; border-radius: 50%; background: #333; display: grid; place-items: center; }
+      .x-buy[hidden], .x-sep[hidden], .x-toast[hidden] { display: none; }
+      .x-toast { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); background: #1d1d1f; color: #fff; font: 500 13px/1.3 var(--sans); padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
+      .x-buy:disabled { opacity: .35; cursor: not-allowed; }
+      .x-review { display: grid; gap: 14px; margin-top: 24px; }
+      .x-card { background: #FAFAF8; border-radius: 26px; padding: 20px; }
+      .x-card__top { display: flex; justify-content: space-between; align-items: center; font: 500 14px/1 var(--sans); color: #555; }
+      .x-edit { border: 0; background: #fff; border-radius: 999px; padding: 0 14px; min-height: 44px; font: 600 14px/1 var(--sans); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+      .x-rh { font: 600 26px/1.3 var(--sans); letter-spacing: -0.03em; margin: 14px 0 16px; }
+      .x-rh mark { color: inherit; border-radius: 999px; padding: 0 .25em; }
+      .x-outs { background: #EEEDEA; border-radius: 18px; padding: 5px; display: grid; gap: 5px; }
+      .x-out { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 14px; padding: 10px 12px; font: 600 14px/1.2 var(--sans); }
+      .x-out i { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-style: normal; flex: none; }
+      .x-out b { margin-left: auto; }
+      .x-chcap { font: 400 13px/1.4 var(--sans); color: #666; margin: 18px 0 8px; }
+      .x-chart { position: relative; }
+      .x-chart svg { width: 100%; height: auto; display: block; }
+      .x-chart rect { cursor: pointer; }
+      .x-tip { position: absolute; top: 0; transform: translateX(-50%); background: #1d1d1f; color: #fff; font: 500 12px/1.3 var(--sans); padding: 6px 9px; border-radius: 9px; white-space: nowrap; pointer-events: none; }
+      .x-axis { display: flex; justify-content: space-between; font: 400 12px/1 var(--sans); color: #666; margin-top: 8px; }
+      .x-rows { margin: 0; }
+      .x-rows div { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid #ebe9e4; font: 400 14px/1.35 var(--sans); }
+      .x-rows div:last-child { border-bottom: 0; }
+      .x-rows dt { color: #555; } .x-rows dd { margin: 0; font-weight: 600; text-align: right; }
+      .x-agree { display: flex; gap: 12px; align-items: flex-start; font: 400 14px/1.45 var(--sans); padding: 16px 6px; cursor: pointer; }
+      .x-agree input { width: 22px; height: 22px; accent-color: #151515; flex: none; margin: 0; }
+      .x-confirm { width: 100%; justify-content: center; font-size: 17px; min-height: 58px; padding: 6px 18px; }
+      .x-ring { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); display: grid; place-items: center; font-size: 12px; }
+      .x-done { text-align: center; margin: auto 0; padding: 60px 0; }
+      .x-done h2 { font: 600 34px/1.2 var(--sans); letter-spacing: -0.03em; margin: 0 0 10px; }
+      .x-done p { color: #555; font: 400 15px/1.5 var(--sans); margin: 0 0 22px; }
+      .x-foot { text-align: center; font: 400 12px/1.5 var(--sans); color: #666; margin-top: 30px; }
+      @media (max-width: 640px) {
+        #pop { position: fixed; left: 12px !important; right: 12px; top: auto !important; bottom: 12px; width: auto; }
+      }
+      @media (min-width: 760px) {
+        .x-sent { font-size: 56px; line-height: 1.28; }
+        .x-review { grid-template-columns: 1fr 1fr; align-items: start; }
+        .x-card { padding: 26px; }
+        .x-rh { font-size: 32px; }
+      }
+    </style>
+  </head>
+  <body class="x-app">
+    <div class="page" id="top">
+      <main class="x-root" id="app">
+        <button class="x-bal" id="balBtn" aria-label="Derive balance"><span class="x-bal__t"><span id="bal">Connect wallet</span><small id="balNet"></small></span><i>+</i><span class="x-av" aria-hidden="true"></span></button>
+
+        <section class="x-builder" id="builder" aria-label="Build a position">
+          <div class="x-tags">
+            <span class="x-tag x-tag--dark" id="kind">Call spread</span>
+            <span class="x-tag"><b>●</b> <span id="spotTag">ETH $2,703</span></span>
+            <span class="x-tag is-sim" id="liveTag" role="status"><b>●</b> <span id="liveTxt">Connecting…</span></span>
+            <span class="x-seg" role="group" aria-label="Network"><button type="button" data-net="testnet" aria-pressed="true">Testnet</button><button type="button" data-net="mainnet" aria-pressed="false">Mainnet</button></span>
+          </div>
+          <p class="x-amber" id="netNote" role="note" hidden>Mainnet prices. Confirm is still simulated; no order is sent.</p>
+          <h1 class="x-sent">
+            I want to make
+            <button class="x-pill x-amt" data-pop="amt" aria-haspopup="dialog"><span id="pAmt">$3,000</span>__CHEV__</button>
+            if
+            <button class="x-pill x-lav" data-pop="asset" aria-haspopup="dialog"><span id="pAsset">ETH</span>__CHEV__</button>
+            <button class="x-pill x-sal" id="pDir" aria-label="Toggle direction"><span id="pDirT">hits</span><svg id="dirIc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></button>
+            <button class="x-pill x-mint" data-pop="tgt" aria-haspopup="dialog"><span id="pTgt">$3,100</span><span class="x-pct" id="pPct">↑15%</span>__CHEV__</button>
+            by
+            <button class="x-pill x-lav" data-pop="date" aria-haspopup="dialog"><span id="pDate">Nov 27</span>__CHEV__</button>
+          </h1>
+          <div class="x-quote">
+            <span class="x-cost" id="qCost">It costs $1,595</span>
+            <span class="x-grey" id="qChance">25% chance it happens</span>
+          </div>
+          <p class="x-hint" id="hint" hidden></p>
+          <div class="x-pop" id="pop" role="dialog" hidden></div>
+        </section>
+
+        <section id="review" hidden></section>
+        <section id="done" class="x-done" hidden>
+          <h2>Position opened (simulated) · no order sent</h2>
+          <p id="doneMsg"></p>
+          <button class="x-buy" id="again">Build another <span class="x-arr">→</span></button>
+        </section>
+
+        <div class="x-scrim" id="sheet" hidden><div class="x-sheet" role="dialog" aria-modal="true" aria-label="Wallet" id="sheetBody"></div></div>
+
+        <p class="x-foot">Prototype · live Derive quotes · no orders sent · not financial advice · concept by @rightclcksaveas</p>
+      </main>
+
+      <nav class="x-dock" aria-label="App">
+        <button class="x-ic is-on" aria-label="Build"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></button>
+        <button class="x-ic" aria-label="Savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11a7 6 0 0 1 13-2h2v5h-2a7 7 0 0 1-3 3v3h-3v-2h-3v2H6v-3.5A6 6 0 0 1 5 11zM16 11h.01"/></svg></button>
+        <button class="x-ic" aria-label="Activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 1-8.5 6M12 3a9 9 0 0 0-6 2.3"/></svg></button>
+        <button class="x-ic" aria-label="Portfolio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M6 20V12h4v8M10 20V6h4v14M14 20v-9h4v9"/></svg></button>
+        <span class="x-toast" id="toast" role="status" hidden></span>
+        <span class="x-sep" id="dockSep"></span>
+        <button class="x-buy" id="buy">Buy for <span id="buyAmt">$1,595</span><span class="x-arr">→</span></button>
+      </nav>
+    </div>
+    <script src="hark.js"></script>
+    <script>
+      (function () {
+        const CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+        document.querySelectorAll(".x-sent .x-pill").forEach((b) => (b.innerHTML = b.innerHTML.replace("__CHEV__", CHEV)));
+
+        const ASSETS = {
+          ETH: { p: 2703, ch: null, iv: 0.65 },
+          BTC: { p: 96841, ch: null, iv: 0.5 },
+          SOL: { p: 0, ch: null, iv: 0.8 },
+          HYPE: { p: 92, ch: null, iv: 1.1 },
+          ADA: { p: 0.71, ch: null, iv: 0.9 },
+          LIT: { p: 3.66, ch: null, iv: 1.3 },
+        };
+        const START = Date.UTC(2026, 9, 7);
+        const DATES = [[2026, 9, 30], [2026, 10, 13], [2026, 10, 20], [2026, 10, 27], [2026, 11, 25], [2027, 0, 29], [2027, 2, 26]].map(([y, m, d]) => {
+          const t = Date.UTC(y, m, d);
+          const dt = new Date(t);
+          const mo = dt.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+          return { short: mo + " " + d + (y !== 2026 ? " " + y : ""), long: mo + " " + d + ", " + y, days: Math.round((t - START) / 864e5) };
+        });
+
+        const S = { amt: 3000, asset: "ETH", dir: "up", tgt: 3100, date: 3, jitter: 1, open: null };
+        const $ = (id) => document.getElementById(id);
+        const NETS = { testnet: { name: "Testnet", url: "wss://api-demo.lyra.finance/ws" }, mainnet: { name: "Mainnet", url: "wss://api.lyra.finance/ws" } };
+        let NET = "testnet";
+        const W = { st: "none", wallet: "", id: null, val: 0, timer: null, flashT: null, msg: "" };
+        const hasPrice = () => ASSETS[S.asset].p > 0;
+        const short = () => W.st === "on" && Q && Q.cost > W.val;
+
+        // math
+        function erf(x) {
+          const s = Math.sign(x); x = Math.abs(x);
+          const t = 1 / (1 + 0.3275911 * x);
+          const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+          return s * y;
+        }
+        const N = (x) => 0.5 * (1 + erf(x / Math.SQRT2));
+        function bs(Sp, K, T, v) {
+          const d1 = (Math.log(Sp / K) + 0.5 * v * v * T) / (v * Math.sqrt(T));
+          const d2 = d1 - v * Math.sqrt(T);
+          return { call: Sp * N(d1) - K * N(d2), put: K * N(-d2) - Sp * N(-d1), d2 };
+        }
+        const spot = () => ASSETS[S.asset].p * (liveTk() ? 1 : S.jitter);
+        function niceStep(p) { return Math.pow(10, Math.floor(Math.log10(p)) - 1); }
+        function chanceAt(dateIdx) {
+          const a = ASSETS[S.asset], T = DATES[dateIdx].days / 365;
+          const d2 = bs(spot(), S.tgt, T, a.iv).d2;
+          return S.dir === "up" ? N(d2) : N(-d2);
+        }
+        function quote() {
+          if (!hasPrice()) return { valid: false, wait: true };
+          const L = liveQuote(); if (L) return L;
+          const a = ASSETS[S.asset], sp = spot(), T = DATES[S.date].days / 365, step = niceStep(sp), K2 = S.tgt;
+          const valid = S.dir === "up" ? K2 > sp : K2 < sp;
+          if (!valid) return { valid: false };
+          let K1, W, D;
+          if (S.dir === "up") {
+            K1 = Math.floor(sp / step) * step; W = K2 - K1;
+            D = bs(sp, K1, T, a.iv).call - bs(sp, K2, T, a.iv).call;
+          } else {
+            K1 = Math.ceil(sp / step) * step; W = K1 - K2;
+            D = bs(sp, K1, T, a.iv).put - bs(sp, K2, T, a.iv).put;
+          }
+          const n = S.amt / (W - D), cost = n * D;
+          return { valid: true, K1, K2, W, D, n, cost, fee: cost * 0.0025, chance: chanceAt(S.date) };
+        }
+
+        // format
+        const money = (v) => "$" + Math.round(v).toLocaleString("en-US");
+        function price(v) {
+          if (!(v > 0)) return "…";
+          const d = v >= 100 ? 0 : v >= 1 ? 2 : 3;
+          return "$" + v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+        const pctFrom = () => (spot() > 0 && S.tgt > 0 ? Math.round((S.tgt / spot() - 1) * 100) : 0);
+        const pct = (c) => Math.round(c * 100) + "%";
+
+        const UP = '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>', DN = '<path d="M3 7l6 6 4-4 8 8M15 17h6v-6"/>';
+
+        function update() {
+          const q = quote(), p = pctFrom(), a = S.asset;
+          $("pAmt").textContent = money(S.amt);
+          $("pAsset").textContent = a;
+          $("pDirT").textContent = S.dir === "up" ? "hits" : "drops to";
+          $("dirIc").innerHTML = S.dir === "up" ? UP : DN;
+          $("pTgt").textContent = price(S.tgt);
+          $("pPct").textContent = (p >= 0 ? "↑" : "↓") + Math.abs(p) + "%";
+          $("pPct").classList.toggle("is-down", p < 0);
+          $("pDate").textContent = DATES[S.date].short;
+          $("kind").textContent = S.dir === "up" ? "Call spread" : "Put spread";
+          $("spotTag").textContent = a + " " + price(spot());
+          const hint = $("hint");
+          if (q.valid) {
+            hint.hidden = true;
+            $("qCost").textContent = "It costs " + money(q.cost);
+            $("qChance").textContent = pct(q.chance) + " chance it happens";
+            $("buyAmt").textContent = money(q.cost);
+            $("buy").disabled = false;
+          } else if (q.wait) {
+            hint.hidden = true;
+            $("qCost").textContent = "It costs …";
+            $("qChance").textContent = "Waiting for a live " + a + " price";
+            $("buyAmt").textContent = "…";
+            $("buy").disabled = true;
+          } else {
+            hint.hidden = false;
+            hint.textContent = S.dir === "up"
+              ? "Pick a target above " + price(spot()) + " for “hits”, or switch to “drops to”."
+              : "Pick a target below " + price(spot()) + " for “drops to”, or switch to “hits”.";
+            $("qCost").textContent = "It costs —";
+            $("qChance").textContent = "No quote";
+            $("buyAmt").textContent = "—";
+            $("buy").disabled = true;
+          }
+          if (!S.open || S.open === "tgt") setTgtCap(q);
+          return q;
+        }
+
+        // popovers
+        const pop = $("pop"), builder = $("builder");
+        function closePop() {
+          pop.hidden = true; S.open = null;
+          document.querySelectorAll(".x-pill.is-on").forEach((b) => { b.classList.remove("is-on"); b.setAttribute("aria-expanded", "false"); });
+        }
+        function sliderPop(cap, val, min, max, step, sideL, sideR, onSet, capId) {
+          pop.innerHTML =
+            '<p class="x-pop__cap">' + cap + '</p><label class="x-field"><span>$</span><input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" id="popIn" aria-label="Value"><small>type or drag</small></label>' +
+            '<input class="x-range" type="range" id="popRg" aria-label="Slider"><div class="x-ends"><span>' + sideL + '</span><b id="' + (capId || "") + '"></b><span>' + sideR + "</span></div>";
+          const inp = $("popIn"), rg = $("popRg");
+          rg.min = min; rg.max = max; rg.step = step; rg.value = val; inp.value = +(+val).toFixed(step < 1 ? 3 : 0);
+          rg.oninput = () => { inp.value = +(+rg.value).toFixed(step < 1 ? 3 : 0); onSet(+rg.value); };
+          inp.oninput = () => { const v = parseFloat(inp.value); if (Number.isFinite(v) && v > 0) { rg.value = v; onSet(v); } };
+          const commit = () => {
+            let v = parseFloat(inp.value);
+            if (!Number.isFinite(v)) v = +rg.value;
+            v = Math.min(max, Math.max(min, v));
+            inp.value = +v.toFixed(step < 1 ? 3 : 0); rg.value = v; onSet(v);
+          };
+          inp.onblur = commit;
+          inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); commit(); inp.blur(); } };
+        }
+        function listPop(items, onPick) {
+          pop.innerHTML = '<ul class="x-list">' + items.map((it, i) => '<li><button data-i="' + i + '"' + (it.sel ? ' class="is-sel"' : "") + "><span>" + it.l + "</span><em" + (it.c ? ' class="' + it.c + '"' : "") + ">" + it.r + "</em></button></li>").join("") + "</ul>";
+          pop.querySelectorAll("button").forEach((b) => (b.onclick = () => { onPick(+b.dataset.i); closePop(); update(); }));
+        }
+        function openPop(kind, btn) {
+          if (S.open === kind) return closePop();
+          closePop(); S.open = kind;
+          btn.classList.add("is-on"); btn.setAttribute("aria-expanded", "true");
+          const sp = spot();
+          if (kind === "amt") sliderPop("How much you want to make", S.amt, 50, 10000, 50, "$50", "$10,000", (v) => { S.amt = Math.max(1, v); update(); });
+          if (kind === "tgt" && !hasPrice()) { closePop(); return; }
+          if (kind === "tgt") {
+            const st = sp / 1000;
+            sliderPop(S.asset + " reference price " + price(sp), S.tgt, sp * 0.5, sp * 2, st, price(sp * 0.5), price(sp * 2), (v) => { S.tgt = v; setTgtCap(update()); }, "tgtCap");
+            setTgtCap(quote());
+          }
+          if (kind === "asset") {
+            const keys = Object.keys(ASSETS);
+            listPop(keys.map((k) => { const ch = ASSETS[k].ch, has = Number.isFinite(ch); return { l: "<b>" + k + "</b> " + price(ASSETS[k].p), r: has ? (ch > 0 ? "+" : "") + ch.toFixed(1) + "%" : "", c: has ? (ch >= 0 ? "x-up" : "x-dn") : "", sel: k === S.asset }; }), (i) => {
+              S.asset = keys[i]; S.jitter = 1;
+              const p = ASSETS[S.asset].p; S.tgt = S.dir === "up" ? p * 1.15 : p * 0.85;
+            });
+          }
+          if (kind === "date") listPop(DATES.map((d, i) => ({ l: d.lab || d.long, r: (quote().valid ? pct(chanceFor(i)) : "—") + " chance", sel: i === S.date })), (i) => (S.date = i));
+          pop.hidden = false;
+          update();
+          const br = builder.getBoundingClientRect(), r = btn.getBoundingClientRect();
+          const w = pop.offsetWidth;
+          let left = r.left - br.left;
+          left = Math.max(0, Math.min(left, document.documentElement.clientWidth - 20 - br.left - w));
+          pop.style.left = left + "px";
+          pop.style.top = r.bottom - br.top + 8 + "px";
+        }
+        document.querySelectorAll("[data-pop]").forEach((b) => { b.setAttribute("aria-expanded", "false"); b.onclick = (e) => { e.stopPropagation(); openPop(b.dataset.pop, b); }; });
+        $("pDir").onclick = () => {
+          closePop();
+          S.dir = S.dir === "up" ? "down" : "up";
+          const p = spot(); S.tgt = S.dir === "up" ? p * 1.15 : p * 0.85;
+          update();
+        };
+        pop.onclick = (e) => e.stopPropagation();
+        document.addEventListener("pointerdown", (e) => { if (S.open && !pop.contains(e.target) && !e.target.closest("[data-pop]")) closePop(); });
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.open) closePop(); });
+        if (window.visualViewport) visualViewport.addEventListener("resize", () => { if (innerWidth < 640) pop.style.bottom = (innerHeight - visualViewport.height - visualViewport.offsetTop + 12) + "px"; });
+
+        // review
+        let timer = null, left = 10, Q = null;
+        const rv = $("review");
+        function stopTimer() { clearInterval(timer); timer = null; }
+        function chartSVG(q) {
+          const lo = q.dir === "up" ? q.K1 : q.K2, hi = q.dir === "up" ? q.K2 : q.K1, W = hi - lo;
+          const from = lo - W * 0.8, to = hi + W * 0.8, n = 14, pts = [];
+          for (let i = 0; i < n; i++) {
+            const x = from + ((to - from) * i) / (n - 1);
+            const pay = q.dir === "up" ? Math.min(Math.max(x - q.K1, 0), q.W) : Math.min(Math.max(q.K1 - x, 0), q.W);
+            pts.push({ x, pl: q.n * pay - q.cost });
+          }
+          const max = Math.max(...pts.map((p) => Math.abs(p.pl))), H = 160, mid = H * (S.amt / (S.amt + q.cost)), bw = 600 / n;
+          const bars = pts.map((p, i) => {
+            const h = Math.max(2, (Math.abs(p.pl) / Math.max(S.amt, q.cost)) * (p.pl >= 0 ? mid - 6 : H - mid - 6));
+            const y = p.pl >= 0 ? mid - h : mid;
+            return '<rect data-i="' + i + '" x="' + (i * bw + 4) + '" y="' + y + '" width="' + (bw - 8) + '" height="' + h + '" rx="6" fill="' + (p.pl >= 0 ? "#5BD08A" : "#F2A39B") + '"/>';
+          }).join("");
+          return { pts, from, to, max, svg: '<svg viewBox="0 0 600 ' + H + '" role="img" aria-label="Profit or loss by price at expiry">' + bars + '<line x1="0" x2="600" y1="' + mid + '" y2="' + mid + '" stroke="#151515" stroke-width="2"/></svg>' };
+        }
+        function renderReview() {
+          Q = quote(); if (!Q.valid) return;
+          Q.dir = S.dir;
+          const up = S.dir === "up", a = S.asset, d = DATES[S.date];
+          const midP = (Q.K1 + Q.K2) / 2, midPL = Q.n * Math.abs(midP - Q.K1) - Q.cost;
+          const ch = chartSVG(Q);
+          const sign = (v) => (v >= 0 ? "+" : "−") + money(Math.abs(v));
+          rv.innerHTML =
+            '<div class="x-review"><div class="x-card"><div class="x-card__top"><span>Your position</span><button class="x-edit" id="edit">Edit</button></div>' +
+            '<p class="x-rh">Make <mark style="background:#F3DE9A">' + money(S.amt) + "</mark> if " + a + " ends " + (up ? "above" : "below") + ' <mark style="background:#BDEFCB">' + price(Q.K2) + '</mark> by <mark style="background:#D9D6FB">' + d.long + "</mark></p>" +
+            '<div class="x-outs"><div class="x-out"><i style="background:#BDEFCB">' + (up ? "↗" : "↘") + "</i>Ends " + (up ? "above " : "below ") + price(Q.K2) + '<b class="x-up">+' + money(S.amt) + "</b></div>" +
+            '<div class="x-out"><i style="background:#EEEDEA">→</i>Ends at ' + price(midP) + "<b" + (midPL < 0 ? ' class="x-dn"' : "") + ">" + sign(midPL) + "</b></div>" +
+            '<div class="x-out"><i style="background:#F7C6BC">' + (up ? "↘" : "↗") + "</i>Ends " + (up ? "below " : "above ") + price(Q.K1) + '<b class="x-dn">−' + money(Q.cost) + "</b></div></div>" +
+            '<p class="x-chcap">Profit or loss by ' + a + " price on " + d.long + ' · tap the bars</p><div class="x-chart" id="chart">' + ch.svg + '<span class="x-tip" id="tip" hidden></span></div>' +
+            '<div class="x-axis"><span>' + price(ch.from) + "</span><span>" + price((ch.from + ch.to) / 2) + "</span><span>" + price(ch.to) + "</span></div></div>" +
+            '<div><div class="x-card"><dl class="x-rows">' +
+            "<div><dt>Contracts</dt><dd>" + Q.n.toFixed(2) + " per leg</dd></div>" +
+            "<div><dt>Maximum debit</dt><dd>" + money(Q.cost) + "</dd></div>" +
+            '<div><dt>Maximum profit</dt><dd class="x-up">' + money(S.amt) + "</dd></div>" +
+            '<div><dt>Maximum loss</dt><dd class="x-dn">' + money(Q.cost) + "</dd></div>" +
+            "<div><dt>hunch fee</dt><dd>$" + Q.fee.toFixed(2) + " · 0.25% of premium</dd></div>" +
+            "<div><dt>Expires</dt><dd>" + d.long + "</dd></div>" +
+            "<div><dt>Settlement</dt><dd>Cash settled · Derive margin rules</dd></div></dl></div>" +
+            '<label class="x-agree"><input type="checkbox" id="agree"><span>I understand this ' + NETS[NET].name.toLowerCase() + ' spread settles in cash and is subject to Derive margin and liquidation rules.</span></label>' +
+            '<button class="x-buy x-confirm" id="confirm" disabled>Tick the box to continue</button></div></div>';
+          const tip = $("tip"), chart = $("chart");
+          chart.querySelectorAll("rect").forEach((r) => (r.onclick = (e) => {
+            e.stopPropagation();
+            const p = ch.pts[+r.dataset.i], cr = chart.getBoundingClientRect(), rr = r.getBoundingClientRect();
+            tip.hidden = false;
+            tip.textContent = price(p.x) + " · " + sign(p.pl);
+            tip.style.left = Math.min(Math.max(rr.left + rr.width / 2 - cr.left, 60), cr.width - 60) + "px";
+            tip.style.top = "-30px";
+          }));
+          $("edit").onclick = () => showView("build");
+          $("agree").onchange = (e) => { if (e.target.checked) { left = 10; startTimer(); } else { stopTimer(); setConfirm(); } };
+          $("confirm").onclick = confirm;
+          setConfirm();
+        }
+        function setConfirm() {
+          const b = $("confirm"); if (!b) return;
+          balRow();
+          const ok = $("agree").checked && hasPrice() && !short();
+          b.disabled = !ok;
+          b.innerHTML = short() ? "Not enough collateral" : !hasPrice() ? "Waiting for a live price" : ok ? "Confirm and pay " + money(Q.cost) + ' <span class="x-ring" aria-label="Quote refreshes in ' + left + ' seconds">' + left + "</span>" : "Tick the box to continue";
+        }
+        function startTimer() {
+          stopTimer(); setConfirm();
+          timer = setInterval(() => {
+            left--;
+            if (left <= 0) {
+              S.jitter = 1 + (Math.random() - 0.5) * 0.004; liveRefresh();
+              const nq = quote();
+              if (nq.valid) liveReview();
+              left = 10;
+            }
+            setConfirm();
+          }, 1000);
+        }
+        function confirm() {
+          if (!hasPrice() || short()) return;
+          stopTimer();
+          $("doneMsg").textContent = "Paid " + money(Q.cost) + " for " + Q.n.toFixed(2) + " contracts per leg. You make " + money(S.amt) + " if " + S.asset + " ends " + (S.dir === "up" ? "above " : "below ") + price(Q.K2) + " by " + DATES[S.date].long + ".";
+          showView("done");
+        }
+        function showView(v) {
+          stopTimer(); closePop();
+          builder.hidden = v !== "build"; rv.hidden = v !== "review"; $("done").hidden = v !== "done";
+          $("buy").hidden = $("dockSep").hidden = v !== "build";
+          if (v === "review") renderReview();
+          if (v === "build") update();
+          window.scrollTo(0, 0);
+        }
+        $("buy").onclick = (e) => { e.stopPropagation(); if (quote().valid) showView("review"); };
+        $("again").onclick = () => { S.jitter = 1; showView("build"); };
+        let toastT = null;
+        document.querySelectorAll(".x-ic").forEach((b, i) => (b.onclick = (e) => {
+          e.stopPropagation();
+          document.querySelectorAll(".x-ic").forEach((x) => x.classList.toggle("is-on", x === b));
+          const t = $("toast");
+          if (i === 0) { t.hidden = true; showView("build"); return; }
+          t.textContent = b.getAttribute("aria-label") + " is coming soon in this prototype";
+          t.hidden = false;
+          clearTimeout(toastT);
+          toastT = setTimeout(() => { t.hidden = true; document.querySelectorAll(".x-ic").forEach((x, j) => x.classList.toggle("is-on", j === 0)); }, 2200);
+        }));
+
+        // live Derive testnet quotes (read-only; no orders are ever sent)
+        const SIM_DATES = DATES.slice(), INST = {}, TK = {}, pend = {}, bootT = Date.now();
+        let ws = null, rid = 0, backoff = 2000, lastAsset = null, lastKey = "", lastLive = false, gen = 0, rvT = null;
+        function rpc(method, params) {
+          return new Promise((res, rej) => {
+            if (!ws || ws.readyState !== 1) return rej(new Error("offline"));
+            const id = ++rid;
+            pend[id] = { res, rej, t: setTimeout(() => { delete pend[id]; rej(new Error("timeout")); }, 6000) };
+            ws.send(JSON.stringify({ id, method, params }));
+          });
+        }
+        function connect() {
+          const g = gen;
+          try { ws = new WebSocket(NETS[NET].url); } catch (e) { return retry(g); }
+          ws.onopen = () => { backoff = 2000; Object.keys(ASSETS).forEach((c) => { loadInst(c); loadPerp(c); }); };
+          ws.onmessage = (e) => {
+            let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+            const p = pend[m.id]; if (!p) return;
+            clearTimeout(p.t); delete pend[m.id];
+            m.error ? p.rej(m.error) : p.res(m.result);
+          };
+          ws.onclose = () => { Object.keys(pend).forEach((id) => { clearTimeout(pend[id].t); pend[id].rej(new Error("closed")); delete pend[id]; }); if (g !== gen) return; walletLost(); retry(g); };
+          ws.onerror = () => {};
+        }
+        function retry(g) { setTimeout(() => { if (g === gen) connect(); }, backoff); backoff = Math.min(backoff * 2, 30000); }
+        const ymd = (name) => name.split("-")[1];
+        // real 24h change from the asset's perp ticker; hidden (null) when unavailable
+        function loadPerp(cur) {
+          rpc("public/get_ticker", { instrument_name: cur + "-PERP" }).then((r) => {
+            const s = (r && r.stats) || {}, px = (r && (+r.mark_price || +r.index_price)) || 0;
+            let v = parseFloat(s.percent_change);
+            if (Number.isFinite(v)) v *= 100;
+            else { const pc = parseFloat(s.price_change); v = Number.isFinite(pc) && px - pc > 0 ? (pc / (px - pc)) * 100 : null; }
+            ASSETS[cur].ch = Number.isFinite(v) ? v : null;
+          }).catch(() => { ASSETS[cur].ch = null; });
+        }
+        function loadInst(cur) {
+          rpc("public/get_instruments", { currency: cur, instrument_type: "option", expired: false }).then((r) => {
+            if (!Array.isArray(r) || !r.length) return;
+            INST[cur] = r;
+            const ex = expiries(cur);
+            if (ex.length) fetchTk(cur, ex[0].key);
+            if (cur === S.asset) { lastAsset = null; refreshView(); }
+          }).catch(() => {});
+        }
+        function expiries(cur) {
+          const now = Date.now(), seen = {}, out = [];
+          (INST[cur] || []).forEach((i) => {
+            const e = i.option_details.expiry * 1000, key = ymd(i.instrument_name);
+            if (e - now >= 5 * 864e5 && !seen[key]) { seen[key] = 1; out.push({ e, key }); }
+          });
+          return out.sort((a, b) => a.e - b.e).map(({ e, key }) => {
+            const dt = new Date(e), f = (o) => dt.toLocaleString("en-US", Object.assign({ timeZone: "UTC" }, o));
+            const days = Math.round((e - now) / 864e5), mo = f({ month: "short" }), d = f({ day: "numeric" }), y = dt.getUTCFullYear();
+            return { e, key, days, short: mo + " " + d + (y !== new Date().getUTCFullYear() ? " " + y : ""), long: mo + " " + d + ", " + y, lab: f({ weekday: "short" }) + ", " + mo + " " + d + " · " + days + " days" };
+          });
+        }
+        function syncDates() {
+          const ex = expiries(S.asset), src = ex.length ? ex : SIM_DATES, pd = DATES[S.date] ? DATES[S.date].days : 30;
+          let bi = 0;
+          src.forEach((d, i) => { if (Math.abs(d.days - pd) < Math.abs(src[bi].days - pd)) bi = i; });
+          DATES.length = 0; src.forEach((d) => DATES.push(d)); S.date = bi;
+        }
+        function fetchTk(cur, key) {
+          const k = cur + "|" + key, c = (TK[k] = TK[k] || {});
+          if (c.busy) return;
+          c.busy = true;
+          rpc("public/get_tickers", { currency: cur, instrument_type: "option", expiry_date: key }).then((r) => {
+            c.busy = false;
+            const tk = r && r.tickers; if (!tk || !Object.keys(tk).length) return;
+            c.tk = tk; c.t = Date.now(); // fetch timestamp for this ticker set
+            const I = +Object.values(tk)[0].I;
+            if (I > 0) {
+              const first = !(ASSETS[cur].p > 0); ASSETS[cur].p = I;
+              if (first && cur === S.asset) S.tgt = S.dir === "up" ? I * 1.15 : I * 0.85;
+            }
+            if (cur === S.asset) refreshView();
+          }).catch(() => { c.busy = false; });
+        }
+        function curKey() { const d = DATES[S.date]; return d && d.key ? S.asset + "|" + d.key : null; }
+        // cached ticker set; older than 60 s: still used, but refetched right away
+        function cached(cur, key) {
+          const c = TK[cur + "|" + key]; if (!c || !c.tk) return null;
+          if (Date.now() - c.t > 60000 && Date.now() - (c.try || 0) > 5000) { c.try = Date.now(); fetchTk(cur, key); }
+          return c;
+        }
+        function liveTk() { const d = DATES[S.date]; return d && d.key ? cached(S.asset, d.key) : null; }
+        function liveRefresh() { const d = DATES[S.date]; if (d && d.key) fetchTk(S.asset, d.key); }
+        function refreshView() { if (!rv.hidden) return liveReview(); if (S.open !== "date") update(); }
+        // redraw the review with the latest quote, keeping the agreement tick and focus
+        function liveReview() {
+          if (rv.hidden || !quote().valid) return;
+          const ag = $("agree"), was = !!(ag && ag.checked), foc = document.activeElement && rv.contains(document.activeElement) ? document.activeElement.id : null;
+          renderReview();
+          const a2 = $("agree"); if (a2) a2.checked = was;
+          setConfirm();
+          if (foc && $(foc)) $(foc).focus();
+        }
+        const usable = (t) => !!t && (+t.a > 0 || +t.M > 0);
+        function liveQuote() {
+          const c = liveTk(); if (!c) return null;
+          const d = DATES[S.date], up = S.dir === "up", typ = up ? "C" : "P";
+          const legs = (INST[S.asset] || []).filter((i) => ymd(i.instrument_name) === d.key && i.option_details.option_type === typ && c.tk[i.instrument_name])
+            .map((i) => ({ i, K: +i.option_details.strike, t: c.tk[i.instrument_name] }));
+          const sp = +Object.values(c.tk)[0].I;
+          if (!legs.length || !(sp > 0)) return null;
+          if (up ? S.tgt <= sp : S.tgt >= sp) return { valid: false, live: usable(legs.reduce((a, b) => (Math.abs(b.K - S.tgt) < Math.abs(a.K - S.tgt) ? b : a)).t) };
+          const k1s = legs.filter((l) => (up ? l.K <= sp : l.K >= sp)), k2s = legs.filter((l) => (up ? l.K > sp : l.K < sp));
+          if (!k1s.length || !k2s.length) return null;
+          const L1 = k1s.reduce((a, b) => ((up ? b.K > a.K : b.K < a.K) ? b : a));
+          const L2 = k2s.reduce((a, b) => (Math.abs(b.K - S.tgt) < Math.abs(a.K - S.tgt) ? b : a));
+          if (!usable(L1.t) || !usable(L2.t)) return null;
+          let mark = false;
+          const px = (l, side) => { const v = +l.t[side]; if (v > 0) return v; mark = true; return +l.t.M; };
+          const p1 = px(L1, "a"), p2 = px(L2, "b"), D = p1 - p2, W = Math.abs(L2.K - L1.K);
+          if (!(D > 0) || !(W - D > 0)) return null;
+          const n = Math.round((S.amt / (W - D)) * 100) / 100, cost = n * D;
+          const fee = (l, p) => Math.min(n * (+l.t.I || sp) * (+l.i.taker_fee_rate || 0), 0.125 * n * p) + (+l.i.base_fee || 0);
+          const op = L2.t.option_pricing || {}, f = +op.f || sp;
+          const ch = liveChance(d, c.tk, f);
+          return { valid: true, live: true, mark, K1: L1.K, K2: L2.K, W, D, n, cost, fee: cost * 0.0025, chance: ch == null ? chanceAt(S.date) : ch,
+            i1: L1.i.instrument_name, i2: L2.i.instrument_name, p1, p2, s1: +L1.t.a > 0 ? "ask" : "mark", s2: +L2.t.b > 0 ? "bid" : "mark", dfee: fee(L1, p1) + fee(L2, p2) };
+        }
+        // chance at the user's actual target: IV interpolated between the listed strikes bracketing S.tgt
+        function liveChance(d, tk, f) {
+          if (!d || !d.key || !tk) return null;
+          const up = S.dir === "up", typ = up ? "C" : "P", tgt = S.tgt;
+          const legs = (INST[S.asset] || []).filter((i) => ymd(i.instrument_name) === d.key && i.option_details.option_type === typ && tk[i.instrument_name])
+            .map((i) => ({ K: +i.option_details.strike, t: tk[i.instrument_name] })).sort((a, b) => a.K - b.K);
+          if (!legs.length) return null;
+          let lo = null, hi = null;
+          legs.forEach((l) => { if (l.K <= tgt) lo = l; if (l.K >= tgt && !hi) hi = l; });
+          if (!lo) lo = hi; if (!hi) hi = lo;
+          const iv = (l) => +(l.t.option_pricing || {}).i || ASSETS[S.asset].iv;
+          const w = hi.K === lo.K ? 0 : (tgt - lo.K) / (hi.K - lo.K), v = iv(lo) + w * (iv(hi) - iv(lo));
+          if (!(f > 0)) {
+            const sp = +Object.values(tk)[0].I || spot();
+            const k2s = legs.filter((l) => (up ? l.K > sp : l.K < sp));
+            const L2 = k2s.length ? k2s.reduce((a, b) => (Math.abs(b.K - tgt) < Math.abs(a.K - tgt) ? b : a)) : null;
+            f = (L2 && +(L2.t.option_pricing || {}).f) || sp;
+          }
+          const T = Math.max((d.e - Date.now()) / (365 * 864e5), 1e-6);
+          if (!(v > 0) || !(tgt > 0)) return null;
+          const d2 = (Math.log(f / tgt) - 0.5 * v * v * T) / (v * Math.sqrt(T));
+          return up ? N(d2) : N(-d2);
+        }
+        function chanceFor(i) {
+          const d = DATES[i], c = d && d.key ? cached(S.asset, d.key) : null;
+          const ch = c ? liveChance(d, c.tk) : null;
+          return ch == null ? chanceAt(i) : ch;
+        }
+        function setTgtCap(q) {
+          const cap = $("tgtCap"), p = pctFrom();
+          const pays = q.valid && q.K2 && Math.abs(S.tgt - q.K2) / q.K2 > 0.005 ? " · pays at " + price(q.K2) : "";
+          if (cap) cap.textContent = (q.valid ? pct(q.chance) + " chance" : "Wrong side of spot") + " · " + (p >= 0 ? "+" : "") + p + "% from now" + pays;
+        }
+        function tick() {
+          const c = liveTk(), on = !!(c && quote().live), boot = !c && Date.now() - bootT < 6000;
+          $("liveTag").classList.toggle("is-sim", boot);
+          $("liveTag").classList.toggle("is-amber", !on && !boot);
+          $("liveTxt").textContent = on ? "Live · Derive " + NETS[NET].name.toLowerCase() + " · " + Math.round((Date.now() - c.t) / 1000) + "s ago" : boot ? "Connecting…" : "No quotes for this date";
+          if (!rv.hidden && c && c.t !== rvT) liveReview();
+        }
+        const baseUpdate = update, baseRender = renderReview, baseClose = closePop;
+        update = function () {
+          if (lastAsset !== S.asset) { lastAsset = S.asset; syncDates(); }
+          const k = curKey(); if (k && k !== lastKey) { lastKey = k; liveRefresh(); }
+          const q = baseUpdate();
+          if (q.valid && q.mark) $("qCost").insertAdjacentHTML("beforeend", '<small class="x-mk">mark</small>');
+          else if (q.valid && !q.live) $("qCost").insertAdjacentHTML("beforeend", '<small class="x-mk">Estimated</small>');
+          tick();
+          return q;
+        };
+        closePop = function () { const was = S.open; baseClose(); if (was === "tgt") update(); };
+        renderReview = function () {
+          baseRender();
+          const lc = liveTk(); rvT = lc ? lc.t : null;
+          if (Q && Q.valid && !Q.live) rv.querySelectorAll(".x-rows > div").forEach((r) => { if (r.firstChild.textContent === "Maximum debit") r.lastChild.insertAdjacentHTML("beforeend", ' <small class="x-mk">Estimated</small>'); });
+          if (!Q || !Q.live) return;
+          const usd = (v) => "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          rv.querySelectorAll(".x-rows > div").forEach((r) => {
+            const t = r.firstChild.textContent;
+            if (t === "Contracts") r.lastChild.innerHTML = "Buy " + Q.n.toFixed(2) + " " + Q.i1 + " @ " + usd(Q.p1) + " " + Q.s1 + "<br>Sell " + Q.n.toFixed(2) + " " + Q.i2 + " @ " + usd(Q.p2) + " " + Q.s2;
+            if (t === "hunch fee") r.insertAdjacentHTML("afterend", "<div><dt>Derive fees</dt><dd>" + usd(Q.dfee) + " · taker, both legs</dd></div>");
+          });
+        };
+        function balRow() {
+          const rows = rv.querySelector(".x-rows"); if (!rows) return;
+          let row = rows.querySelector("[data-bal]");
+          if (!Q || W.st !== "on") { if (row) row.remove(); return; }
+          if (!row) { rows.insertAdjacentHTML("beforeend", "<div data-bal><dt>Balance after</dt><dd></dd></div>"); row = rows.querySelector("[data-bal]"); }
+          const dd = row.lastChild;
+          dd.className = short() ? "x-dn" : "";
+          dd.textContent = short() ? "Not enough collateral" : usd2(W.val - Q.cost);
+        }
+
+        // network toggle
+        function setNet(n) {
+          if (n === NET) {
+            liveRefresh(); update();
+            const t = $("toast"); t.textContent = "Already on " + NETS[n].name + " · quotes refreshed"; t.hidden = false;
+            clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2200);
+            return;
+          }
+          NET = n;
+          document.querySelectorAll("[data-net]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.net === n)));
+          $("netNote").hidden = n !== "mainnet";
+          gen++;
+          if (ws) { ws.onclose = ws.onmessage = ws.onopen = null; try { ws.close(); } catch (_) {} ws = null; }
+          Object.keys(pend).forEach((id) => { clearTimeout(pend[id].t); pend[id].rej(new Error("Network switched")); delete pend[id]; });
+          Object.keys(INST).forEach((k) => delete INST[k]);
+          Object.keys(TK).forEach((k) => delete TK[k]);
+          walletLost();
+          lastAsset = null; lastKey = ""; lastLive = false; backoff = 2000;
+          connect();
+          if (!rv.hidden) showView("build"); else update();
+        }
+        document.querySelectorAll("[data-net]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); setNet(b.dataset.net); }));
+
+        // wallet: read-only Derive balance (login + subaccount value; never sends orders)
+        const usd2 = (v) => (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const errMsg = (e) => (e && (e.message || (typeof e.data === "string" ? e.data : ""))) || String(e || "Something went wrong");
+        function renderBal() {
+          const t = { none: "Connect wallet", busy: "Signing in…", reconnect: "Reconnect wallet", nosub: "No Derive subaccount on this network", err: W.msg }[W.st];
+          $("bal").textContent = W.st === "on" ? usd2(W.val) : t;
+          $("balNet").textContent = W.st === "on" ? NETS[NET].name + " · #" + W.id : "";
+          $("balBtn").setAttribute("aria-label", W.st === "on" ? "Derive balance " + usd2(W.val) + ", " + NETS[NET].name + " subaccount " + W.id : $("bal").textContent);
+        }
+        function setW(st) { W.st = st; renderBal(); if (!rv.hidden) setConfirm(); }
+        function stopW() { clearInterval(W.timer); W.timer = null; clearTimeout(W.flashT); }
+        function walletLost() { const had = W.st === "on" || W.st === "nosub" || W.st === "reconnect"; stopW(); W.id = null; W.val = 0; setW(had ? "reconnect" : "none"); }
+        function flashErr(e) {
+          stopW(); W.id = null; W.val = 0; W.msg = errMsg(e); setW("err");
+          W.flashT = setTimeout(() => { if (W.st === "err") setW("none"); }, 4000);
+        }
+        const sheet = $("sheet"), sheetBody = $("sheetBody");
+        function closeSheet() { sheet.hidden = true; $("balBtn").focus(); }
+        function openSheet(html) {
+          sheetBody.innerHTML = html + '<div class="x-sheet__btns"><button class="x-edit" type="button" id="sheetClose">Close</button></div>';
+          sheet.hidden = false;
+          $("sheetClose").onclick = closeSheet;
+          const f = sheetBody.querySelector("input, .x-buy") || $("sheetClose"); f.focus();
+        }
+        sheet.onclick = (e) => { if (e.target === sheet) closeSheet(); };
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheet.hidden) closeSheet(); });
+        async function openWallet() {
+          if (W.st === "busy") return;
+          if (!window.ethereum) return openSheet('<h2>No wallet found</h2><p>No wallet found in this browser. Open this page in a wallet browser such as MetaMask or Rabby to load your Derive balance.</p>');
+          let accounts;
+          try { accounts = await window.ethereum.request({ method: "eth_requestAccounts" }); } catch (e) { return flashErr(e); }
+          if (!accounts || !accounts.length) return flashErr(new Error("No account shared by the wallet"));
+          openSheet('<h2>Load your Derive balance</h2><p>Read-only on ' + NETS[NET].name + '. Signing in never sends an order.</p><label for="walletIn">Derive wallet address</label><input id="walletIn" autocomplete="off" spellcheck="false"><div class="x-sheet__btns" style="margin-bottom:8px"><button class="x-buy" type="button" id="signIn">Sign in to Derive</button></div>');
+          $("walletIn").value = accounts[0];
+          $("signIn").onclick = () => signIn(accounts[0], $("walletIn").value.trim());
+        }
+        async function signIn(signer, wallet) {
+          closeSheet(); stopW();
+          if (!wallet) return flashErr(new Error("Enter a wallet address"));
+          W.wallet = wallet; setW("busy");
+          const g = gen;
+          try {
+            const ts = Date.now().toString();
+            const sig = await window.ethereum.request({ method: "personal_sign", params: [ts, signer] });
+            await rpc("public/login", { wallet, timestamp: ts, signature: sig });
+            const r = await rpc("private/get_subaccounts", { wallet });
+            if (g !== gen) return;
+            const ids = (r && r.subaccount_ids) || [];
+            if (!ids.length) return setW("nosub");
+            W.id = ids[0];
+            await loadBal();
+            W.timer = setInterval(() => loadBal().catch(flashErr), 30000);
+          } catch (e) { if (g === gen) flashErr(e); }
+        }
+        async function loadBal() {
+          const g = gen, r = await rpc("private/get_subaccount", { subaccount_id: W.id });
+          if (g !== gen) return;
+          const v = +(r && r.subaccount_value);
+          if (!Number.isFinite(v)) throw new Error("No subaccount value returned");
+          W.val = v; setW("on");
+        }
+        $("balBtn").onclick = (e) => { e.stopPropagation(); openWallet(); };
+        setInterval(() => { tick(); const live = !!liveTk(); if (live !== lastLive) { lastLive = live; refreshView(); } }, 1000);
+        setInterval(liveRefresh, 10000);
+        setInterval(() => Object.keys(ASSETS).forEach(loadPerp), 300000);
+        connect();
+
+        update();
+      })();
+    </script>
+  </body>
+</html>

@@ -43,6 +43,12 @@ export const initialState = (asset: Asset = "ETH"): BuilderState => ({
 });
 
 export const defaultTarget = (spot: number, dir: Direction): number => (dir === "up" ? spot * (1 + DEFAULT_MOVE) : spot * (1 - DEFAULT_MOVE));
+/** Default target, or null when spot is unusable (≤ 0, NaN, or so large the target overflows). */
+const autoTarget = (spot: number | null, dir: Direction): number | null => {
+  if (spot === null || !(spot > 0)) return null;
+  const t = defaultTarget(spot, dir);
+  return Number.isFinite(t) && t > 0 ? t : null;
+};
 
 export function reduce(s: BuilderState, a: Action): BuilderState {
   switch (a.type) {
@@ -51,10 +57,10 @@ export function reduce(s: BuilderState, a: Action): BuilderState {
       return { ...s, amount: Math.min(AMOUNT_MAX, Math.max(AMOUNT_MIN, a.value)) };
     case "asset":
       if (a.asset === s.asset) return { ...s, open: null };
-      return { ...s, asset: a.asset, target: a.spot && a.spot > 0 ? defaultTarget(a.spot, s.dir) : null, expiryKey: null, open: null };
+      return { ...s, asset: a.asset, target: autoTarget(a.spot, s.dir), expiryKey: null, open: null };
     case "toggleDir": {
       const dir: Direction = s.dir === "up" ? "down" : "up";
-      return { ...s, dir, target: a.spot && a.spot > 0 ? defaultTarget(a.spot, dir) : s.target, open: null };
+      return { ...s, dir, target: autoTarget(a.spot, dir) ?? s.target, open: null };
     }
     case "target":
       if (!(a.value > 0) || !Number.isFinite(a.value)) return s;
@@ -68,8 +74,8 @@ export function reduce(s: BuilderState, a: Action): BuilderState {
       return { ...s, expiryKey: best.key };
     }
     case "spot":
-      if (s.target !== null || !(a.spot > 0)) return s;
-      return { ...s, target: defaultTarget(a.spot, s.dir) };
+      if (s.target !== null) return s;
+      return { ...s, target: autoTarget(a.spot, s.dir) };
     case "open":
       return { ...s, open: s.open === a.pop ? null : a.pop };
     case "close":

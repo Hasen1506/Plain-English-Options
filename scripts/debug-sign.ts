@@ -28,6 +28,7 @@ const a = captured!;
 const td = typedDataFor(a, net);
 const { EIP712Domain: _d, ...types } = td.types;
 console.log(JSON.stringify({
+  action: a,
   ours: { digest: digest(a, net), typed: TypedDataEncoder.hash(td.domain, types, td.message), data: encodeTradeData({ assetAddress: inst.assetAddress, subId: inst.subId, limitPrice: "1", amount: "0.1", maxFee: "5", recipientId: 87139, isBid: true }) },
   theirs: { typed_data_hash: dbg.typed_data_hash, encoded_data: dbg.encoded_data, domain_separator: dbg.domain_separator, recovered_signer: dbg.recovered_signer, expected_signer: dbg.expected_signer },
 }, null, 1));
