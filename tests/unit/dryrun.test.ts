@@ -93,6 +93,7 @@ describe("dry run can never trade", () => {
     const rawInst = mainnetInstruments("ETH").raw;
     const tk = mainnetTickers("ETH");
     type Fr = { method: string; params: Record<string, unknown>; result: unknown };
+    const perpFx = (await import("../fixtures/perps-mainnet.json", { with: { type: "json" } })).default.frames as { method: string; params: Record<string, unknown>; result: any }[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     const fxTickers = ((await import("../fixtures/mainnet-public.json", { with: { type: "json" } })).default.frames as Fr[]).filter((f) => f.method === "public/get_tickers");
     const inner = {
       async call<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
@@ -103,6 +104,9 @@ describe("dry run can never trade", () => {
         if (method === "public/get_tickers") return (fxTickers.find((f) => f.params.currency === "ETH" && String(f.params.expiry_date) === String(params.expiry_date))?.result ?? { tickers: {} }) as T;
         if (method === "public/get_risk_universes") return [{ risk_universe_id: 1, managers: [{ manager_id: 1, margin_type: "SM", instruments: ["ETH-OPTION"], collaterals: [] }] }] as T;
         if (method === "private/order_debug") return { typed_data_hash: "0x00", recovered_signer: params.signer, domain_separator: NETWORKS.mainnet.domainSeparator } as T;
+        if (method === "public/get_instrument") return perpFx.find((f) => f.method === "public/get_all_instruments")!.result.instruments.find((i: { instrument_name: string }) => i.instrument_name === params.instrument_name) as T;
+        if (method === "public/get_ticker") return perpFx.find((f) => f.method === "public/get_ticker" && f.params.instrument_name === params.instrument_name)!.result as T;
+        if (method === "private/get_margin") return { is_valid_trade: true } as T;
         return {} as T;
       },
     };
@@ -113,6 +117,10 @@ describe("dry run can never trade", () => {
     expect(report.subaccount.riskUniverse).toBe(1);
     expect(report.rightUniverse).toBe(true);
     expect(tk.length).toBeGreaterThan(0);
+    // perps: the smallest ETH-PERP market and post-only orders, signed and only debugged
+    expect(report.perps!.instrument).toBe("ETH-PERP");
+    expect(calls.filter((m) => m === "private/order_debug").length).toBe(4);
+    expect(report.perps!.margin!.valid).toBe(true);
   });
 
   it("checkMainnet refuses a raw (unguarded) connection", async () => {
@@ -126,7 +134,7 @@ describe("check:mainnet script source", () => {
     for (const f of ["scripts/check-mainnet.ts", "scripts/check-mainnet-lib.ts"]) {
       const src = readFileSync(f, "utf8").replace(/^\s*\/\/.*$/gm, "");
       expect(src).not.toMatch(/["'`]private\/order["'`]/);
-      expect(src).not.toMatch(/\b(sendOrder|placeSpread|closeSpread|closePosition)\b/);
+      expect(src).not.toMatch(/\b(sendOrder|placeSpread|closeSpread|closePosition|openPerp|closePerp|flipPerp|closeAll|cancelEverything)\b/);
     }
     const cli = readFileSync("scripts/check-mainnet.ts", "utf8");
     expect(cli).toMatch(/new ReadOnlyRpc\(client\)/);
