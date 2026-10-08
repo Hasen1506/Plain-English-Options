@@ -121,3 +121,15 @@ export function signDigestWithKey(privateKey: string, d: string): string {
 export function makeNonce(now = Date.now()): string {
   return (BigInt(now) * 1_000_000n + BigInt(Math.floor(Math.random() * 1e6))).toString();
 }
+
+let lastIncreasing = 0n;
+/**
+ * Nonce for actions that must strictly increase per wallet/subaccount
+ * (session key, withdraw, transfer): ns timestamp, bumped past the last one issued.
+ */
+export function increasingNonce(now = Date.now()): string {
+  let n = BigInt(now) * 1_000_000n + BigInt(Math.floor(Math.random() * 1000));
+  if (n <= lastIncreasing) n = lastIncreasing + 1n;
+  lastIncreasing = n;
+  return n.toString();
+}
