@@ -1,6 +1,6 @@
 // DOM controller: wires the pure modules to the page.
 
-import { ASSETS, MAINNET_PHRASE, MAX_COST_STORAGE_KEY, NETWORKS, QUOTE_MAX_AGE_MS, SESSION_TTL_SEC, TICKER_REFRESH_MS, type Asset, type NetworkId } from "../config.ts";
+import { ASSETS, LEVERAGE_DEFAULT_CAP, LEVERAGE_STORAGE_KEY, LEVERAGE_UI_MAX, MAINNET_PHRASE, MAX_COST_STORAGE_KEY, NETWORKS, QUOTE_MAX_AGE_MS, SESSION_TTL_SEC, TICKER_REFRESH_MS, type Asset, type NetworkId } from "../config.ts";
 import { DeriveClient, type Status } from "../net/client.ts";
 import { ensureChain, friendlyWalletError, walletSigner, type ActionSigner, type Eip1193 } from "../net/signer.ts";
 import { cancelOrder, closePosition, closeSpread, placeSpread, preTradeCheck, type PreTrade, type SpreadResult } from "../net/trader.ts";
@@ -9,7 +9,14 @@ import { checkDepositAmount, collateralFor, depositRoute, estimateDepositGas, fr
 import { ReadOnlyRpc, debugSpread } from "../net/dryrun.ts";
 import { isNoAccount } from "../net/account.ts";
 import { closedSpreads, parseOrders, parseTrades, type ClosedSpread, type LegSummary, type OrderRow, type TradeRow } from "../lib/history.ts";
-import { parseMaxCost } from "../lib/guards.ts";
+import { parseLeverageCap, parseMaxCost } from "../lib/guards.ts";
+import { cancelEverything, closeAll, type KillLeg } from "../net/perpTrader.ts";
+import { isPerpName } from "../lib/perp.ts";
+import type { VenueTrigger } from "../venues/types.ts";
+import { parseFunding, perpHistoryRows, type PerpHistoryRow } from "../lib/perpHistory.ts";
+import { createPerps } from "./perps.ts";
+import { createVenues, type PerpVenue } from "../venues/index.ts";
+import { perpHistoryHtml, perpPositionsHtml } from "./perpViews.ts";
 import {
   parseCurrencies,
   parseInstrument,
@@ -28,7 +35,7 @@ import { confirmState } from "../lib/guards.ts";
 import { escapeHtml as h, money, pct, price, signedMoney, usd2, type ExpiryLabel } from "../lib/format.ts";
 import { chartSvg, depositSheetHtml, historyHtml, oneTapHtml, planHtml, portfolioHtml, resultHtml, reviewHtml, withdrawSheetHtml } from "./views.ts";
 
-type View = "build" | "review" | "done" | "portfolio" | "history";
+type View = "build" | "review" | "done" | "portfolio" | "history" | "perps";
 type WalletSt = "none" | "busy" | "on" | "reconnect" | "err" | "nosub" | "noaccount";
 
 interface TkEntry {
@@ -86,7 +93,7 @@ export function startApp(opts: AppOptions = {}) {
       return null;
     }
   })();
-  const settings = { maxCost: parseMaxCost(storage?.getItem(MAX_COST_STORAGE_KEY)) };
+  const settings = { maxCost: parseMaxCost(storage?.getItem(MAX_COST_STORAGE_KEY)), leverageCap: parseLeverageCap(storage?.getItem(LEVERAGE_STORAGE_KEY), LEVERAGE_UI_MAX, LEVERAGE_DEFAULT_CAP) };
   /** Orders are signed by the one-tap key while it is valid, otherwise by the wallet. */
   const orderSigner = (): ActionSigner | null => (W.session && W.tap && sessionKeyUsable(W.session.expirySec, now()) ? W.tap : W.signer);
   const R = { agreed: false, typed: "", busy: false, pre: null as PreTrade | null, preKey: "", step: "" };
@@ -587,8 +594,30 @@ export function startApp(opts: AppOptions = {}) {
   // ---------- portfolio ----------
   const port = $("portfolio");
   let portMsg = "";
+  // eslint-disable-next-line prefer-const -- assigned once the venues exist, further down
+  let derive: PerpVenue;
+  let portTriggers: VenueTrigger[] = [];
+  let portTrigSub: number | null = null;
+  function loadTriggers() {
+    const id = W.sel, g = gen;
+    if (W.st !== "on" || id === null) return;
+    const acct = sub();
+    if (!acct) return;
+    derive
+      .triggers(acct)
+      .then((r) => {
+        if (g !== gen || W.sel !== id) return;
+        portTriggers = r;
+        portTrigSub = id;
+        if (view === "portfolio") renderPortfolio();
+      })
+      .catch(() => {});
+  }
   function renderPortfolio() {
-    port.innerHTML = portfolioHtml(sub(), NETWORKS[net].name, W.st === "on", { mainnet: net === "mainnet", maxCost: settings.maxCost });
+    const s = sub();
+    const optionView = s ? { ...s, positions: s.positions.filter((p) => !isPerpName(p.instrument)) } : null;
+    port.innerHTML = portfolioHtml(optionView, NETWORKS[net].name, W.st === "on", { mainnet: net === "mainnet", maxCost: settings.maxCost, leverageCap: settings.leverageCap, leverageMax: LEVERAGE_UI_MAX, hasPositions: !!s?.positions.length });
+    if (s && W.st === "on") port.querySelector(".x-card")!.insertAdjacentHTML("afterend", perpPositionsHtml({ sub: s, triggers: portTrigSub === s.id ? portTriggers : [], tickers: perps.data().tk }));
     const st = (t: string) => {
       portMsg = t; // survives the re-render that follows every refresh
       const el = document.getElementById("portStep");
@@ -609,6 +638,19 @@ export function startApp(opts: AppOptions = {}) {
           await loadSubs();
         }),
     );
+    port.querySelectorAll<HTMLButtonElement>("[data-cancel-trigger]").forEach(
+      (b) =>
+        (b.onclick = async () => {
+          b.disabled = true;
+          try {
+            await derive.cancelTrigger(sub()!, b.dataset.cancelTrigger!);
+            st("Take-profit / stop-loss cancelled");
+          } catch (e) {
+            st("Cancel failed: " + (e as Error).message);
+          }
+          loadTriggers();
+        }),
+    );
     const legData = async (name: string) => {
       const cached = Object.values(inst).flat().find((x) => x?.name === name) ?? null;
       const [ri, rt] = await Promise.all([cached ?? client.call("public/get_instrument", { instrument_name: name }), client.call("public/get_ticker", { instrument_name: name })]);
@@ -620,14 +662,15 @@ export function startApp(opts: AppOptions = {}) {
     if (killBtn)
       killBtn.onclick = async () => {
         killBtn.disabled = true;
-        st("Cancelling every open order…");
+        st("Cancelling every open order, take-profit and stop-loss…");
         try {
-          await client.call("private/cancel_all", { subaccount_id: W.sel });
-          st("All open orders cancelled");
+          await derive.cancelAll(sub()!);
+          st("All open orders cancelled, take-profits and stop-losses too");
         } catch (e) {
           st("Cancel all failed: " + (e as Error).message);
         }
         await loadSubs();
+        loadTriggers();
       };
     const capIn = document.getElementById("maxCostIn") as HTMLInputElement | null;
     const capSave = document.getElementById("maxCostSave");
@@ -639,13 +682,23 @@ export function startApp(opts: AppOptions = {}) {
         st(settings.maxCost === null ? "Mainnet limit off" : `Mainnet trades are limited to ${money(settings.maxCost)} each`);
         renderPortfolio();
       };
+    const levIn = document.getElementById("levCapIn") as HTMLInputElement | null;
+    const levSave = document.getElementById("levCapSave");
+    if (levIn && levSave)
+      levSave.onclick = () => {
+        settings.leverageCap = parseLeverageCap(levIn.value, LEVERAGE_UI_MAX, LEVERAGE_DEFAULT_CAP);
+        storage?.setItem(LEVERAGE_STORAGE_KEY, String(settings.leverageCap));
+        st(`Perp leverage capped at ${settings.leverageCap}×`);
+        renderPortfolio();
+      };
     const ctx = () => ({ rpc: client, signer: orderSigner()!, net: NETWORKS[net], subaccountId: W.sel!, now });
+    const confirmMain = (what: string) => net !== "mainnet" || window.confirm(`${what} with real money on mainnet?`);
     port.querySelectorAll<HTMLButtonElement>("[data-close]").forEach(
       (b) =>
         (b.onclick = async () => {
           const name = b.dataset.close!, p = sub()?.positions.find((x) => x.instrument === name);
           if (!p || !orderSigner()) return;
-          if (net === "mainnet" && !window.confirm("Close this position with real money on mainnet?")) return;
+          if (!confirmMain("Close this position")) return;
           b.disabled = true;
           st("Sign the closing order in your wallet");
           try {
@@ -658,13 +711,56 @@ export function startApp(opts: AppOptions = {}) {
           await loadSubs();
         }),
     );
+    const perpAct = (attr: string, what: string, run: (name: string, amount: number) => Promise<string>) =>
+      port.querySelectorAll<HTMLButtonElement>(`[${attr}]`).forEach(
+        (b) =>
+          (b.onclick = async () => {
+            const name = b.getAttribute(attr)!, p = sub()?.positions.find((x) => x.instrument === name);
+            if (!p || !derive.signer()) return;
+            if (!confirmMain(what)) return;
+            b.disabled = true;
+            st(derive.signer()!.oneTap ? "Sending…" : "Sign the order in your wallet");
+            try {
+              st(await run(name, p.amount));
+            } catch (e) {
+              st(what + " failed: " + friendlyWalletError(e).message);
+            }
+            await loadSubs();
+            loadTriggers();
+          }),
+      );
+    const said = (r: { status: string; filled: number; amount: number; orderId: string | null; error: string | null }) => `${r.status}: ${r.filled} of ${r.amount} · order ${r.orderId ?? "—"}${r.error ? " · " + r.error : ""}`;
+    perpAct("data-perp-close", "Close this perp", async (name, amt) => said(await derive.close(sub()!, name, amt, 1)));
+    perpAct("data-perp-half", "Close half of this perp", async (name, amt) => said(await derive.close(sub()!, name, amt, 0.5, "peo-close-half")));
+    perpAct("data-perp-flip", "Flip this perp", async (name, amt) => {
+      const r = await derive.flip(sub()!, name, amt);
+      return `${r.message} · orders ${[r.close.orderId, r.open?.orderId].filter(Boolean).join(", ")}`;
+    });
+    const allBtn = document.getElementById("closeAllPos") as HTMLButtonElement | null;
+    if (allBtn)
+      allBtn.onclick = async () => {
+        const s0 = sub();
+        if (!s0 || !orderSigner()) return;
+        if (!window.confirm(`Cancel every order and close all ${s0.positions.length} position${s0.positions.length === 1 ? "" : "s"} on #${s0.id}${net === "mainnet" ? " with real money" : ""}?`)) return;
+        allBtn.disabled = true;
+        const legs: KillLeg[] = s0.positions.map((p) =>
+          derive.isPerp(p.instrument)
+            ? { name: p.instrument, amount: p.amount, kind: "perp", close: (a) => derive.close(s0, p.instrument, a, 1, "peo-kill") }
+            : { name: p.instrument, amount: p.amount, kind: "option", close: async (a) => { const { i, t } = await legData(p.instrument); return closePosition(ctx(), i, t, a); } },
+        );
+        const r = await closeAll(client, s0.id, legs, st);
+        const left = r.results.filter((x) => Math.abs(x.outcome.filled) + 1e-9 < Math.abs(legs.find((l) => l.name === x.name)!.amount));
+        st(`${r.cancelled ? "All orders cancelled. " : "Cancel all failed. "}${r.results.length - left.length} of ${r.results.length} positions closed${left.length ? ` · still open: ${left.map((x) => `${x.name} (${x.outcome.error ?? x.outcome.status})`).join(", ")}` : ""}`);
+        await loadSubs();
+        loadTriggers();
+      };
     port.querySelectorAll<HTMLButtonElement>("[data-close-spread]").forEach(
       (b) =>
         (b.onclick = async () => {
           const names = b.dataset.closeSpread!.split("|");
           const ps = names.map((n) => sub()?.positions.find((x) => x.instrument === n));
           if (ps.some((p) => !p) || !orderSigner()) return;
-          if (net === "mainnet" && !window.confirm("Close this spread with real money on mainnet?")) return;
+          if (!confirmMain("Close this spread")) return;
           b.disabled = true;
           st("Sign the closing orders in your wallet");
           try {
@@ -681,9 +777,11 @@ export function startApp(opts: AppOptions = {}) {
 
   // ---------- history ----------
   const hist = $("history");
-  const H = { spreads: [] as ClosedSpread[], singles: [] as LegSummary[], trades: [] as TradeRow[], orders: [] as OrderRow[], loading: false, error: null as string | null, sub: null as number | null };
+  const H = { spreads: [] as ClosedSpread[], singles: [] as LegSummary[], trades: [] as TradeRow[], orders: [] as OrderRow[], perps: [] as PerpHistoryRow[], perpTotal: 0, fundingError: null as string | null, loading: false, error: null as string | null, sub: null as number | null };
   function renderHistory() {
-    hist.innerHTML = historyHtml({ connected: W.st === "on", netName: NETWORKS[net].name, subId: W.sel, spreads: H.sub === W.sel ? H.spreads : [], closedSingles: H.sub === W.sel ? H.singles : [], trades: H.sub === W.sel ? H.trades : [], orders: H.sub === W.sel ? H.orders : [], loading: H.loading, error: H.error });
+    const mine = H.sub === W.sel;
+    hist.innerHTML = historyHtml({ connected: W.st === "on", netName: NETWORKS[net].name, subId: W.sel, spreads: mine ? H.spreads : [], closedSingles: mine ? H.singles.filter((l) => !isPerpName(l.instrument)) : [], trades: mine ? H.trades : [], orders: mine ? H.orders : [], loading: H.loading, error: H.error });
+    if (W.st === "on" && W.sel !== null && mine) hist.querySelector(".x-card")!.insertAdjacentHTML("afterend", perpHistoryHtml(H.perps, H.perpTotal, H.fundingError));
   }
   async function loadHistory() {
     if (W.st !== "on" || W.sel === null) return renderHistory();
@@ -695,8 +793,18 @@ export function startApp(opts: AppOptions = {}) {
       const [t, o] = await Promise.all([client.call("private/get_trade_history", { subaccount_id: id, page_size: 200 }), client.call("private/get_order_history", { subaccount_id: id, page_size: 100 })]);
       if (g !== gen) return;
       const trades = parseTrades(t);
-      const cs = closedSpreads(trades);
-      Object.assign(H, { trades, orders: parseOrders(o), spreads: cs.spreads, singles: cs.closedSingles, sub: id });
+      const cs = closedSpreads(trades.filter((x) => !isPerpName(x.instrument)));
+      let funding: ReturnType<typeof parseFunding> = [];
+      H.fundingError = null;
+      try {
+        const acct = W.subs.find((x) => x.id === id);
+        if (acct) funding = (await derive.history(acct)).funding;
+      } catch (e) {
+        H.fundingError = "Funding history unavailable: " + (e as Error).message;
+      }
+      if (g !== gen) return;
+      const ph = perpHistoryRows(trades, funding);
+      Object.assign(H, { trades, orders: parseOrders(o), spreads: cs.spreads, singles: cs.closedSingles, perps: ph.rows, perpTotal: ph.total, sub: id });
     } catch (e) {
       H.error = "Could not load history: " + (e as Error).message;
     }
@@ -713,8 +821,11 @@ export function startApp(opts: AppOptions = {}) {
     $("done").hidden = v !== "done";
     port.hidden = v !== "portfolio";
     hist.hidden = v !== "history";
+    $("perps").hidden = v !== "perps";
+    if (v === "perps") perps.show();
+    else perps.hide();
     $("buy").hidden = $("dockSep").hidden = v !== "build";
-    document.querySelectorAll<HTMLElement>(".x-ic").forEach((b) => b.classList.toggle("is-on", b.dataset.view === (v === "portfolio" || v === "history" ? v : "build")));
+    document.querySelectorAll<HTMLElement>(".x-ic").forEach((b) => b.classList.toggle("is-on", b.dataset.view === (v === "portfolio" || v === "history" || v === "perps" ? v : "build")));
     if (cdTimer && v !== "review") {
       clearInterval(cdTimer);
       cdTimer = null;
@@ -731,6 +842,7 @@ export function startApp(opts: AppOptions = {}) {
     if (v === "portfolio") {
       renderPortfolio();
       void loadSubs();
+      loadTriggers();
     }
     if (v === "history") {
       renderHistory();
@@ -752,7 +864,7 @@ export function startApp(opts: AppOptions = {}) {
       (b.onclick = (e) => {
         e.stopPropagation();
         const v = b.dataset.view;
-        showView(v === "portfolio" || v === "history" ? v : "build");
+        showView(v === "portfolio" || v === "history" || v === "perps" ? v : "build");
       }),
   );
 
@@ -782,6 +894,7 @@ export function startApp(opts: AppOptions = {}) {
     if (view === "review") renderReview();
     if (view === "portfolio") renderPortfolio();
     if (view === "history") renderHistory();
+    perps.walletChanged();
   }
   let errT: ReturnType<typeof setTimeout> | null = null;
   function flashErr(e: unknown) {
@@ -898,8 +1011,8 @@ export function startApp(opts: AppOptions = {}) {
     $("killAll").onclick = async () => {
       const say = (t: string) => ($("subStep").textContent = t);
       try {
-        await client.call("private/cancel_all", { subaccount_id: W.sel });
-        say(`All open orders on #${W.sel} cancelled`);
+        await cancelEverything(client, W.sel!);
+        say(`All open orders, take-profits and stop-losses on #${W.sel} cancelled`);
         void loadSubs();
       } catch (e) {
         say("Cancel all failed: " + (e as Error).message);
@@ -938,6 +1051,7 @@ export function startApp(opts: AppOptions = {}) {
     renderBal();
     closeSheet();
     refresh();
+    perps.walletChanged();
     if (view === "portfolio" || view === "history") showView(view);
   }
 
@@ -974,17 +1088,18 @@ export function startApp(opts: AppOptions = {}) {
     return `${approx ? "about " : "≈ "}${eth < 0.0001 ? eth.toExponential(2) : eth.toFixed(5)} ETH${usd ? ` (${usd2(eth * usd)})` : ""} paid to the network from your wallet`;
   }
 
-  async function openDepositSheet(mode: "new" | "existing") {
+  async function openDepositSheet(mode: "new" | "existing", forRU?: { ru: number; product: string }) {
     const p = W.provider, owner = W.signer?.owner ?? W.owner, from = W.account;
     if (!p || !owner || !from) return;
     const NET = NETWORKS[net];
     const target = sub();
-    const ru = assetRU();
+    const ru = forRU ? forRU.ru : assetRU();
+    const assetName = forRU ? forRU.product : S.asset;
     let route: { managerId: number; collateral: ReturnType<typeof collateralFor> };
     try {
       if (!universes.length) universes = parseRiskUniverses(await client.call("public/get_risk_universes", {}));
       if (mode === "new") {
-        if (ru === null) throw new Error(`No risk universe lists ${S.asset} options`);
+        if (ru === null) throw new Error(`No risk universe lists ${assetName}${forRU ? "" : " options"}`);
         route = depositRoute(universes, NET, ru);
       } else {
         if (!target || target.managerId === null) throw new Error("Pick a subaccount first");
@@ -995,7 +1110,7 @@ export function startApp(opts: AppOptions = {}) {
       return;
     }
     const c = route.collateral;
-    const my = openSheet(depositSheetHtml({ mode, netName: NET.name, mainnet: isMain(), asset: S.asset, riskUniverse: ru, riskUniverseName: ruName(ru), subId: target?.id ?? null, walletUsdc: null, minDeposit: c.minDepositUsd, noAccount: W.st === "noaccount" }));
+    const my = openSheet(depositSheetHtml({ mode, netName: NET.name, mainnet: isMain(), asset: assetName, riskUniverse: ru, riskUniverseName: ruName(ru), subId: target?.id ?? null, walletUsdc: null, minDeposit: c.minDepositUsd, noAccount: W.st === "noaccount" }));
     const live = () => my === sheetGen;
     const amt = $<HTMLInputElement>("depAmt"), go = $<HTMLButtonElement>("depGo"), step = $("depStep");
     const real = document.getElementById("depReal") as HTMLInputElement | null;
@@ -1228,6 +1343,7 @@ export function startApp(opts: AppOptions = {}) {
       renderBal();
       if (view === "review" && !R.busy) renderReview();
       if (view === "portfolio") renderPortfolio();
+      perps.walletChanged();
       if (first && W.st === "on" && !W.session && !W.tapAsked && sheet.hidden) {
         W.tapAsked = true;
         const ru = assetRU();
@@ -1265,6 +1381,7 @@ export function startApp(opts: AppOptions = {}) {
           if (!inst[S.asset]) loadInstruments(S.asset);
           if (S.expiryKey) fetchTk(S.asset, S.expiryKey, true);
           if (W.st === "on" && W.session) void loadSubs();
+          perps.onOpen();
         }
         renderLive();
       },
@@ -1297,7 +1414,11 @@ export function startApp(opts: AppOptions = {}) {
     renderBal();
     S = { ...S, expiryKey: null, target: null };
     connect();
-    if (view !== "build") showView("build");
+    perps.reset();
+    portTriggers = [];
+    portTrigSub = null;
+    if (view === "perps") perps.walletChanged();
+    else if (view !== "build") showView("build");
     else renderBuilder();
   }
   document.querySelectorAll<HTMLElement>("[data-net]").forEach(
@@ -1319,6 +1440,7 @@ export function startApp(opts: AppOptions = {}) {
 
   // ---------- timers ----------
   setInterval(() => {
+    perps.tick();
     renderLive();
     if (S.expiryKey && wsStatus === "open") fetchTk(S.asset, S.expiryKey);
     if (view === "review") setConfirm();
@@ -1332,12 +1454,33 @@ export function startApp(opts: AppOptions = {}) {
     if (W.st === "on" && !R.busy) void loadSubs();
   }, 30_000);
 
+  // perp venues: Derive shares this app's connection, wallet, one-tap key and deposits
+  const venues = createVenues({
+    derive: {
+      client: () => client,
+      net: () => net,
+      now,
+      wsOpen: () => wsStatus === "open",
+      wallet: () => ({ on: W.st === "on", subs: W.subs, sel: W.sel, signer: W.signer, session: W.session, tap: W.tap }),
+      setSel: (id) => {
+        if (W.sel === id) return;
+        W.sel = id;
+        renderBal();
+      },
+      universes: () => universes,
+      loadSubs: () => loadSubs(),
+      newSubaccount: (ru, product) => void openDepositSheet("new", { ru, product }),
+    },
+  });
+  derive = venues.find((v) => v.id === "derive")!;
+  const perps = createPerps({ venues, now, settings: () => settings, toast });
+
   connect();
   renderBal();
   renderBuilder();
 
   // test hook: lets e2e read state without scraping
-  (window as unknown as { __peo?: unknown }).__peo = { state: () => ({ S, net, view, wallet: { st: W.st, sel: W.sel, oneTap: !!W.session, sessionKey: W.session?.address ?? null }, q: quote(), maxCost: settings.maxCost }) };
+  (window as unknown as { __peo?: unknown }).__peo = { state: () => ({ S, net, view, wallet: { st: W.st, sel: W.sel, oneTap: !!W.session, sessionKey: W.session?.address ?? null, scopes: W.session?.scopes ?? [] }, q: quote(), maxCost: settings.maxCost, leverageCap: settings.leverageCap, perps: perps.state() }) };
 }
 
 export { money };
