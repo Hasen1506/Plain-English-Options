@@ -11,17 +11,24 @@
 import { readFileSync } from "node:fs";
 import { getAddress } from "ethers";
 import { recoverL1, recoverUser, userTyped, APPROVE_AGENT_TYPES, WITHDRAW_TYPES, type HlSig } from "../../src/venues/hyperliquid/signing.ts";
-import { parseMeta, applyBook, type HlMarket } from "../../src/venues/hyperliquid/parse.ts";
+import { parseMeta, applyBook, hlName, hlDexOf, HL_TAKER, HL_MAKER, type HlMarket } from "../../src/venues/hyperliquid/parse.ts";
+import { builderLabel, builderNote, collateralTokenWire, findDex, hip3Fees, parseCategories } from "../../src/venues/hyperliquid/hip3.ts";
 import { meetsMinimum, validPrice, validSize } from "../../src/venues/hyperliquid/rules.ts";
 import type { PerpTicker } from "../../src/lib/perp.ts";
 import type { Packable } from "../../src/venues/hyperliquid/msgpack.ts";
 
 export type Net = "mainnet" | "testnet";
-type Frame = { req: { type: string; coin?: string }; res: unknown };
+type Frame = { req: { type: string; coin?: string; dex?: string; req?: { coin?: string } }; res: unknown };
 const fixtures: Record<Net, { recordedAt: number; frames: Frame[] }> = {
   mainnet: JSON.parse(readFileSync(new URL("../fixtures/hyperliquid/mainnet.json", import.meta.url), "utf8")),
   testnet: JSON.parse(readFileSync(new URL("../fixtures/hyperliquid/testnet.json", import.meta.url), "utf8")),
 };
+/** HIP-3 frames (scripts/record-hip3.ts): perpDexs, perpConciseAnnotations, the xyz dex, spotMeta, candles. */
+const hip3: Record<Net, { recordedAt: number; frames: Frame[] }> = {
+  mainnet: JSON.parse(readFileSync(new URL("../fixtures/hyperliquid/hip3-mainnet.json", import.meta.url), "utf8")),
+  testnet: JSON.parse(readFileSync(new URL("../fixtures/hyperliquid/hip3-testnet.json", import.meta.url), "utf8")),
+};
+export const hip3Frame = (net: Net, type: string, pick: (f: Frame) => boolean = () => true) => hip3[net].frames.find((f) => f.req.type === type && pick(f))?.res ?? null;
 export const HL_RECORDED_AT = fixtures.mainnet.recordedAt;
 
 interface Pos {
@@ -42,6 +49,10 @@ interface Order {
 }
 export interface HlMockState {
   net: Net;
+  /** USDC per user on each builder dex (each perp dex margins separately) */
+  dexBalance: Record<string, Record<string, number>>;
+  /** HIP-3 off: answer like a network without builder dexes */
+  noHip3?: boolean;
   /** userRole answers "missing" (no Hyperliquid mainnet account for anyone in this scenario) */
   noMainnet?: boolean;
   balance: Record<string, number>; // USDC per user
@@ -66,6 +77,21 @@ export function hlMarket(net: Net) {
     const p = parseMeta(meta);
     const books = new Map<string, unknown>();
     for (const f of fx.frames) if (f.req.type === "l2Book") books.set(f.req.coin!, f.res);
+    for (const f of hip3[net].frames) if (f.req.type === "l2Book") books.set(f.req.coin!, f.res);
+    // the builder dex the app lists, parsed the way the app does
+    const d = findDex(hip3Frame(net, "perpDexs"), "xyz");
+    if (d) {
+      const cats = parseCategories(hip3Frame(net, "perpConciseAnnotations"));
+      const b = parseMeta(hip3Frame(net, "metaAndAssetCtxs", (f) => f.req.dex === "xyz"), undefined, {
+        name: "xyz",
+        index: d.index,
+        categories: cats,
+        builder: (lev, iso) => ({ dex: "xyz", label: builderLabel(net, d), note: builderNote(net, d, lev, iso) }),
+        fees: (sc, g) => hip3Fees({ taker: HL_TAKER, maker: HL_MAKER }, sc, g),
+      });
+      p.markets.push(...b.markets);
+      Object.assign(p.tickers, b.tickers);
+    }
     m = { markets: p.markets, tk: p.tickers, meta, books };
     marketsCache.set(net, m);
   }
@@ -73,7 +99,7 @@ export function hlMarket(net: Net) {
 }
 
 export function newHlState(net: Net, now: () => number = () => HL_RECORDED_AT + 60_000): HlMockState {
-  return { net, balance: {}, agents: new Map(), pos: {}, lev: {}, orders: {}, fills: {}, nonces: new Map(), oid: 1000, now, log: [], withdrawals: [] };
+  return { net, dexBalance: {}, balance: {}, agents: new Map(), pos: {}, lev: {}, orders: {}, fills: {}, nonces: new Map(), oid: 1000, now, log: [], withdrawals: [] };
 }
 
 /** Synthetic one-level book around the mark for coins without a recorded l2Book. */
@@ -81,7 +107,7 @@ function bookFor(st: HlMockState, coin: string) {
   const m = hlMarket(st.net);
   const rec = m.books.get(coin);
   if (rec) return rec;
-  const name = `${coin.toUpperCase()}-PERP`;
+  const name = hlName(coin);
   const t = m.tk[name];
   const mark = t?.mark ?? 1;
   const mk = m.markets.find((x) => x.name === name)!;
@@ -90,14 +116,19 @@ function bookFor(st: HlMockState, coin: string) {
   return { coin, time: HL_RECORDED_AT, levels: [[{ px: String(+bid.toFixed(8)), sz: "1000000", n: 5 }], [{ px: String(+ask.toFixed(8)), sz: "1000000", n: 5 }]] };
 }
 function touch(st: HlMockState, coin: string) {
-  const name = `${coin.toUpperCase()}-PERP`;
+  const name = hlName(coin);
   const t = applyBook(hlMarket(st.net).tk[name]!, bookFor(st, coin));
   return t;
 }
 const marketByAsset = (st: HlMockState, a: number) => hlMarket(st.net).markets.find((m) => m.asset.index === a) ?? null;
 
-function account(st: HlMockState, user: string) {
-  const ps = st.pos[user] ?? {};
+const balOf = (st: HlMockState, user: string, dex: string) => (dex ? (st.dexBalance[user]?.[dex] ?? 0) : (st.balance[user] ?? 0));
+function addBal(st: HlMockState, user: string, dex: string, v: number) {
+  if (dex) (st.dexBalance[user] ??= {})[dex] = balOf(st, user, dex) + v;
+  else st.balance[user] = (st.balance[user] ?? 0) + v;
+}
+function account(st: HlMockState, user: string, dex = "") {
+  const ps = Object.fromEntries(Object.entries(st.pos[user] ?? {}).filter(([coin]) => hlDexOf(coin) === dex));
   const m = hlMarket(st.net);
   let upnl = 0, used = 0, mm = 0;
   const assetPositions = Object.entries(ps)
@@ -113,10 +144,10 @@ function account(st: HlMockState, user: string) {
       mm += ntl * mk.mmReq;
       return { coin, szi: p.szi, lv, entry: p.entry, mark, u, ntl, mk, cum: p.cumFunding };
     });
-  const value = (st.balance[user] ?? 0) + upnl;
+  const value = balOf(st, user, dex) + upnl;
   const headroom = value - mm;
   return {
-    marginSummary: { accountValue: String(value), totalNtlPos: "0", totalRawUsd: String(st.balance[user] ?? 0), totalMarginUsed: String(used) },
+    marginSummary: { accountValue: String(value), totalNtlPos: "0", totalRawUsd: String(balOf(st, user, dex)), totalMarginUsed: String(used) },
     crossMarginSummary: { accountValue: String(value), totalNtlPos: "0", totalRawUsd: "0", totalMarginUsed: String(used) },
     crossMaintenanceMarginUsed: String(mm),
     withdrawable: String(Math.max(0, value - used)),
@@ -132,8 +163,8 @@ function account(st: HlMockState, user: string) {
   };
 }
 
-function frontendOrders(st: HlMockState, user: string) {
-  return (st.orders[user] ?? []).map((o) => ({
+function frontendOrders(st: HlMockState, user: string, dex = "") {
+  return (st.orders[user] ?? []).filter((o) => hlDexOf(o.coin) === dex).map((o) => ({
     coin: o.coin,
     side: o.side,
     limitPx: o.limitPx,
@@ -156,16 +187,29 @@ function frontendOrders(st: HlMockState, user: string) {
 export function hlInfo(st: HlMockState, body: Record<string, unknown>): unknown {
   const m = hlMarket(st.net);
   const user = typeof body.user === "string" ? getAddress(body.user) : "";
+  const dex = typeof body.dex === "string" ? body.dex : "";
   switch (body.type) {
     case "metaAndAssetCtxs":
-      return m.meta;
+      return dex ? (st.noHip3 ? null : hip3Frame(st.net, "metaAndAssetCtxs", (f) => f.req.dex === dex)) : m.meta;
+    case "perpDexs":
+      return st.noHip3 ? [null] : hip3Frame(st.net, "perpDexs");
+    case "perpConciseAnnotations":
+      return st.noHip3 ? [] : hip3Frame(st.net, "perpConciseAnnotations");
+    case "spotMeta":
+      return hip3Frame(st.net, "spotMeta");
+    case "candleSnapshot": {
+      const coin = (body.req as { coin?: string } | undefined)?.coin;
+      return hip3Frame(st.net, "candleSnapshot", (f) => f.req.req?.coin === coin) ?? [];
+    }
+    case "userAbstraction":
+      return "default";
     case "l2Book":
       return bookFor(st, String(body.coin));
     case "clearinghouseState":
-      return account(st, user);
+      return account(st, user, dex);
     case "frontendOpenOrders":
     case "openOrders":
-      return frontendOrders(st, user);
+      return frontendOrders(st, user, dex);
     case "userFills":
       return [...(st.fills[user] ?? [])].reverse();
     case "userFunding":
@@ -206,8 +250,9 @@ function fill(st: HlMockState, user: string, coin: string, isBuy: boolean, sz: n
   else if (ns !== 0 && Math.sign(ns) !== Math.sign(p.szi)) p.entry = px;
   p.szi = ns;
   if (ns === 0) p.entry = 0;
-  const fee = sz * px * (crossed ? 0.00045 : 0.00015);
-  st.balance[user] = (st.balance[user] ?? 0) + closed - fee;
+  const mk = hlMarket(st.net).markets.find((x) => x.asset.coin === coin);
+  const fee = sz * px * (crossed ? (mk?.takerFeeRate ?? 0.00045) : (mk?.makerFeeRate ?? 0.00015));
+  addBal(st, user, hlDexOf(coin), closed - fee);
   (st.fills[user] ??= []).push({ coin, px: String(px), sz: String(sz), side: isBuy ? "B" : "A", time: st.now(), startPosition: "0", dir: "", closedPnl: String(closed), hash: "0x0", oid, crossed, fee: String(fee), tid: st.oid * 7, feeToken: "USDC" });
 }
 
@@ -237,7 +282,7 @@ function placeOrders(st: HlMockState, user: string, action: { orders: { a: numbe
     const crosses = o.b ? px >= tk.ask : px <= tk.bid;
     // margin: the opening part of the order must fit in free collateral at the coin's leverage
     if (!o.r) {
-      const a = account(st, user);
+      const a = account(st, user, mk.asset.dex ?? "");
       const lv = st.lev[user]?.[coin]?.value ?? Math.min(20, mk.maxLeverage);
       if ((sz * px) / lv > Number(a.withdrawable) + 1e-9) {
         if (i === 0) parentFilled = false;
@@ -331,6 +376,23 @@ export function hlExchange(st: HlMockState, body: { action: Record<string, unkno
     return { status: "ok", response: { type: "default" } };
   }
   if (a.type === "order") return placeOrders(st, user, a as never);
+  if (a.type === "agentSendAsset") {
+    // only the collateral token, only between this user's own dexes, never more than is free
+    if (getAddress(String(a.destination)) !== user) return err("Destination must match the source address");
+    if (a.nonce !== body.nonce) return err("nonce must match");
+    const want = collateralTokenWire(hip3Frame(st.net, "spotMeta"), 0);
+    if (a.token !== want) return err("Only the collateral token can be transferred to or from a perp DEX");
+    const src = String(a.sourceDex), dst = String(a.destinationDex);
+    const known = (x: string) => x === "" || !!findDex(hip3Frame(st.net, "perpDexs"), x);
+    if (!known(src) || !known(dst) || src === dst) return err("Invalid perp dex");
+    const amt = Number(a.amount);
+    if (!(amt > 0) || !/^\d+(\.\d{1,6})?$/.test(String(a.amount))) return err("Invalid amount");
+    if (amt > Number(account(st, user, src).withdrawable) + 1e-9) return err("Insufficient balance");
+    addBal(st, user, src, -amt);
+    addBal(st, user, dst, amt);
+    st.log.push({ type: "agentSendAsset", signer, ok: true, detail: `${src || "main"}→${dst} ${a.amount}` });
+    return { status: "ok", response: { type: "default" } };
+  }
   if (a.type === "cancel") {
     const out = (a.cancels as { a: number; o: number }[]).map((c) => {
       const list = st.orders[user] ?? [];
