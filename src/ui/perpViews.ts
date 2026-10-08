@@ -65,6 +65,8 @@ export interface PerpPanelModel {
   oneTap: boolean;
   triggersNeedWallet: boolean;
   canTrigger: boolean;
+  canDeposit?: boolean;
+  canWithdraw?: boolean;
   maxCost: number | null;
   leverageCap: number;
 }
@@ -74,7 +76,7 @@ export function perpPanelHtml(m: PerpPanelModel): string {
   const subRow = !m.connected
     ? `<div><dt>Subaccount</dt><dd>Connect your wallet</dd></div>`
     : m.accounts.length
-      ? `<div><dt><label for="perpSub">Subaccount</label></dt><dd><select id="perpSub" class="x-pick">${m.accounts.map((s) => `<option value="${s.id}"${s.id === m.selectedSub ? " selected" : ""}>#${s.id} · ${h(usd2(s.value))}</option>`).join("")}</select>${m.accountScope ? `<br><small>${h(m.venueName)} · ${h(m.accountScope)}</small>` : ""}</dd></div>`
+      ? `<div><dt><label for="perpSub">Subaccount</label></dt><dd><select id="perpSub" class="x-pick">${m.accounts.map((s) => `<option value="${s.id}"${s.id === m.selectedSub ? " selected" : ""}>#${s.id} · ${h(usd2(s.value))}</option>`).join("")}</select>${m.accountScope ? `<br><small>${h(m.venueName)} · ${h(m.accountScope)}</small>` : ""}${m.canDeposit ? ` <button type="button" class="x-edit x-small" id="perpDeposit">Deposit</button>` : ""}${m.canWithdraw ? ` <button type="button" class="x-edit x-small" id="perpWithdraw">Withdraw</button>` : ""}</dd></div>`
       : `<div><dt>Subaccount</dt><dd class="x-dn" id="perpNoSub">None in ${h(m.accountScope ?? "this market's account")} <button type="button" class="x-edit x-small" id="perpNewSub">Deposit into a new one</button></dd></div>`;
   if (!q) {
     return `<div class="x-card" id="perpDetails"><p class="x-empty" id="perpFail">${h(m.fail ?? "Waiting for a live price")}</p><dl class="x-rows">${subRow}</dl></div>`;
