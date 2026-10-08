@@ -106,6 +106,10 @@ export interface PerpVenue {
   selectAccount(id: number): void;
   /** Start the venue's onboarding/deposit flow for an account that can trade this market. */
   newAccount(market: string): void;
+  /** Add collateral to an existing account (venue's own flow; only when caps.deposit). */
+  deposit(acct: VenueAccount): void;
+  /** Take collateral out of an account (venue's own flow; only when caps.withdraw). */
+  withdraw(acct: VenueAccount): void;
   refreshAccounts(): Promise<void>;
   signer(): VenueSignerInfo | null;
 
