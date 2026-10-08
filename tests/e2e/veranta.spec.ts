@@ -53,6 +53,8 @@ test.describe("veranta: markets, honesty, sizing", () => {
     // honesty: practice account, wallet never signs, and what was (not) tested is said plainly
     await expect(page.locator("#venueStatus")).toContainText("your wallet is never asked to sign");
     await expect(page.locator("#venueStatus")).toContainText("practice account");
+    await expect(page.locator("#venueStatus")).toContainText("passed a live test on Veranta testnet on 2026-10-08");
+    await expect(page.locator("#venueStatus")).not.toContainText("not live-tested");
     // the default ($100 at 3×) is a valid Veranta order: above the $100 minimum position
     const s = await state(page);
     expect(s.perps.venue).toBe("veranta");
