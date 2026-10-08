@@ -17,10 +17,18 @@ describe("units", () => {
         const d = alignDown(x, s), u = alignUp(x, s);
         expect(isAligned(d, s)).toBe(true);
         expect(isAligned(u, s)).toBe(true);
-        const xs = toE18(x.toFixed(12));
-        expect(toE18(d) <= xs).toBe(true);
-        expect(toE18(u) >= xs).toBe(true);
+        expect(Number(d)).toBeLessThanOrEqual(x * (1 + 1e-14) + 1e-12);
+        expect(Number(u)).toBeGreaterThanOrEqual(x * (1 - 1e-14) - 1e-12);
         expect(toE18(u) - toE18(d) <= toE18(s)).toBe(true);
+      }),
+      { numRuns: 5000 },
+    );
+  });
+  it("a price already on the tick stays put (no float noise)", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: 10 ** 9 }), fc.constantFrom("0.0001", "0.01", "0.1", "1"), (k, s) => {
+        const px = Number(fromE18(BigInt(k) * toE18(s)));
+        return alignUp(px, s) === alignDown(px, s) && Number(alignUp(px, s)) === px;
       }),
       { numRuns: 5000 },
     );

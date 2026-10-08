@@ -516,12 +516,15 @@ export function startApp(opts: AppOptions = {}) {
 
   // ---------- portfolio ----------
   const port = $("portfolio");
+  let portMsg = "";
   function renderPortfolio() {
     port.innerHTML = portfolioHtml(sub(), NETWORKS[net].name, W.st === "on");
     const st = (t: string) => {
+      portMsg = t; // survives the re-render that follows every refresh
       const el = document.getElementById("portStep");
       if (el) el.textContent = t;
     };
+    st(portMsg);
     port.querySelectorAll<HTMLButtonElement>("[data-cancel]").forEach(
       (b) =>
         (b.onclick = async () => {

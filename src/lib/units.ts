@@ -31,6 +31,18 @@ export function numToDec(x: number): string {
   return fromE18(toE18(x.toFixed(12)));
 }
 
+/**
+ * Exact-looking decimal for a float: 15 significant digits removes binary noise
+ * (8194.0629 stays 8194.0629, not 8194.062900000001), so a price already on the
+ * tick is not pushed one tick away.
+ */
+function plain(x: number): string {
+  let s = x.toPrecision(15);
+  if (/e/i.test(s)) s = x.toFixed(12);
+  const [w, f = ""] = s.split(".");
+  return f ? `${w}.${f.slice(0, 18)}` : w!;
+}
+
 function step18(step: string): bigint {
   const s = toE18(step);
   if (s <= 0n) throw new Error(`step must be positive: ${step}`);
@@ -40,7 +52,7 @@ function step18(step: string): bigint {
 /** Largest multiple of `step` that is <= x (x >= 0). */
 export function alignDown(x: number, step: string): string {
   const s = step18(step);
-  const v = toE18(x.toFixed(12));
+  const v = toE18(plain(x));
   const q = v >= 0n ? v / s : -((-v + s - 1n) / s);
   return fromE18(q * s);
 }
@@ -48,7 +60,7 @@ export function alignDown(x: number, step: string): string {
 /** Smallest multiple of `step` that is >= x. */
 export function alignUp(x: number, step: string): string {
   const s = step18(step);
-  const v = toE18(x.toFixed(12));
+  const v = toE18(plain(x));
   const q = v >= 0n ? (v + s - 1n) / s : -(-v / s);
   return fromE18(q * s);
 }
