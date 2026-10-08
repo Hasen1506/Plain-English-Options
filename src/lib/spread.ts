@@ -177,7 +177,7 @@ const maxDec = (a: string, b: string): string => (toE18(a) >= toE18(b) ? a : b);
  * order, so it weighs more per unit on small orders; testnet rejected 0.1-lot
  * orders signed without the ÷ amount term). Signed with 2× headroom.
  */
-export function maxFeePerUnit(inst: Instrument, index: number, price: number, amount: number): string {
+export function maxFeePerUnit(inst: Pick<Instrument, "takerFeeRate" | "baseFee">, index: number, price: number, amount: number): string {
   const v = 2 * (2 * Math.max(index, price) * inst.takerFeeRate + inst.baseFee / Math.max(amount, 1e-9));
   return alignUp(v, "0.000001");
 }
