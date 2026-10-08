@@ -152,6 +152,8 @@ export interface PerpVenue {
   riskWords?(): string;
   /** Where the collateral lives, in plain words ("USDC deposited on Hyperliquid (from Arbitrum)"). */
   collateralWords?(): string;
+  /** Venue-specific open fee for a quote (Veranta: maker or taker by open-interest skew, not by order type). */
+  openFee?(q: PerpQuote): number;
   /** Venue-specific liquidation estimate for an isolated quote (Veranta: loss = 85% of margin). */
   liquidationPrice?(q: PerpQuote): number | null;
   /** Leverage the venue will actually use for a requested one (Hyperliquid: whole numbers). */
