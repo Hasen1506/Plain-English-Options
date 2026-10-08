@@ -24,6 +24,8 @@ export interface VPractice {
 export interface VerantaApi {
   pairs(): Promise<VPair[]>;
   price(pairIndex: number): Promise<number>;
+  /** Hourly closes over [start, end] (unix seconds) for a feed symbol ("Metal.XAU/USD"); optional. */
+  candles?(feedSymbol: string, start: number, end: number): Promise<number[]>;
   /** Testnet only: a practice trader key + a 30-day session key registered for it, funded from the fork faucet. */
   startPractice(onStep?: (s: string) => void): Promise<VPractice>;
   usdc(): Promise<{ balance: number; allowance: number }>;
@@ -119,6 +121,10 @@ export function sdkVerantaApi(net: NetworkId): VerantaApi {
     },
     async price(i) {
       return (await publicClient()).markets.price(i);
+    },
+    async candles(sym, start, end) {
+      const r = (await (await publicClient()).markets.candles(sym, "60", start, end)) as unknown;
+      return Array.isArray(r) ? r.map((x) => Number((x as { close?: unknown })?.close)).filter((v) => Number.isFinite(v) && v > 0) : [];
     },
     async startPractice(onStep) {
       if (N.sdk !== "testnet") throw new Error("Veranta mainnet is not available in this app yet");
