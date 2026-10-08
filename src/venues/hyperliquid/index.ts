@@ -18,12 +18,22 @@ import { depositUsdc } from "./deposit.ts";
 import { SigningKey, Wallet } from "ethers";
 import { signL1 } from "./signing.ts";
 
+/** Honest label: signing is verified against Hyperliquid's servers, but no real (testnet) order has been placed yet. */
+export const HL_STATUS = {
+  tag: "not live-tested",
+  detail:
+    "Order signing is checked against Hyperliquid's own servers, but this app has not yet placed a real Hyperliquid order, even on testnet (Hyperliquid's testnet only opens accounts for addresses that have deposited on mainnet). Treat trading here as unproven.",
+  usable: true,
+} as const;
+
 export interface HlHost {
   net(): NetworkId;
   now(): number;
   eth(): Eip1193 | null;
   /** e2e builds only: a mock server instead of api.hyperliquid*.xyz */
   apiOverride?(): string | null;
+  /** e2e builds only: the mock's base for a given network (the testnet deposit guard asks mainnet). */
+  apiOverrideFor?(net: NetworkId): string | null;
   fetch?: Fetch;
   sheet: { open(html: string): void; close(): void };
   /** account / agent changed: re-render */
@@ -140,6 +150,27 @@ export function createHyperliquidVenue(host: HlHost) {
     host.changed();
   }
 
+  /**
+   * Hyperliquid testnet only creates an account for an address that already exists on
+   * Hyperliquid MAINNET (testnet faucet docs; hyperliquid-dex/node#138). A CCTP deposit
+   * to any other address is minted on HyperEVM but never credited: the USDC is lost.
+   * Seen live on 2026-10-08 (Arbitrum Sepolia tx 0x65c15cbd…7a7e). Returns why the
+   * deposit must not go out, or null.
+   */
+  async function testnetDepositBlocker(addr: string): Promise<string | null> {
+    const base = host.apiOverrideFor?.("mainnet") ?? HL_NETWORKS.mainnet.api;
+    const f: Fetch = host.fetch ?? ((u, i) => globalThis.fetch(u, i));
+    let role: unknown;
+    try {
+      role = ((await (await f(base + "/info", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "userRole", user: addr }) })).json()) as { role?: unknown })?.role;
+    } catch {
+      return "Could not check this address on Hyperliquid mainnet, so the testnet deposit was not sent.";
+    }
+    return role === "missing" || role == null
+      ? "Hyperliquid testnet only opens accounts for addresses that already have a Hyperliquid mainnet account. This address has none, so a testnet deposit would be lost. Deposit was not sent."
+      : null;
+  }
+
   function depositSheet() {
     const n = N();
     const main = host.net() === "mainnet";
@@ -162,6 +193,11 @@ export function createHyperliquidVenue(host: HlHost) {
     go.onclick = async () => {
       go.disabled = true;
       try {
+        if (!main) {
+          out.textContent = "Checking that Hyperliquid testnet can open an account for this address…";
+          const why = await testnetDepositBlocker(user!);
+          if (why) throw new Error(why);
+        }
         const r = await depositUsdc({ p: provider(), n, user: user!, amountUsd: amt.value.trim(), nowSec: Math.floor(host.now() / 1000), onStep: (s) => (out.textContent = s) });
         out.textContent = `Deposit sent · tx ${r.txHash}. About ${r.credited} USDC arrives on Hyperliquid in a few minutes.`;
         out.dataset.tx = r.txHash;
@@ -211,6 +247,7 @@ export function createHyperliquidVenue(host: HlHost) {
     name: "Hyperliquid",
     caps: { triggers: true, postOnly: true, oneTap: true, dryRun: true, deposit: true, withdraw: true, crossMargin: true },
     slippage: HL_SLIPPAGE,
+    status: HL_STATUS,
     marginModes: ["cross", "isolated"],
 
     networkName: () => N().name,
