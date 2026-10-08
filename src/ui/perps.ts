@@ -182,6 +182,8 @@ export function createPerps(d: PerpDeps) {
       oneTap: oneTap(),
       triggersNeedWallet: v.signer()?.triggersNeedWallet ?? true,
       canTrigger: v.caps.triggers,
+      canDeposit: v.caps.deposit,
+      canWithdraw: v.caps.withdraw,
       maxCost: v.isMainnet() ? d.settings().maxCost : null,
       leverageCap: d.settings().leverageCap,
     });
@@ -194,6 +196,10 @@ export function createPerps(d: PerpDeps) {
       };
     const mk = document.getElementById("perpNewSub");
     if (mk) mk.onclick = () => venue().newAccount(P.name);
+    const dep = document.getElementById("perpDeposit");
+    if (dep && s) dep.onclick = () => venue().deposit(s);
+    const wd = document.getElementById("perpWithdraw");
+    if (wd && s) wd.onclick = () => venue().withdraw(s);
     if (focusId) document.getElementById(focusId)?.focus();
     setConfirm();
     maybeMargin(q);
