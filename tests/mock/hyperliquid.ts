@@ -42,6 +42,8 @@ interface Order {
 }
 export interface HlMockState {
   net: Net;
+  /** userRole answers "missing" (no Hyperliquid mainnet account for anyone in this scenario) */
+  noMainnet?: boolean;
   balance: Record<string, number>; // USDC per user
   agents: Map<string, { user: string; name: string; until: number }>; // agent → owner
   pos: Record<string, Record<string, Pos>>;
@@ -168,6 +170,9 @@ export function hlInfo(st: HlMockState, body: Record<string, unknown>): unknown 
       return [...(st.fills[user] ?? [])].reverse();
     case "userFunding":
       return [];
+    case "userRole":
+      // mainnet presence decides whether testnet may open an account (sid "hlnomain…" = none)
+      return { role: st.noMainnet ? "missing" : "user" };
     case "userFees":
       return { userCrossRate: "0.00045", userAddRate: "0.00015", activeReferralDiscount: "0.0" };
   }
