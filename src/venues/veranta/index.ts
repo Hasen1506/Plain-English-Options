@@ -10,7 +10,7 @@ import type { OrderOutcome } from "../../net/trader.ts";
 import type { PerpVenue, VenueAccount, VenueTrigger } from "../types.ts";
 import { sdkVerantaApi, type VerantaApi, type VPractice, type VReceipt } from "./api.ts";
 import { VERANTA_NETWORKS, VERANTA_SLIPPAGE, VERANTA_STATUS } from "./config.ts";
-import { historyFrom, limitsFrom, marketsFrom, positionsFrom, usdc6, verantaLiqPrice, type VPair, type VPosition, type VerantaMarket } from "./rules.ts";
+import { historyFrom, limitsFrom, marketsFrom, openFeeRate, positionsFrom, usdc6, verantaLiqPrice, type VPair, type VPosition, type VerantaMarket } from "./rules.ts";
 
 export interface VerantaHost {
   net(): NetworkId;
@@ -193,6 +193,11 @@ export function createVerantaVenue(host: VerantaHost) {
     marginMode: () => "isolated",
     setMarginMode: () => {},
     effectiveLeverage: (name, lev) => levFor(name, lev),
+    openFee: (q: PerpQuote) => {
+      const m = markets.get(q.inst.name);
+      if (!m) return q.estFee;
+      return q.notional * openFeeRate({ isLong: q.side === "buy", size: q.n, oiLong: m.oiLong, oiShort: m.oiShort, maker: m.makerFeeRate, taker: m.takerFeeRate });
+    },
     liquidationPrice: (q: PerpQuote) => verantaLiqPrice({ entry: q.entry, collateral: Math.max(0, q.putIn - q.estFee), leverage: q.leverage, isLong: q.side === "buy" }),
     riskWords: () => "I understand this is a Veranta testnet practice trade: leverage on test USDC, liquidated when the loss reaches 85% of the margin, with fees, funding and borrowing costs charged under Veranta's rules.",
     collateralWords: () => "test USDC in a practice wallet on Veranta's testnet (a copy of Base)",
