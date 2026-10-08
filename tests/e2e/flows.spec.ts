@@ -11,7 +11,7 @@ test.describe("building a position", () => {
 
     // asset list shows the real 24h change from the perp ticker
     await page.locator("[data-pop=asset]").click();
-    await expect(page.locator("#pop")).toContainText("-4.6%");
+    await expect(page.locator("#pop")).toContainText("-1.6%"); // ETH-PERP 24h change from the recorded perp tickers (tests/fixtures/perps-testnet.json)
     await page.locator("#pop button", { hasText: "BTC" }).click();
     await expect(page.locator("#pAsset")).toHaveText("BTC");
     await expect(page.locator("#spotTag")).toContainText("BTC $");
@@ -74,8 +74,8 @@ test.describe("building a position", () => {
 
   test("switching network clears data and mainnet demands a typed confirmation", async ({ page }) => {
     await openApp(page);
-    await page.locator("[data-net=mainnet]").click();
-    await expect(page.locator("[data-net=mainnet]")).toHaveAttribute("aria-pressed", "true");
+    await page.locator("#builder [data-net=mainnet]").click();
+    await expect(page.locator("#builder [data-net=mainnet]")).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("#netNote")).toBeVisible();
     await expect(page.locator("#liveTxt")).toContainText("Live · Derive mainnet", { timeout: 15_000 });
     await connectWallet(page);
@@ -90,7 +90,7 @@ test.describe("building a position", () => {
     await expect(page.locator("#confirm")).toContainText("Pay real money");
     // never press it: tests do not trade mainnet
     await page.locator("#edit").click();
-    await page.locator("[data-net=testnet]").click();
+    await page.locator("#builder [data-net=testnet]").click();
     await expect(page.locator("#builder")).toBeVisible();
     await expect(page.locator("#bal")).toHaveText("Reconnect wallet");
   });
