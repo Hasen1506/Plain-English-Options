@@ -78,7 +78,7 @@ describe("EIP-712 action signing", () => {
     const a: ActionFields = { subaccountId: 7, nonce: "99", module: NETWORKS.testnet.tradeModule, data: "0xabcd", expiry: 3, owner: w.address, signer: w.address };
     const sig = await s.signAction(a);
     expect(recoverAddress(digest(a, NETWORKS.testnet), sig)).toBe(w.address);
-    expect(calls).toEqual(["eth_chainId", "wallet_switchEthereumChain", "eth_signTypedData_v4"]);
+    expect(calls).toEqual(["eth_chainId", "wallet_switchEthereumChain", "eth_chainId", "eth_signTypedData_v4"]); // re-checked after the switch
   });
 
   it("refuses malformed keys without echoing them", () => {
