@@ -83,6 +83,11 @@ export function createPerps(d: PerpDeps) {
       existing: isolated ? 0 : (s?.positions.find((p) => p.instrument === P.name)?.amount ?? 0),
       leverageCap: d.settings().leverageCap,
     });
+    if (r.ok && v.openFee) {
+      // the venue prices its own open fee (Veranta: by open-interest skew)
+      const fee = v.openFee(r.quote);
+      r.quote = { ...r.quote, estFee: fee, worstFee: Math.max(fee, r.quote.worstFee) };
+    }
     if (r.ok && isolated && s) {
       // isolated: only this position's margin (notional ÷ leverage) backs it
       const q = r.quote;
