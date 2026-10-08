@@ -29,7 +29,7 @@ jobs:
         run: npm run typecheck
       - name: Unit + property tests
         run: npm run test:unit
-      - name: Differential tests (old prototype vs new)
+      - name: Differential tests (app maths vs independent references and the old prototype)
         run: npm run test:diff
       - name: Playwright version
         id: pw
@@ -46,7 +46,7 @@ jobs:
       - name: Install Playwright system deps
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      - name: E2E (mock Derive server, recorded testnet frames)
+      - name: E2E (mock Derive + mock perp venues, recorded testnet frames)
         run: npm run test:e2e
         env:
           CI: "1"
