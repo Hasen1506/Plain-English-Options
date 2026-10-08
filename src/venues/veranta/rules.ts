@@ -10,6 +10,7 @@ import type { OpenOrder, Position } from "../../lib/ticker.ts";
 import type { TradeRow } from "../../lib/history.ts";
 import type { FundingEvent } from "../../lib/perpHistory.ts";
 import { VERANTA_LIQ_THRESHOLD } from "./config.ts";
+import { categoryFromVeranta } from "../../lib/categories.ts";
 
 /** The slice of the SDK's PairInfo the app reads (raw API JSON). */
 export interface VPair {
@@ -23,7 +24,7 @@ export interface VPair {
   openFeeP?: number; // percent
   closeFeeP?: number;
   coinOI?: { long?: number; short?: number };
-  feed?: { attributes?: { isOpen?: boolean; assetType?: string } };
+  feed?: { attributes?: { isOpen?: boolean; assetType?: string; symbol?: string } };
   additionalPairParams2?: { openMakerFeeP?: number; closeMakerFeeP?: number; openTakerFeeP?: number; closeTakerFeeP?: number; closeOnlyMode?: boolean };
 }
 
@@ -67,7 +68,11 @@ export function marketsFrom(pairs: VPair[], prices: Record<number, number>, now:
     const minLev = num(p.leverages?.minLeverage) ?? 1;
     const spread = (num(p.spreadP) ?? 0) / 100;
     const isOpen = p.feed?.attributes?.isOpen !== false && !a2.closeOnlyMode;
+    // the price feed says what the pair is (crypto | fx | metal | commodity | equity); no feed type = not listed by category
+    const category = categoryFromVeranta(p.feed?.attributes?.assetType ?? "crypto", p.from);
+    if (!category) continue;
     const m: VerantaMarket = {
+      ...(category === "crypto" ? {} : { category }),
       name,
       currency: p.from,
       isActive: isOpen,
