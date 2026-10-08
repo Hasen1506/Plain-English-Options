@@ -1,0 +1,144 @@
+{
+  "at": "2026-10-08T02:38:20.411Z",
+  "network": "testnet",
+  "wallet": "0xEAA409Dca3F98a1697759DA3FB93A9D416Ed7D81",
+  "route": {
+    "riskUniverse": 1,
+    "managerId": 1,
+    "asset": "0x57B03E14d409ADC7fAb6CFc44b5886CAD2D5f02b",
+    "erc20": "0x73Efab09362052D26FB93A730Be4F8a5EdC833af",
+    "min": 5
+  },
+  "subaccounts": [
+    {
+      "id": 87141,
+      "ru": 0,
+      "value": 0
+    },
+    {
+      "id": 87142,
+      "ru": 1,
+      "value": 1020.00004648533
+    }
+  ],
+  "depositExisting": {
+    "steps": [
+      "approve",
+      "deposit"
+    ],
+    "txs": [
+      "0x9f0dac1047ec0919af479b197a36b1838860c231af1ee0ec6c3d7516d2c212b4",
+      "0xdbbe0a656a7fa9f245b88a294d20d0d0c4bd3e0e2655a378bf96bad8b8ced001"
+    ],
+    "gasWei": "398067208",
+    "approximate": true
+  },
+  "creditedExisting": {
+    "before": 1020.00004648533,
+    "after": 1045.000074005602
+  },
+  "withdraw": {
+    "operation_id": 5695492,
+    "op_uuid": "01a11961-9f61-7163-90f5-2c0d45d872e9"
+  },
+  "sessionKey": {
+    "address": "0xabF79fA2b71b37541A9C09EFFe92d1fCB1A48524",
+    "expirySec": 1791513590,
+    "scopes": [
+      "trade:orderbook:option"
+    ],
+    "subaccounts": [
+      87142
+    ]
+  },
+  "orderDebug": [
+    {
+      "instrument": "ETH-20261016-2500-C",
+      "ok": true,
+      "ourDigest": "0x1362d3cd92886791e7c60560d3969b873f1bc5d5cf1507e79673bdf7f199defd",
+      "exchangeHash": "0x1362d3cd92886791e7c60560d3969b873f1bc5d5cf1507e79673bdf7f199defd",
+      "expectedSigner": "0xabf79fa2b71b37541a9c09effe92d1fcb1a48524",
+      "recoveredSigner": "0xabF79fA2b71b37541A9C09EFFe92d1fCB1A48524",
+      "domainOk": true,
+      "error": null
+    },
+    {
+      "instrument": "ETH-20261016-2700-C",
+      "ok": true,
+      "ourDigest": "0x99b0a909bc5ddd9400a0fd905fb0db7c68a4053c82f990919f7e64d229a9db52",
+      "exchangeHash": "0x99b0a909bc5ddd9400a0fd905fb0db7c68a4053c82f990919f7e64d229a9db52",
+      "expectedSigner": "0xabf79fa2b71b37541a9c09effe92d1fcb1a48524",
+      "recoveredSigner": "0xabF79fA2b71b37541A9C09EFFe92d1fCB1A48524",
+      "domainOk": true,
+      "error": null
+    }
+  ],
+  "open": {
+    "status": "filled",
+    "orders": [
+      {
+        "id": "2d97d921-b3bc-4502-9673-52f048824ea2",
+        "instrument": "ETH-20261016-2500-C",
+        "side": "buy",
+        "status": "filled",
+        "filled": 0.1,
+        "avgPrice": 115.9,
+        "fee": 0.57742507431,
+        "error": null
+      },
+      {
+        "id": "b0b38b6c-7c7a-4a8c-a9ee-3f5b20f3b758",
+        "instrument": "ETH-20261016-2700-C",
+        "side": "sell",
+        "status": "filled",
+        "filled": 0.1,
+        "avgPrice": 18.8,
+        "fee": 0.577423772149,
+        "error": null
+      }
+    ]
+  },
+  "close": [
+    {
+      "id": "3a349d45-c28b-4bb8-892a-1abac09c6aa4",
+      "instrument": "ETH-20261016-2700-C",
+      "side": "buy",
+      "status": "filled",
+      "filled": 0.1,
+      "avgPrice": 22.8,
+      "fee": 0.57742108354,
+      "error": null
+    },
+    {
+      "id": "4830ada5-6a03-4847-848d-6450f7d18ab1",
+      "instrument": "ETH-20261016-2500-C",
+      "side": "sell",
+      "status": "filled",
+      "filled": 0.1,
+      "avgPrice": 111.9,
+      "fee": 0.57742108354,
+      "error": null
+    }
+  ],
+  "resting": {
+    "id": "9cf67396-f149-4ac1-a35c-e77cd71a7666",
+    "status": "open",
+    "error": null
+  },
+  "cancelAll": "ok",
+  "openOrdersAfterCancelAll": 0,
+  "history": {
+    "trades": 4,
+    "orders": 5,
+    "closedSpreads": [
+      {
+        "long": "ETH-20261016-2500-C",
+        "short": "ETH-20261016-2700-C",
+        "size": 0.1,
+        "pnl": -3.1096910135390003,
+        "fees": 2.309691013539
+      }
+    ]
+  },
+  "revokedUntil": 1791427559
+}
