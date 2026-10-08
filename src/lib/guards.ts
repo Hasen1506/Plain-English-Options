@@ -15,12 +15,14 @@ export interface ConfirmInput {
   network: NetworkId;
   typed: string; // mainnet confirmation phrase
   busy: boolean;
+  /** Optional user limit on what one mainnet trade may cost (worst case). null = off (the default). */
+  maxCost?: number | null;
 }
 
 export interface ConfirmState {
   enabled: boolean;
   label: string;
-  reason: "ok" | "no-price" | "stale" | "mark-only" | "wallet" | "wrong-universe" | "balance" | "depth" | "agree" | "phrase" | "busy";
+  reason: "ok" | "no-price" | "stale" | "mark-only" | "wallet" | "wrong-universe" | "balance" | "depth" | "cap" | "agree" | "phrase" | "busy";
 }
 
 export function confirmState(i: ConfirmInput): ConfirmState {
@@ -34,7 +36,17 @@ export function confirmState(i: ConfirmInput): ConfirmState {
   if (i.assetRU === null || i.subaccountRU === null || i.subaccountRU !== i.assetRU) return no("wrong-universe", "Pick a subaccount for this asset");
   if (i.balance === null || !(i.balance >= q.worstLoss)) return no("balance", "Not enough collateral");
   if (!q.depthOk) return no("depth", "Not enough size on the book. Lower the amount");
+  if (i.network === "mainnet" && i.maxCost != null && i.maxCost > 0 && q.worstLoss > i.maxCost) return no("cap", `Above your ${money(i.maxCost)} limit per trade`);
   if (!i.agreed) return no("agree", "Tick the box to continue");
   if (i.network === "mainnet" && i.typed.trim().toUpperCase() !== MAINNET_PHRASE) return no("phrase", `Type ${MAINNET_PHRASE} to confirm`);
   return { enabled: true, reason: "ok", label: (i.network === "mainnet" ? "Pay real money: " : "Confirm and pay ") + money(q.maxLoss) };
+}
+
+/** Parse the optional mainnet per-trade limit setting: empty / zero / junk = off. */
+export function parseMaxCost(v: string | null | undefined): number | null {
+  if (v == null) return null;
+  const s = String(v).trim().replace(/[$,\s]/g, "");
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
