@@ -1,0 +1,1653 @@
+{
+ "recordedAt": "2026-10-08T06:06:12.897Z",
+ "network": "mainnet",
+ "pairCount": 202,
+ "pairs": [
+  {
+   "spreadP": 0.01,
+   "pnlSpreadP": 0.025,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 50,
+    "pnlMinLeverage": 75,
+    "pnlMaxLeverage": 500
+   },
+   "priceImpactMultiplier": 1.2,
+   "skewImpactMultiplier": 0.25,
+   "groupIndex": 0,
+   "feeIndex": 0,
+   "values": {
+    "maxGainP": 2500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 40,
+    "maxWalletOIP": 50,
+    "isUSDCAligned": false,
+    "groupOpenInterestPecentage": 40,
+    "maxWalletOI": 50
+   },
+   "from": "ETH",
+   "to": "USD",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 322810.94,
+    "short": 345305.35
+   },
+   "marginFee": {
+    "long": 0,
+    "short": 0
+   },
+   "pairSpreadP": 0.01,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 100,
+   "pairMinLeverage": 1,
+   "pairOI": 668116.29,
+   "pairMaxOI": 15995046.828,
+   "maxWalletOI": 62478853.16,
+   "index": 0,
+   "pairParams": {
+    "onePercentDepthAbove": 39578594.896,
+    "onePercentDepthBelow": 51272463.104
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2,
+    "negSpreadCap": 25,
+    "isPnlTypeAllowed": 0,
+    "pnlPriceImpactMultiplier": 1.2,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 2,
+    "pnlNegSpreadCap": 7.5,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 2
+   },
+   "blockOILimit": 2500000,
+   "openFeeP": 0.045,
+   "closeFeeP": 0.045,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 100,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     80,
+     50,
+     45,
+     37.5,
+     27.5,
+     25,
+     25,
+     22.5,
+     15,
+     2.5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 8,
+    "2": 8,
+    "3": 8
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 15995046.828,
+    "sell": 15995046.828
+   },
+   "zfpOverride": null,
+   "leverageOverride": null,
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 135.3046267686,
+    "short": 132.6187235989
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": -0.00059994,
+    "short": 0.0006120904769756597
+   },
+   "accPerOiLong": 30.908420135080952,
+   "accPerOiShort": -31.347625117449745,
+   "fundingLastUpdateBlock": 52325088,
+   "decayedVol": -4.907185,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0.01,
+    "closeMakerFeeP": 0.01,
+    "openTakerFeeP": 0.045,
+    "closeTakerFeeP": 0.045,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": -3.333e-7,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 30,
+    "maxRunTime": 86400,
+    "frequency": 30,
+    "twapFee": 0
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "Crypto.ETH/USD",
+     "assetType": "crypto",
+     "isOpen": true,
+     "nextOpen": 0,
+     "nextClose": 0,
+     "schedule": "America/New_York;O,O,O,O,O,O,O;"
+    }
+   }
+  },
+  {
+   "spreadP": 0,
+   "pnlSpreadP": 0.02,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 50,
+    "pnlMinLeverage": 75,
+    "pnlMaxLeverage": 500
+   },
+   "priceImpactMultiplier": 0,
+   "skewImpactMultiplier": 0,
+   "groupIndex": 0,
+   "feeIndex": 1,
+   "values": {
+    "maxGainP": 2500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 50,
+    "maxWalletOIP": 50,
+    "isUSDCAligned": false,
+    "groupOpenInterestPecentage": 50,
+    "maxWalletOI": 50
+   },
+   "from": "BTC",
+   "to": "USD",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 3699255.88,
+    "short": 4119146.36
+   },
+   "marginFee": {
+    "long": 0,
+    "short": 0
+   },
+   "pairSpreadP": 0,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 100,
+   "pairMinLeverage": 1,
+   "pairOI": 7818402.24,
+   "pairMaxOI": 19993808.535,
+   "maxWalletOI": 62478853.16,
+   "index": 1,
+   "pairParams": {
+    "onePercentDepthAbove": 88707556.896,
+    "onePercentDepthBelow": 115815456.472
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2,
+    "negSpreadCap": 25,
+    "isPnlTypeAllowed": 0,
+    "pnlPriceImpactMultiplier": 1.2,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 2,
+    "pnlNegSpreadCap": 7.5,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 1
+   },
+   "blockOILimit": 2500000,
+   "openFeeP": 0.045,
+   "closeFeeP": 0.045,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 100,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     80,
+     50,
+     45,
+     37.5,
+     27.5,
+     25,
+     25,
+     22.5,
+     15,
+     2.5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 8,
+    "2": 8,
+    "3": 8
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 19993808.535,
+    "sell": 19993808.535
+   },
+   "zfpOverride": null,
+   "leverageOverride": null,
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 49.6978098411,
+    "short": 48.0966410844
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": 0.0007000200000000001,
+    "short": -0.00072332412535666
+   },
+   "accPerOiLong": 1032.67314762492,
+   "accPerOiShort": -1054.16649926488,
+   "fundingLastUpdateBlock": 52325088,
+   "decayedVol": 9.213627,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0.01,
+    "closeMakerFeeP": 0.01,
+    "openTakerFeeP": 0.045,
+    "closeTakerFeeP": 0.045,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": 3.889e-7,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 30,
+    "maxRunTime": 86400,
+    "frequency": 30,
+    "twapFee": 0
+   },
+   "addtionalPairParams": {
+    "minSlP": 50
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "Crypto.BTC/USD",
+     "assetType": "crypto",
+     "isOpen": true,
+     "nextOpen": 0,
+     "nextClose": 0,
+     "schedule": "America/New_York;O,O,O,O,O,O,O;"
+    }
+   }
+  },
+  {
+   "spreadP": 0.02,
+   "pnlSpreadP": 0.03,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 25,
+    "pnlMinLeverage": 75,
+    "pnlMaxLeverage": 500
+   },
+   "priceImpactMultiplier": 1.2,
+   "skewImpactMultiplier": 0.25,
+   "groupIndex": 1,
+   "feeIndex": 2,
+   "values": {
+    "maxGainP": 2500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 50,
+    "maxWalletOIP": 50,
+    "isUSDCAligned": false,
+    "groupOpenInterestPecentage": 50,
+    "maxWalletOI": 50
+   },
+   "from": "SOL",
+   "to": "USD",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 49093.91,
+    "short": 48416.52
+   },
+   "marginFee": {
+    "long": 0.00057078,
+    "short": 0.00057078
+   },
+   "pairSpreadP": 0.02,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 100,
+   "pairMinLeverage": 1,
+   "pairOI": 97510.43,
+   "pairMaxOI": 9372097.75,
+   "maxWalletOI": 62478853.16,
+   "index": 2,
+   "pairParams": {
+    "onePercentDepthAbove": 10638167.76,
+    "onePercentDepthBelow": 9413855.76
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2,
+    "negSpreadCap": 50,
+    "isPnlTypeAllowed": 0,
+    "pnlPriceImpactMultiplier": 1.2,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 2,
+    "pnlNegSpreadCap": 7.5,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 6
+   },
+   "blockOILimit": 2500000,
+   "openFeeP": 0.045,
+   "closeFeeP": 0.045,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 100,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     80,
+     50,
+     45,
+     37.5,
+     27.5,
+     25,
+     25,
+     22.5,
+     15,
+     2.5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 8,
+    "2": 8,
+    "3": 8
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 9372097.75,
+    "sell": 9372097.75
+   },
+   "zfpOverride": null,
+   "leverageOverride": null,
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 415.4193794146,
+    "short": 414.3372674348
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": -0.0063,
+    "short": 0.006316453517480931
+   },
+   "accPerOiLong": 0.9080665061565688,
+   "accPerOiShort": -0.9495638528355339,
+   "fundingLastUpdateBlock": 52325088,
+   "decayedVol": -0.00148,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0.01,
+    "closeMakerFeeP": 0.01,
+    "openTakerFeeP": 0.045,
+    "closeTakerFeeP": 0.045,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": -0.0000035,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 30,
+    "maxRunTime": 86400,
+    "frequency": 30,
+    "twapFee": 0
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "Crypto.SOL/USD",
+     "assetType": "crypto",
+     "isOpen": true,
+     "nextOpen": 0,
+     "nextClose": 0,
+     "schedule": "America/New_York;O,O,O,O,O,O,O;"
+    }
+   }
+  },
+  {
+   "spreadP": 0,
+   "pnlSpreadP": 0.01,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 500,
+    "pnlMinLeverage": 200,
+    "pnlMaxLeverage": 500
+   },
+   "priceImpactMultiplier": 0,
+   "skewImpactMultiplier": 0,
+   "groupIndex": 2,
+   "feeIndex": 11,
+   "values": {
+    "maxGainP": 2500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 80,
+    "maxWalletOIP": 15,
+    "isUSDCAligned": false,
+    "groupOpenInterestPecentage": 80,
+    "maxWalletOI": 15
+   },
+   "from": "EUR",
+   "to": "USD",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 652231,
+    "short": 665726.45
+   },
+   "marginFee": {
+    "long": 0.0009279,
+    "short": 0.0003933
+   },
+   "pairSpreadP": 0,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 300,
+   "pairMinLeverage": 1,
+   "pairOI": 1317957.45,
+   "pairMaxOI": 29990712.8,
+   "maxWalletOI": 18743655.95,
+   "index": 11,
+   "pairParams": {
+    "onePercentDepthAbove": 10000000,
+    "onePercentDepthBelow": 10000000
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2.5,
+    "negSpreadCap": 5,
+    "isPnlTypeAllowed": 0,
+    "pnlPriceImpactMultiplier": 0,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 0,
+    "pnlNegSpreadCap": 0,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 327
+   },
+   "blockOILimit": 2500000,
+   "openFeeP": 0.02,
+   "closeFeeP": 0,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 300,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     80,
+     50,
+     45,
+     37.5,
+     27.5,
+     25,
+     25,
+     22.5,
+     15,
+     2.5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 10,
+    "2": 10,
+    "3": 10
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 29990712.8,
+    "sell": 29990712.8
+   },
+   "zfpOverride": {
+    "deactivated": false,
+    "activatesAt": 0,
+    "maxLeverage": 500,
+    "maxPnlLeverage": 500
+   },
+   "leverageOverride": {
+    "active": false,
+    "maxLeverage": 500,
+    "maxPnlLeverage": 500,
+    "revertMaxLeverage": 500,
+    "revertMaxPnlLeverage": 500,
+    "revertsAt": 0
+   },
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 583154.3059688658,
+    "short": 583152.5018554593
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": 0,
+    "short": 0
+   },
+   "accPerOiLong": 0.0000097694683254,
+   "accPerOiShort": 0,
+   "fundingLastUpdateBlock": 52325088,
+   "decayedVol": -0.000172,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0,
+    "closeMakerFeeP": 0,
+    "openTakerFeeP": 0,
+    "closeTakerFeeP": 0,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": 0,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 30,
+    "maxRunTime": 86400,
+    "frequency": 30,
+    "twapFee": 0
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "FX.EUR/USD",
+     "assetType": "fx",
+     "isOpen": true,
+     "nextOpen": 1791494100,
+     "nextClose": 1791493200,
+     "schedule": "America/New_York;O,O,O,O,0000-1700,C,1700-2400;1224/0000-1700,1231/0000-1700"
+    }
+   }
+  },
+  {
+   "spreadP": 0,
+   "pnlSpreadP": 0.01,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 500,
+    "pnlMinLeverage": 200,
+    "pnlMaxLeverage": 1000
+   },
+   "priceImpactMultiplier": 0,
+   "skewImpactMultiplier": 0,
+   "groupIndex": 2,
+   "feeIndex": 12,
+   "values": {
+    "maxGainP": 2500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 98,
+    "maxWalletOIP": 50,
+    "isUSDCAligned": true,
+    "groupOpenInterestPecentage": 98,
+    "maxWalletOI": 50
+   },
+   "from": "USD",
+   "to": "JPY",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 3620694.92,
+    "short": 3675764.73
+   },
+   "marginFee": {
+    "long": 0.00034038,
+    "short": 0.00035082
+   },
+   "pairSpreadP": 0,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 300,
+   "pairMinLeverage": 1,
+   "pairOI": 7296459.65,
+   "pairMaxOI": 36738623.18,
+   "maxWalletOI": 62478853.16,
+   "index": 12,
+   "pairParams": {
+    "onePercentDepthAbove": 10000000,
+    "onePercentDepthBelow": 10000000
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2.5,
+    "negSpreadCap": 5,
+    "isPnlTypeAllowed": 0,
+    "pnlPriceImpactMultiplier": 1.2,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 2.5,
+    "pnlNegSpreadCap": 5,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 340
+   },
+   "blockOILimit": 2500000,
+   "openFeeP": 0.02,
+   "closeFeeP": 0,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 300,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     80,
+     50,
+     45,
+     37.5,
+     27.5,
+     25,
+     25,
+     22.5,
+     15,
+     2.5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 5,
+    "2": 5,
+    "3": 5
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 36738623.18,
+    "sell": 36738623.18
+   },
+   "zfpOverride": {
+    "deactivated": false,
+    "activatesAt": 0,
+    "maxLeverage": 500,
+    "maxPnlLeverage": 1000
+   },
+   "leverageOverride": {
+    "active": false,
+    "maxLeverage": 500,
+    "maxPnlLeverage": 1000,
+    "revertMaxLeverage": 500,
+    "revertMaxPnlLeverage": 1000,
+    "revertsAt": 0
+   },
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 23201.6664277987,
+    "short": 23258.4472745835
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": 0,
+    "short": 0
+   },
+   "accPerOiLong": 0.0006661235747285019,
+   "accPerOiShort": -0.000665599634922218,
+   "fundingLastUpdateBlock": 52325088,
+   "decayedVol": -0.000001,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0,
+    "closeMakerFeeP": 0,
+    "openTakerFeeP": 0,
+    "closeTakerFeeP": 0,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": 0,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 30,
+    "maxRunTime": 86400,
+    "frequency": 30,
+    "twapFee": 0
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "FX.USD/JPY",
+     "assetType": "fx",
+     "isOpen": true,
+     "nextOpen": 1791494100,
+     "nextClose": 1791493200,
+     "schedule": "America/New_York;O,O,O,O,0000-1700,C,1700-2400;1224/0000-1700,1231/0000-1700"
+    }
+   }
+  },
+  {
+   "spreadP": 0.02,
+   "pnlSpreadP": 0.02,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 200,
+    "pnlMinLeverage": 75,
+    "pnlMaxLeverage": 250
+   },
+   "priceImpactMultiplier": 0,
+   "skewImpactMultiplier": 0,
+   "groupIndex": 3,
+   "feeIndex": 21,
+   "values": {
+    "maxGainP": 500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 90,
+    "maxWalletOIP": 15,
+    "isUSDCAligned": false,
+    "groupOpenInterestPecentage": 90,
+    "maxWalletOI": 15
+   },
+   "from": "XAU",
+   "to": "USD",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 1151588.61,
+    "short": 1151608.54
+   },
+   "marginFee": {
+    "long": 0.0018129600000000002,
+    "short": 0.0002853
+   },
+   "pairSpreadP": 0.02,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 300,
+   "pairMinLeverage": 1,
+   "pairOI": 2303197.1500000004,
+   "pairMaxOI": 22493034.603,
+   "maxWalletOI": 18743655.95,
+   "index": 21,
+   "pairParams": {
+    "onePercentDepthAbove": 1000000,
+    "onePercentDepthBelow": 1000000
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2.5,
+    "negSpreadCap": 20,
+    "isPnlTypeAllowed": 0,
+    "pnlPriceImpactMultiplier": 0,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 2.5,
+    "pnlNegSpreadCap": 10,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 346
+   },
+   "blockOILimit": 2500000,
+   "openFeeP": 0.02,
+   "closeFeeP": 0,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 300,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     80,
+     50,
+     45,
+     37.5,
+     27.5,
+     25,
+     25,
+     22.5,
+     15,
+     2.5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 10,
+    "2": 10,
+    "3": 10
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 22493034.603,
+    "sell": 22493034.603
+   },
+   "zfpOverride": {
+    "deactivated": false,
+    "activatesAt": 0,
+    "maxLeverage": 200,
+    "maxPnlLeverage": 250
+   },
+   "leverageOverride": {
+    "active": false,
+    "maxLeverage": 200,
+    "maxPnlLeverage": 250,
+    "revertMaxLeverage": 200,
+    "revertMaxPnlLeverage": 250,
+    "revertsAt": 0
+   },
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 278.5575537644,
+    "short": 277.959743532
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": 0,
+    "short": 0
+   },
+   "accPerOiLong": 0.018491478123027125,
+   "accPerOiShort": -0.018524078886196272,
+   "fundingLastUpdateBlock": 52325088,
+   "decayedVol": 74227.654052,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0,
+    "closeMakerFeeP": 0,
+    "openTakerFeeP": 0,
+    "closeTakerFeeP": 0,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": 0,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 30,
+    "maxRunTime": 86400,
+    "frequency": 30,
+    "twapFee": 0
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "Metal.XAU/USD",
+     "assetType": "metal",
+     "isOpen": true,
+     "nextOpen": 1791496800,
+     "nextClose": 1791493200,
+     "schedule": "America/New_York;0000-1700&1800-2400,0000-1700&1800-2400,0000-1700&1800-2400,0000-1700&1800-2400,0000-1700,C,1800-2400;0907/0000-1430&1800-2400,1126/0000-1430&1800-2400,1127/0000-1445,1224/0000-1345,1225/C,1231/0000-1700,0101/C,0118/0000-1430&1800-2400,0215/0000-1430&1800-2400,0325/0000-1700,0326/C,0531/0000-1430&1800-2400,0618/0000-1300,0705/0000-1430&1800-2400"
+    }
+   }
+  },
+  {
+   "spreadP": 0.01,
+   "pnlSpreadP": 0.01,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 75,
+    "pnlMinLeverage": 1,
+    "pnlMaxLeverage": 500
+   },
+   "priceImpactMultiplier": 1.2,
+   "skewImpactMultiplier": 0.25,
+   "groupIndex": 0,
+   "feeIndex": 115,
+   "values": {
+    "maxGainP": 2500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 40,
+    "maxWalletOIP": 50,
+    "isUSDCAligned": false,
+    "groupOpenInterestPecentage": 40,
+    "maxWalletOI": 50
+   },
+   "from": "ETH_UPSIDE",
+   "to": "USD",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 62117.62,
+    "short": 37883.14
+   },
+   "marginFee": {
+    "long": 0,
+    "short": 0
+   },
+   "pairSpreadP": 0.01,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 100,
+   "pairMinLeverage": 1,
+   "pairOI": 100000.76000000001,
+   "pairMaxOI": 15995046.828,
+   "maxWalletOI": 62478853.16,
+   "index": 115,
+   "pairParams": {
+    "onePercentDepthAbove": 39578594.896,
+    "onePercentDepthBelow": 51272463.104
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2,
+    "negSpreadCap": 25,
+    "isPnlTypeAllowed": 1,
+    "pnlPriceImpactMultiplier": 1.2,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 2,
+    "pnlNegSpreadCap": 7.5,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 2
+   },
+   "blockOILimit": 0,
+   "openFeeP": 0.045,
+   "closeFeeP": 0.045,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 100,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     25,
+     25,
+     25,
+     25,
+     25,
+     25,
+     20,
+     10,
+     5,
+     5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 15995046.828,
+    "sell": 15995046.828
+   },
+   "zfpOverride": null,
+   "leverageOverride": null,
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 24.3040788831,
+    "short": 14.7787079182
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": -0.00079992,
+    "short": 0.001315495162890887
+   },
+   "accPerOiLong": 30.880381974815105,
+   "accPerOiShort": -20489906.322771344,
+   "fundingLastUpdateBlock": 52325090,
+   "decayedVol": -817.898615,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0.01,
+    "closeMakerFeeP": 0.01,
+    "openTakerFeeP": 0.045,
+    "closeTakerFeeP": 0.045,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": -4.444e-7,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 0,
+    "maxRunTime": 0,
+    "frequency": 0,
+    "twapFee": 0
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "Crypto.ETH/USD",
+     "assetType": "crypto",
+     "isOpen": true,
+     "nextOpen": 0,
+     "nextClose": 0,
+     "schedule": "America/New_York;O,O,O,O,O,O,O;"
+    }
+   }
+  },
+  {
+   "spreadP": 0,
+   "pnlSpreadP": 0.01,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 75,
+    "pnlMinLeverage": 1,
+    "pnlMaxLeverage": 500
+   },
+   "priceImpactMultiplier": 0,
+   "skewImpactMultiplier": 0,
+   "groupIndex": 0,
+   "feeIndex": 116,
+   "values": {
+    "maxGainP": 2500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 50,
+    "maxWalletOIP": 50,
+    "isUSDCAligned": false,
+    "groupOpenInterestPecentage": 50,
+    "maxWalletOI": 50
+   },
+   "from": "BTC_UPSIDE",
+   "to": "USD",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 3948138.19,
+    "short": 2145843.38
+   },
+   "marginFee": {
+    "long": 0,
+    "short": 0
+   },
+   "pairSpreadP": 0,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 100,
+   "pairMinLeverage": 1,
+   "pairOI": 6093981.57,
+   "pairMaxOI": 19993808.535,
+   "maxWalletOI": 62478853.16,
+   "index": 116,
+   "pairParams": {
+    "onePercentDepthAbove": 88707556.896,
+    "onePercentDepthBelow": 115815456.472
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2,
+    "negSpreadCap": 25,
+    "isPnlTypeAllowed": 1,
+    "pnlPriceImpactMultiplier": 1.2,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 2,
+    "pnlNegSpreadCap": 7.5,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 1
+   },
+   "blockOILimit": 0,
+   "openFeeP": 0.045,
+   "closeFeeP": 0.045,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 100,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     25,
+     25,
+     25,
+     25,
+     25,
+     25,
+     20,
+     10,
+     5,
+     5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 19993808.535,
+    "sell": 19993808.535
+   },
+   "zfpOverride": null,
+   "leverageOverride": null,
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 47.7483482705,
+    "short": 25.8713759624
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": 0.00039996,
+    "short": -0.000738168290779134
+   },
+   "accPerOiLong": 1032.4399393038773,
+   "accPerOiShort": 30049.308558392193,
+   "fundingLastUpdateBlock": 52325106,
+   "decayedVol": -374425.883288,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0.01,
+    "closeMakerFeeP": 0.01,
+    "openTakerFeeP": 0.045,
+    "closeTakerFeeP": 0.045,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": 2.222e-7,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 0,
+    "maxRunTime": 0,
+    "frequency": 0,
+    "twapFee": 0
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "Crypto.BTC/USD",
+     "assetType": "crypto",
+     "isOpen": true,
+     "nextOpen": 0,
+     "nextClose": 0,
+     "schedule": "America/New_York;O,O,O,O,O,O,O;"
+    }
+   }
+  },
+  {
+   "spreadP": 0.02,
+   "pnlSpreadP": 0.01,
+   "leverages": {
+    "minLeverage": 1,
+    "maxLeverage": 75,
+    "pnlMinLeverage": 1,
+    "pnlMaxLeverage": 500
+   },
+   "priceImpactMultiplier": 1.2,
+   "skewImpactMultiplier": 0.25,
+   "groupIndex": 1,
+   "feeIndex": 117,
+   "values": {
+    "maxGainP": 2500,
+    "maxSlP": 80,
+    "maxLongOiP": 50,
+    "maxShortOiP": 50,
+    "groupOpenInterestPercentageP": 50,
+    "maxWalletOIP": 50,
+    "isUSDCAligned": false,
+    "groupOpenInterestPecentage": 50,
+    "maxWalletOI": 50
+   },
+   "from": "SOL_UPSIDE",
+   "to": "USD",
+   "timer": {
+    "numTiers": 1,
+    "positionSizeToThresholdTierMap": {
+     "0": 0
+    },
+    "thresholdTierToTimerMap": {
+     "0": 0
+    }
+   },
+   "openInterest": {
+    "long": 51538.16,
+    "short": 37341.96
+   },
+   "marginFee": {
+    "long": 0,
+    "short": 0
+   },
+   "pairSpreadP": 0.02,
+   "pairLimitOrderFeeP": 0,
+   "pairMinLevPosUSDC": 100,
+   "pairMinLeverage": 1,
+   "pairOI": 88880.12,
+   "pairMaxOI": 9372097.75,
+   "maxWalletOI": 62478853.16,
+   "index": 117,
+   "pairParams": {
+    "onePercentDepthAbove": 10638167.76,
+    "onePercentDepthBelow": 9413855.76
+   },
+   "storagePairParams": {
+    "posSpreadCap": 2,
+    "negSpreadCap": 50,
+    "isPnlTypeAllowed": 1,
+    "pnlPriceImpactMultiplier": 1.2,
+    "pnlSkewImpactMultiplier": 0,
+    "pnlPosSpreadCap": 2,
+    "pnlNegSpreadCap": 7.5,
+    "minLongBorrowFee": 0,
+    "maxLongBorrowFee": 100,
+    "lazerFeedId": 6
+   },
+   "blockOILimit": 0,
+   "openFeeP": 0.045,
+   "closeFeeP": 0.045,
+   "limitOrderFeeP": 0,
+   "minLevPosUSDC": 100,
+   "pnlFees": {
+    "numTiers": 10,
+    "tierP": [
+     1,
+     5,
+     25,
+     50,
+     100,
+     250,
+     500,
+     1500,
+     2500,
+     3000
+    ],
+    "feesP": [
+     25,
+     25,
+     25,
+     25,
+     25,
+     25,
+     20,
+     10,
+     5,
+     5
+    ]
+   },
+   "lossProtectionMultiplier": {
+    "0": 0,
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "longSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "shortSkewConfig": {
+    "0": 0,
+    "1": 101,
+    "2": 101,
+    "3": 101
+   },
+   "isPairListed": true,
+   "minShortBorrowFee": 0,
+   "maxShortBorrowFee": 100,
+   "liquidity": {
+    "buy": 9372097.75,
+    "sell": 9372097.75
+   },
+   "zfpOverride": null,
+   "leverageOverride": null,
+   "uncappedSpread": {
+    "isActive": false,
+    "windows": []
+   },
+   "coinOI": {
+    "long": 475.9959979747,
+    "short": 322.9578407939
+   },
+   "fundingFeePerHourP": 0,
+   "fundingRate": {
+    "long": -0.00640008,
+    "short": 0.009432848755828869
+   },
+   "accPerOiLong": 0.9087834766336302,
+   "accPerOiShort": -19941244.630858306,
+   "fundingLastUpdateBlock": 52325090,
+   "decayedVol": -321.338064,
+   "additionalPairParams2": {
+    "openMakerFeeP": 0.01,
+    "closeMakerFeeP": 0.01,
+    "openTakerFeeP": 0.045,
+    "closeTakerFeeP": 0.045,
+    "closeOnlyMode": false
+   },
+   "assetOIParams": {
+    "isHardCap": false,
+    "totalOIHardCap": 0,
+    "longOIHardCap": 0,
+    "shortOIHardCap": 0
+   },
+   "hedgingParams": {
+    "hedgingFeePerBlockP": -0.0000035556,
+    "hedgingThresholdLowP": 0,
+    "hedgingThresholdHighP": 100
+   },
+   "pairTwapParams": {
+    "minRunTime": 0,
+    "maxRunTime": 0,
+    "frequency": 0,
+    "twapFee": 0
+   },
+   "feed": {
+    "attributes": {
+     "symbol": "Crypto.SOL/USD",
+     "assetType": "crypto",
+     "isOpen": true,
+     "nextOpen": 0,
+     "nextClose": 0,
+     "schedule": "America/New_York;O,O,O,O,O,O,O;"
+    }
+   }
+  }
+ ],
+ "prices": {
+  "0": 2568.25003668,
+  "1": 82823.36235302,
+  "2": 115.25617563
+ }
+}
