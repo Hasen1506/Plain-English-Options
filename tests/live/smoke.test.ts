@@ -1,5 +1,6 @@
 // Opt-in live smoke test against Derive TESTNET (never mainnet):
-//   DERIVE_PRIVATE_KEY=0x… [DERIVE_WALLET=0x…] [DERIVE_SUBACCOUNT_ID=87139] npm run test:live
+//   DERIVE_PRIVATE_KEY=0x… [DERIVE_WALLET=0x…] [DERIVE_SUBACCOUNT_ID=…] npm run test:live
+// Without DERIVE_SUBACCOUNT_ID it uses the wallet's richest subaccount in the ETH options universe.
 // Logs in, places the smallest ETH bull call spread the exchange allows through
 // the same code the app uses, checks the fills and positions, then closes it.
 import { describe, expect, it } from "vitest";
@@ -13,11 +14,11 @@ import { selectSpread, quoteSpread } from "../../src/lib/spread.ts";
 import { expiriesFor, spotOf } from "../../src/lib/market.ts";
 
 const KEY = process.env.DERIVE_PRIVATE_KEY;
-const SUB = Number(process.env.DERIVE_SUBACCOUNT_ID ?? 87139);
+let SUB = Number(process.env.DERIVE_SUBACCOUNT_ID ?? 0);
 const net = NETWORKS.testnet; // hard-wired: this test never touches mainnet
 
 describe.skipIf(!KEY)("live testnet smoke", () => {
-  it("places, verifies and closes a minimum-size spread on subaccount " + SUB, async () => {
+  it("places, verifies and closes a minimum-size spread", async () => {
     const signer = keySigner(KEY!, net, process.env.DERIVE_WALLET);
     const client = new DeriveClient(net.wsUrl, {
       timeoutMs: 20_000,
@@ -27,8 +28,15 @@ describe.skipIf(!KEY)("live testnet smoke", () => {
       },
     });
     client.connect();
-    const log: Record<string, unknown> = { at: new Date().toISOString(), network: net.id, subaccount: SUB };
+    const log: Record<string, unknown> = { at: new Date().toISOString(), network: net.id };
     try {
+      if (!SUB) {
+        const ids = (await client.call<{ subaccount_ids: number[] }>("private/get_subaccounts", { wallet: signer.owner })).subaccount_ids;
+        const subs = (await Promise.all(ids.map((id) => client.call("private/get_subaccount", { subaccount_id: id }).then(parseSubaccount)))).filter((s): s is SubaccountInfo => !!s && s.riskUniverse === 1);
+        SUB = subs.sort((a, b) => b.value - a.value)[0]?.id ?? 0;
+      }
+      log.subaccount = SUB;
+      expect(SUB, "no RU1 subaccount").toBeGreaterThan(0);
       const sub = async () => parseSubaccount(await client.call("private/get_subaccount", { subaccount_id: SUB }))!;
       const before = await sub();
       expect(before.riskUniverse).toBe(1);
