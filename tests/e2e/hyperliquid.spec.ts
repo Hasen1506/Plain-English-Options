@@ -41,6 +41,10 @@ test.describe("hyperliquid: markets, comparison, sizing", () => {
     await page.locator("[data-cmp-pick='1']").click();
     await expect(page.locator("#perpLiveTxt")).toContainText("Live · Hyperliquid testnet", { timeout: 15_000 });
     expect((await state(page)).perps.venue).toBe("hyperliquid");
+    // honesty: Hyperliquid has not placed a real order yet, and the app says so
+    await expect(page.locator("#venuePick button", { hasText: "Hyperliquid" })).toContainText("not live-tested");
+    await expect(page.locator("#venueStatus")).toBeVisible();
+    await expect(page.locator("#venueStatus")).toContainText("has not yet placed a real Hyperliquid order");
     await expect(page.locator("#perpMarkets tbody tr")).not.toHaveCount(0);
     await pill(page, "risk", "100");
     await pill(page, "lev", "2.5");
@@ -173,6 +177,20 @@ test.describe("hyperliquid: money in and out", () => {
     expect(td.message.value).toBe("25000000");
     expect(td.message.to.toLowerCase()).toBe("0x8e4e3d0e95c1bec4f3ec7f69aa48473e0ab6eb8d"); // CctpExtension (Arbitrum Sepolia)
     expect((await mockState(app.sid)).balance[app.wallet!.address]).toBeCloseTo(24.8, 6);
+  });
+
+  test("testnet deposit is refused for an address with no Hyperliquid mainnet account (it would be lost)", async ({ page }) => {
+    const app = await openApp(page, "hlnomain");
+    await toHl(page);
+    await page.locator("#perpVenueConnect").click();
+    await expect(page.locator("#perpAcct")).toContainText("$0.00", { timeout: 10_000 });
+    await page.locator("#perpDeposit").click();
+    await page.locator("#hlDepAmt").fill("25");
+    await page.locator("#hlDepGo").click();
+    await expect(page.locator("#hlDepStep")).toContainText("Deposit was not sent", { timeout: 15_000 });
+    expect(app.wallet!.calls).not.toContain("cctp:25000000");
+    expect(app.wallet!.typedData.some((t) => (t as { primaryType: string }).primaryType === "ReceiveWithAuthorization")).toBe(false);
+    await expect(page.locator("#hlDepGo")).toBeEnabled();
   });
 
   test("withdraw: signed by the wallet (withdraw3), paid to the same address", async ({ page }) => {
