@@ -23,6 +23,10 @@ const pill = async (page: Page, kind: "risk" | "lev", v: string) => {
 };
 type Q = { entry: number; notional: number; putIn: number } | null;
 const quoteOf = (page: Page) => page.evaluate(() => (window as unknown as { __peo: { state: () => { perps: { quote: Q } } } }).__peo.state().perps.quote) as Promise<Q>;
+/** Open the take-profit / stop-loss fold (it stays open between orders). */
+const openTpsl = async (page: Page) => {
+  if (!(await page.locator("#ppTpsl").evaluate((e) => (e as HTMLDetailsElement).open))) await page.locator("#ppTpsl summary").click();
+};
 const confirm = async (page: Page) => {
   await page.locator("#perpAgree").check();
   await expect(page.locator("#perpConfirm")).toBeEnabled({ timeout: 60_000 });
@@ -59,7 +63,7 @@ test("Veranta testnet in the browser: practice account → long with TP/SL → c
   const q0 = (await quoteOf(page))!;
   expect(q0.notional).toBeGreaterThanOrEqual(100); // Veranta's ETH minimum position
   const entry = q0.entry;
-  await page.locator("#ppTpsl summary").click();
+  await openTpsl(page);
   await page.locator("#ppTp").fill(String(Math.round(entry * 1.2)));
   await page.locator("#ppSl").fill(String(Math.round(entry * 0.85)));
   await confirm(page);
@@ -81,7 +85,7 @@ test("Veranta testnet in the browser: practice account → long with TP/SL → c
   // 4. a fresh short, then close it
   await page.locator("#ppDir").click();
   await pill(page, "risk", "25");
-  await page.locator("#ppTpsl summary").click();
+  await openTpsl(page);
   await page.locator("#ppTp").fill("");
   await page.locator("#ppSl").fill("");
   await confirm(page);
