@@ -1,0 +1,2168 @@
+{
+ "source": "hyperliquid-python-sdk 0.24.0",
+ "key": "0x0123456789012345678901234567890123456789012345678901234567890123",
+ "address": "0x14791697260E4c9A71f18484C9f997B308e59325",
+ "official": [
+  {
+   "name": "dummy mainnet",
+   "kind": "l1",
+   "action": {
+    "type": "dummy",
+    "num": 100000000000
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xf528daee6a0bd11407b483cfcd9a48c56884180b70ee86f124053e5fc1bf4d57",
+   "sig": {
+    "r": "0x53749d5b30552aeb2fca34b530185976545bb22d0b3ce6f62e31be961a59298",
+    "s": "0x755c40ba9bf05223521753995abb2f73ab3229be8ec921f350cb447e384d8ed8",
+    "v": 27
+   }
+  },
+  {
+   "name": "dummy testnet",
+   "kind": "l1",
+   "action": {
+    "type": "dummy",
+    "num": 100000000000
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0xf528daee6a0bd11407b483cfcd9a48c56884180b70ee86f124053e5fc1bf4d57",
+   "sig": {
+    "r": "0x542af61ef1f429707e3c76c5293c80d01f74ef853e34b76efffcb57e574f9510",
+    "s": "0x17b8b32f086e8cdede991f1e2c529f5dd5297cbe8128500e00cbaf766204a613",
+    "v": 28
+   }
+  },
+  {
+   "name": "order mainnet",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "100",
+      "s": "100",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x884f2c32bb6dbdd65f6033e32fb28c0cb6f5b345db0f6471fd3366d85c9252c1",
+   "sig": {
+    "r": "0xd65369825a9df5d80099e513cce430311d7d26ddf477f5b3a33d2806b100d78e",
+    "s": "0x2b54116ff64054968aa237c20ca9ff68000f977c93289157748a3162b6ea940e",
+    "v": 28
+   }
+  },
+  {
+   "name": "order testnet",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "100",
+      "s": "100",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x884f2c32bb6dbdd65f6033e32fb28c0cb6f5b345db0f6471fd3366d85c9252c1",
+   "sig": {
+    "r": "0x82b2ba28e76b3d761093aaded1b1cdad4960b3af30212b343fb2e6cdfa4e3d54",
+    "s": "0x6b53878fc99d26047f4d7e8c90eb98955a109f44209163f52d8dc4278cbbd9f5",
+    "v": 27
+   }
+  },
+  {
+   "name": "order cloid mainnet",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "100",
+      "s": "100",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      },
+      "c": "0x00000000000000000000000000000001"
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x0ba500cedd8f4ba6ded620a0b1cd04f124d9ba745e2e2893fcc763bcc1444af5",
+   "sig": {
+    "r": "0x41ae18e8239a56cacbc5dad94d45d0b747e5da11ad564077fcac71277a946e3",
+    "s": "0x3c61f667e747404fe7eea8f90ab0e76cc12ce60270438b2058324681a00116da",
+    "v": 27
+   }
+  },
+  {
+   "name": "order cloid testnet",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "100",
+      "s": "100",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      },
+      "c": "0x00000000000000000000000000000001"
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x0ba500cedd8f4ba6ded620a0b1cd04f124d9ba745e2e2893fcc763bcc1444af5",
+   "sig": {
+    "r": "0xeba0664bed2676fc4e5a743bf89e5c7501aa6d870bdb9446e122c9466c5cd16d",
+    "s": "0x7f3e74825c9114bc59086f1eebea2928c190fdfbfde144827cb02b85bbe90988",
+    "v": 28
+   }
+  },
+  {
+   "name": "dummy vault mainnet",
+   "kind": "l1",
+   "action": {
+    "type": "dummy",
+    "num": 100000000000
+   },
+   "vault": "0x1719884eb866cb12b2287399b15f7db5e7d775ea",
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xde9e09a7a3da45cc694096d4bfdcd89bc1b892d05497c5ecc1f56c335945184c",
+   "sig": {
+    "r": "0x3c548db75e479f8012acf3000ca3a6b05606bc2ec0c29c50c515066a326239",
+    "s": "0x4d402be7396ce74fbba3795769cda45aec00dc3125a984f2a9f23177b190da2c",
+    "v": 28
+   }
+  },
+  {
+   "name": "dummy vault testnet",
+   "kind": "l1",
+   "action": {
+    "type": "dummy",
+    "num": 100000000000
+   },
+   "vault": "0x1719884eb866cb12b2287399b15f7db5e7d775ea",
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0xde9e09a7a3da45cc694096d4bfdcd89bc1b892d05497c5ecc1f56c335945184c",
+   "sig": {
+    "r": "0xe281d2fb5c6e25ca01601f878e4d69c965bb598b88fac58e475dd1f5e56c362b",
+    "s": "0x7ddad27e9a238d045c035bc606349d075d5c5cd00a6cd1da23ab5c39d4ef0f60",
+    "v": 27
+   }
+  },
+  {
+   "name": "tpsl mainnet",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "100",
+      "s": "100",
+      "r": false,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "103",
+        "tpsl": "sl"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x430a86fb9876e901920d931f5bb20c9d011f6389bd179f39a73c09e6219adcad",
+   "sig": {
+    "r": "0x98343f2b5ae8e26bb2587daad3863bc70d8792b09af1841b6fdd530a2065a3f9",
+    "s": "0x6b5bb6bb0633b710aa22b721dd9dee6d083646a5f8e581a20b545be6c1feb405",
+    "v": 27
+   }
+  },
+  {
+   "name": "tpsl testnet",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "100",
+      "s": "100",
+      "r": false,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "103",
+        "tpsl": "sl"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x430a86fb9876e901920d931f5bb20c9d011f6389bd179f39a73c09e6219adcad",
+   "sig": {
+    "r": "0x971c554d917c44e0e1b6cc45d8f9404f32172a9d3b3566262347d0302896a2e4",
+    "s": "0x206257b104788f80450f8e786c329daa589aa0b32ba96948201ae556d5637eac",
+    "v": 28
+   }
+  },
+  {
+   "name": "scheduleCancel mainnet",
+   "kind": "l1",
+   "action": {
+    "type": "scheduleCancel"
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xa2887a3147b6542306b61d311a056fd1753913d63cc904f30cba61712a98f4ae",
+   "sig": {
+    "r": "0x6cdfb286702f5917e76cd9b3b8bf678fcc49aec194c02a73e6d4f16891195df9",
+    "s": "0x6557ac307fa05d25b8d61f21fb8a938e703b3d9bf575f6717ba21ec61261b2a0",
+    "v": 27
+   }
+  },
+  {
+   "name": "scheduleCancel time testnet",
+   "kind": "l1",
+   "action": {
+    "type": "scheduleCancel",
+    "time": 123456789
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x4be18e445114437c5d1d9dd35a09f5601a3cc34ed4ac94a0281251b9bd8f6832",
+   "sig": {
+    "r": "0x4e4f2dbd4107c69783e251b7e1057d9f2b9d11cee213441ccfa2be63516dc5bc",
+    "s": "0x706c656b23428c8ba356d68db207e11139ede1670481a9e01ae2dfcdb0e1a678",
+    "v": 27
+   }
+  },
+  {
+   "name": "subAccountTransfer mainnet",
+   "kind": "l1",
+   "action": {
+    "type": "subAccountTransfer",
+    "subAccountUser": "0x1d9470d4b963f552e6f671a81619d395877bf409",
+    "isDeposit": true,
+    "usd": 10
+   },
+   "vault": null,
+   "nonce": 0,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xd12f71eba9e3e792812bfdf01a6a92f4d4016bb0541e850b41f770891c0cc447",
+   "sig": {
+    "r": "0x43592d7c6c7d816ece2e206f174be61249d651944932b13343f4d13f306ae602",
+    "s": "0x71a926cb5c9a7c01c3359ec4c4c34c16ff8107d610994d4de0e6430e5cc0f4c9",
+    "v": 28
+   }
+  },
+  {
+   "name": "withdraw3 testnet",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:Withdraw",
+   "action": {
+    "destination": "0x5e9ee1089755c3435139848e47e6635505d5a13a",
+    "amount": "1",
+    "time": 1687816341423,
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Testnet",
+    "type": "withdraw3"
+   },
+   "sig": {
+    "r": "0x8363524c799e90ce9bc41022f7c39b4e9bdba786e5f9c72b20e43e1462c37cf9",
+    "s": "0x58b1411a775938b83e29182e8ef74975f9054c8e97ebf5ec2dc8d51bfc893881",
+    "v": 28
+   }
+  },
+  {
+   "name": "usdSend testnet",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:UsdSend",
+   "action": {
+    "destination": "0x5e9ee1089755c3435139848e47e6635505d5a13a",
+    "amount": "1",
+    "time": 1687816341423,
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Testnet",
+    "type": "usdSend"
+   },
+   "sig": {
+    "r": "0x637b37dd731507cdd24f46532ca8ba6eec616952c56218baeff04144e4a77073",
+    "s": "0x11a6a24900e6e314136d2592e2f8d502cd89b7c15b198e1bee043c9589f9fad7",
+    "v": 27
+   }
+  }
+ ],
+ "generated": [
+  {
+   "name": "order 0 SOL Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 5,
+      "b": false,
+      "p": "18395",
+      "s": "12.01",
+      "r": true,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000000000,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x48d44acf7a1af7c4a1c0f9834de839358beddd7b8117b640a451076708f72c82",
+   "sig": {
+    "r": "0xeef59c232bfcba16e144b8f16bcc6c51b2e7a74aa2ff967f63f25b2ffd9734fe",
+    "s": "0x2b40bf6e678fcfd5237ed2145b07e240ea0c74e354bf1771839516ebbd9ec6ad",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 1 ETH tp",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "56064",
+      "s": "28.3377",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     },
+     {
+      "a": 1,
+      "b": true,
+      "p": "56064",
+      "s": "28.3377",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "56625",
+        "tpsl": "tp"
+       }
+      }
+     }
+    ],
+    "grouping": "normalTpsl"
+   },
+   "vault": null,
+   "nonce": 1760000007919,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x61896aad63aa8191d20a8b15fb0e378caa6f5a91af65f2681fb8f7052dccd3d4",
+   "sig": {
+    "r": "0xebeaa730720b0be95bb1bdeee46d8c451a3096c552341a854eb6df3d56314fe7",
+    "s": "0xb30b6ffa1993737d722d5b436035295a8b348ce8850a399d967f5d5135fa598",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 2 BTC tp",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 0,
+      "b": true,
+      "p": "103510",
+      "s": "27.64698",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "104550",
+        "tpsl": "tp"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000015838,
+   "expiresAfter": 1760000075838,
+   "mainnet": true,
+   "connectionId": "0xd465657bb7efa82c7b356940d81f9c303b8a548650145557732c3a98cca1e15c",
+   "sig": {
+    "r": "0x72c8964b4e4a6610b86a6553822ed709f6df9ba86a8b5ea5c92eee4134dc6491",
+    "s": "0x6df018d77768eee410b2453d8e15cfdf7d7d752e9ed1914f820be584620092f5",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 3 SOL sl",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 5,
+      "b": false,
+      "p": "39488",
+      "s": "24.52",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     },
+     {
+      "a": 5,
+      "b": false,
+      "p": "39488",
+      "s": "24.52",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "39883",
+        "tpsl": "sl"
+       }
+      }
+     }
+    ],
+    "grouping": "normalTpsl"
+   },
+   "vault": null,
+   "nonce": 1760000023757,
+   "expiresAfter": 1760000083757,
+   "mainnet": true,
+   "connectionId": "0x17b7e779fe5f9cdf584fafa100401f2ac031432692480368377f1378c5306360",
+   "sig": {
+    "r": "0x5b593f6eb33755af71abe05d28e8f8cf725812ed696ce6d8600e89e1c77d8f9e",
+    "s": "0x4670e98e95c06b1182bc66b6caf7d63e3870697c490e1d0b7e31f49fd7473312",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 4 BTC Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 0,
+      "b": false,
+      "p": "95860",
+      "s": "5.98445",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000031676,
+   "expiresAfter": 1760000091676,
+   "mainnet": true,
+   "connectionId": "0xc6867df1ed8b55dc0bff71a778d923ccebd593b6499081328ceebe5bb874c9aa",
+   "sig": {
+    "r": "0x1a08534e290b920d1eb9de3f839b90e2a1847de04fbc071f883e96212bcb7920",
+    "s": "0x17c7776ccf377492d9d9653d73c805e6d2d112903c4adfe4a3846b973a4daddd",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 5 SOL sl",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 5,
+      "b": true,
+      "p": "12839",
+      "s": "9.64",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     },
+     {
+      "a": 5,
+      "b": true,
+      "p": "12839",
+      "s": "9.64",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "12967",
+        "tpsl": "sl"
+       }
+      }
+     }
+    ],
+    "grouping": "normalTpsl"
+   },
+   "vault": null,
+   "nonce": 1760000039595,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x9fa61f28c4de660b747bc78693924b43f292075655fcaaffb17503e76049cf7c",
+   "sig": {
+    "r": "0x1ea94b55aa1762b4e5e262710ff3244eec37394cc288cfdab46d08ef6e738b48",
+    "s": "0x699fc6989eec00f4d99b4a506c1b54dec285f69a2ef1e54679f215db7c16a306",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 6 BTC Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 0,
+      "b": false,
+      "p": "108470",
+      "s": "4.95664",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000047514,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xb9b8d9d24bab4f98cb20267697bce0fb9a890b0c9eaec189548e40db694a9101",
+   "sig": {
+    "r": "0xffd7d3a8a39484724b0e89e953e716403f5f6266c29e29ce3283718d55cf901b",
+    "s": "0x4033d19ca8d7a8c226e7d2edf6b856fa80a6d7af6f95ccaab6e40bcdb1f91fa6",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 7 BTC Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 0,
+      "b": true,
+      "p": "13891",
+      "s": "43.93003",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000055433,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xa301f14006413868302e9680858e14fec0253730bc2b31bdb59d308dc89f52af",
+   "sig": {
+    "r": "0xedb24679edcdfdec80d6d81222cd16638f337338a7b1c3863c72d23dcbf32b3f",
+    "s": "0x3d14cacd9e64d17893c6e5f348527f9b2d47b563566d09df2e06001db7c773dd",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 8 ETH Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "16224",
+      "s": "13.3845",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000063352,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xff1a67d351f89008789597c9a44b8729d958acfbaceca8a4c7ede9d96e5d244c",
+   "sig": {
+    "r": "0x6506ab7b548c2c26672b54d1376c1d9eb00290340ad6c440bc7f46740a26e6a",
+    "s": "0x4a01e203792d64f0e1cd4c38acac313b741215fb45b7d6c7f853ca2724cee543",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 9 DOGE Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": false,
+      "p": "72248",
+      "s": "26",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000071271,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xc35520f91287b1b54bdbc86cc0b3193b397007d09454568a86c2d56b47272a19",
+   "sig": {
+    "r": "0xa1a71c39a7ab4f32255178b3fc68ad9655c84007fabb8aa371845762a0d2dd52",
+    "s": "0x2b38b9cc6a3620d5bb4fc3d10dd433fd3b36a6719479f6ae643f1df122a15d52",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 10 BTC Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 0,
+      "b": true,
+      "p": "7635",
+      "s": "3.09084",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000079190,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x9b8b3604714974e91c8d9be9bd11843495044c93533cad7e27aff0d3635968b7",
+   "sig": {
+    "r": "0x749ae0395ee4e03f3f8f64d03b3313e1542d01a2269e00576614d37d9379de53",
+    "s": "0x5781406475fc08feea9a63d8ef9ad0a72bd1118b8db9181d1e8629d68c715454",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 11 ETH Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "30249",
+      "s": "34.9941",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000087109,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0xb91f5b451411633fc5c8bd26ee18f9fe2a316546e493935644b873416ca6de7d",
+   "sig": {
+    "r": "0x322f8ad44e5d84293ae2e816f358cf83a9f6654a6cc762eeca8d3224ffe4c13f",
+    "s": "0x6b2ca70c3765102c0b17756518ddcfbbe51d67ae2d5f0967f07072e53279136c",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 12 DOGE sl",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": false,
+      "p": "81891",
+      "s": "10",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "82710",
+        "tpsl": "sl"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000095028,
+   "expiresAfter": 1760000155028,
+   "mainnet": true,
+   "connectionId": "0x82dea4d1067965d5b0c4f154c6cb817bdfa34a6a3e78233d056dbca1ea731733",
+   "sig": {
+    "r": "0xbb78647d20e21cebdaeb4dee1c9912c5696ed796b7e8774c1006dc7b05002699",
+    "s": "0x45f1be3cf2d65e5872045290baef1a434eb5cc7fc7d77b180ce1da43d3154dc2",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 13 ETH tp",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "16454",
+      "s": "31.561",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     },
+     {
+      "a": 1,
+      "b": true,
+      "p": "16454",
+      "s": "31.561",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "16619",
+        "tpsl": "tp"
+       }
+      }
+     }
+    ],
+    "grouping": "normalTpsl"
+   },
+   "vault": null,
+   "nonce": 1760000102947,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x6d3137548b6f4e4ccbe535cd81b3c9330e7a939185ffa7aab3bbc447a9cf922a",
+   "sig": {
+    "r": "0x84165065c4f102017f96982426d420052f13a866870c6a82ae992d470ade7169",
+    "s": "0x4df9f6466caa518f81433d2ff551703c289119e301f47c241189a28eb2902453",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 14 BTC Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 0,
+      "b": true,
+      "p": "34802",
+      "s": "44.82059",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000110866,
+   "expiresAfter": 1760000170866,
+   "mainnet": false,
+   "connectionId": "0x3499604270d33d7aa4da6da24ea0d8565433c29e8547a2eabe8d36267ab3ce44",
+   "sig": {
+    "r": "0x6469349220770e7705622c1e21e8639913a9f497b37031734578aad58e8c953c",
+    "s": "0x5d5c86087a28faa64cf2995ca094e6ffdc208b23cb0fcc0796479fd131dfcb95",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 15 ETH Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "109730",
+      "s": "28.5771",
+      "r": true,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000118785,
+   "expiresAfter": 1760000178785,
+   "mainnet": false,
+   "connectionId": "0x9f48dd7df319359789fa31894d341769b3abd477731130d781453b6d93f0b0f6",
+   "sig": {
+    "r": "0x7bf33bbaf332122e8787f58dde205ea22af07f313796958f33b33b0b17e6b9cf",
+    "s": "0x3ae40fe697bf34ec94e01b637220ae2f18cd03b95abe0f95da71d76bca5c170f",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 16 ETH Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": false,
+      "p": "116930",
+      "s": "16.3909",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000126704,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x1be57e0ea312471e210fc83e3a49f674397bd6bb4e31b174db1533e3668de684",
+   "sig": {
+    "r": "0xf3e6ed3b366a067623e0b46c83527b826dbb1937a4ce074fab430c2c21d04639",
+    "s": "0x69e84449198d0c110d5528127d2b9f73b2d5a4ea667abe5418f86401c8f45fc",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 17 DOGE tp",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": false,
+      "p": "88554",
+      "s": "21",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "89440",
+        "tpsl": "tp"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000134623,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x3dbc60fda4c022ad781bd7dac334fa5746daf615707375c223e8dbb9440dc250",
+   "sig": {
+    "r": "0x140f813411b62a83a0e2f21d161904c808dfab121b5984e51b20f6c66a1ff16b",
+    "s": "0x53e583ea04d0cfdc151189cbfd6ee890b227fdb0902248791b1cd780bc3c4fb5",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 18 ETH Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": false,
+      "p": "85466",
+      "s": "12.7214",
+      "r": true,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000142542,
+   "expiresAfter": 1760000202542,
+   "mainnet": true,
+   "connectionId": "0xb714940e6575531cee13f0029f473620a05b6d2b28f5eb9732dfcb26d72b440d",
+   "sig": {
+    "r": "0xdadba765f2c1ea3839db812408ce642d6ca868dca996af18963e42d6db1009d2",
+    "s": "0x3886c85d5545c4da8d7881559e3773ee176007cd0116f28e393061c51e716e87",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 19 ETH Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": false,
+      "p": "16340",
+      "s": "39.748",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000150461,
+   "expiresAfter": 1760000210461,
+   "mainnet": true,
+   "connectionId": "0xb5239a3932d8d27613a99db9c20d69d21b33358fb9475ea878455c1793a74899",
+   "sig": {
+    "r": "0xa873f8f6929dcec96657f34a82cb8c539cda915f97d091dadb07b8847daa2e53",
+    "s": "0x10fbd987dfc9246b2e65ed47c88885516d95fa67134b1c53dc637b8592af7a58",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 20 ETH sl",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": true,
+      "p": "110130",
+      "s": "27.5906",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     },
+     {
+      "a": 1,
+      "b": true,
+      "p": "110130",
+      "s": "27.5906",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "111230",
+        "tpsl": "sl"
+       }
+      }
+     }
+    ],
+    "grouping": "normalTpsl"
+   },
+   "vault": null,
+   "nonce": 1760000158380,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x0d6aeb5d52f0e814993c1969854dd8db8cdcb7cfd5db851b9acf92325a56f1fc",
+   "sig": {
+    "r": "0xad670e0f96cda7f88b9fe5a6bd14167f942b0ac665658684b396fbb67b7b828a",
+    "s": "0x63e3af4f7bbd9639743794a38b65d4b39616ab0ca9639c22946b3bf7f574ae4",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 21 SOL Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 5,
+      "b": true,
+      "p": "99982",
+      "s": "8.73",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000166299,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x6f61899c1f630ba297c2fe3fa3595f406527a935cb105169b1020b93dd9dec4b",
+   "sig": {
+    "r": "0x1de03d50ec3b6ebfa6e8c7342c28753de74a8f1b790bc22c894b8db49b6d2cbe",
+    "s": "0x12c39d9c0e524a09c563a996cf63ad536153e2fa12155d4f7b79053d62881617",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 22 DOGE Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": true,
+      "p": "42521",
+      "s": "43",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000174218,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0xd769b727398132ef013e4cbc63d8fe619e252cfd551255731e3ca469371cfff1",
+   "sig": {
+    "r": "0x731b6caa7b5635ed90ddd43dce593a488461590172c3a5ae950a1705eac07caa",
+    "s": "0x767db99785422c91eebe9b043548345a40172bb2da87a41fd9674ea7123b6ffe",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 23 kPEPE Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 98,
+      "b": true,
+      "p": "66916",
+      "s": "47",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000182137,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x252c6b4c444abba1cefc498667b685246692c758697337f770c53bdc932333a6",
+   "sig": {
+    "r": "0x47bb43baa1122a10c1cd54d10691848d825aebd00d36573c2282e307983b09b8",
+    "s": "0x328e38f45d7525e837c4cd724139302a0dd3bbb3eaa9d744c7bea3ced4766288",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 24 DOGE Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": true,
+      "p": "50737",
+      "s": "6",
+      "r": true,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000190056,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0xe41511c38e89a2ab14743c921a428aff79d2a85c7096b95f72a3fa8ac262fbf2",
+   "sig": {
+    "r": "0x4db1577b969ac2eb604fcdf91bff427304b8ddeb5e448e153f46cb415308327b",
+    "s": "0x2075df1666b8fbfb0cd19e34a71eb5e352899a5f82421d0ad575455524e13e9e",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 25 ETH Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": false,
+      "p": "33378",
+      "s": "17.3755",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000197975,
+   "expiresAfter": 1760000257975,
+   "mainnet": false,
+   "connectionId": "0x36954cb0f0d91c8e94e48b9198cf5bcc9b3469eb59a4a79e361e047bd58a0b64",
+   "sig": {
+    "r": "0x2bac68319a0587a69bba5cd5b969e784b8dab9e758b0846e6edd1ce47fc7aa4e",
+    "s": "0x8e29e7fdfb130c40f33b7dadf467488d312397faa205acec91c3a742b099a28",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 26 DOGE Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": true,
+      "p": "18107",
+      "s": "25",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000205894,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x79f5dc63089eeedee3264bdd653cdb02d3beebc2cde573c80f9c5fc9798e1c15",
+   "sig": {
+    "r": "0xdf6c4bc35575887c13ed55ba2b0ef728a879b68ffe9eb3f3fa05dbad21620278",
+    "s": "0x298fe0c9dff69c1d0ea2b8f4d9b3c99a4bf71c3b1d692db145bb0a78d15560f5",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 27 BTC tp",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 0,
+      "b": true,
+      "p": "72649",
+      "s": "4.85252",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     },
+     {
+      "a": 0,
+      "b": true,
+      "p": "72649",
+      "s": "4.85252",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "73375",
+        "tpsl": "tp"
+       }
+      }
+     }
+    ],
+    "grouping": "normalTpsl"
+   },
+   "vault": null,
+   "nonce": 1760000213813,
+   "expiresAfter": 1760000273813,
+   "mainnet": false,
+   "connectionId": "0x302ecd00f3b1bcfa1f666eb73d789b40696156bf43c9cbc9eafae29b93af93fb",
+   "sig": {
+    "r": "0x3d8ee479412a5e5484f2e724dd4e86bd6df75282784b96953dbef9059a506914",
+    "s": "0x1999e284727d0910c46383b5a0d611ffc2ca9ed8c33e2f1985caa8756d26e35a",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 28 ETH tp",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": false,
+      "p": "53362",
+      "s": "21.7039",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     },
+     {
+      "a": 1,
+      "b": false,
+      "p": "53362",
+      "s": "21.7039",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "53896",
+        "tpsl": "tp"
+       }
+      }
+     }
+    ],
+    "grouping": "normalTpsl"
+   },
+   "vault": null,
+   "nonce": 1760000221732,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x1d74e60cfe8cf4d07e53c98cdb01387861aaded157e1b2eb420ee2024ac287c5",
+   "sig": {
+    "r": "0xbffc5f73f80729d5bff104ae9f6616677a6c76c04c201e4fdff3e3eac715cb90",
+    "s": "0x4c06d0ac4a3d550539549ee443cee85982a08a2787543c72dd93edba3e19cf76",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 29 DOGE Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": false,
+      "p": "8721.9",
+      "s": "39",
+      "r": true,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000229651,
+   "expiresAfter": 1760000289651,
+   "mainnet": true,
+   "connectionId": "0x79a454b74d8b2653f2025e79112ce5622c8ce71415fbcfc3fbf79f4aa203ecbc",
+   "sig": {
+    "r": "0x54cb8fe36e5c371b84eae042eaa5a4e183afcd22d047668e666cc5c4ad4e37a5",
+    "s": "0x38f8c25f119ed00aa932aa12ecf2de0572cb8bf8ef5e3107a3cc073ff7f93250",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 30 kPEPE tp",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 98,
+      "b": true,
+      "p": "64981",
+      "s": "47",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "65631",
+        "tpsl": "tp"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000237570,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0xa432282d0e71eff27cfb33f39149fb0110c8bf01fe1e701c449ad1c54cc969ec",
+   "sig": {
+    "r": "0x82e9ce669a63a9c4cca94b40be5181ad9546a050b014031da626b2c1e7378a31",
+    "s": "0x343d005722a260b1680fb48efea4634cc3405d87cb141edb7547aac358d1750d",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 31 kPEPE Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 98,
+      "b": true,
+      "p": "75932",
+      "s": "5",
+      "r": true,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000245489,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x062cc41dc05f704893ae8845978565c227ce63ce27c9b43662dce5beeadf79ad",
+   "sig": {
+    "r": "0x97200df46b6c915f100e2ce28e5adcc1ffa43967fea4977469429d5452d4cf28",
+    "s": "0x3c168c0311762a8da9c92ef081bad07812d04c7336ffd5525096dec3407aca79",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 32 SOL Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 5,
+      "b": false,
+      "p": "4721.4",
+      "s": "44.97",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000253408,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0xcbc2308dd37d2d854254ad6bd9495356f35fcd2057709dac3d41f5072da6a9aa",
+   "sig": {
+    "r": "0xa15822d8ee42296ee7e20912d12a1d26f6a30dfab3dde3fccf96d40b8b37e09c",
+    "s": "0xb483f78942f0507bbb3bfa3c63593fd286eb210529d2110aa65cda89bb832f4",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 33 SOL Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 5,
+      "b": true,
+      "p": "72756",
+      "s": "23.42",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000261327,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0xbde319628019053537c54be5cf39ef9b2a1f4387bfaa04457d02b87ca19efffc",
+   "sig": {
+    "r": "0x27d386d155368a97ef1232b9caed2788e359c86699c3035181f867a13623ff56",
+    "s": "0x104d5b94975c630f028d5d86bb9b277c82a68facee052e486f1029ee7bd94ed3",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 34 DOGE sl",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": false,
+      "p": "91261",
+      "s": "27",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "92174",
+        "tpsl": "sl"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000269246,
+   "expiresAfter": 1760000329246,
+   "mainnet": false,
+   "connectionId": "0x3a5476db136c2898ae7632c396daed4323c527c6ee78a2a8223c8d1111f1da64",
+   "sig": {
+    "r": "0x9b5c25142cb82a6cd8ab2b03f610a3f8c3947239fdc2988fb42e03ff63c2c6c1",
+    "s": "0x65bdc3fc3cc654a2adb68e56e5049cf5b34565fbda4b130240a7fe6aa67e74ea",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 35 ETH Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 1,
+      "b": false,
+      "p": "20287",
+      "s": "43.2312",
+      "r": true,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000277165,
+   "expiresAfter": 1760000337165,
+   "mainnet": true,
+   "connectionId": "0x1441e00607b73c19921f90486d5dcc65ffcbd22a028de99013332da767270cab",
+   "sig": {
+    "r": "0xd35ad0d6ede72090c9515ccb1e3990e426eabf665f833ff2a85a4c0bc44f54f0",
+    "s": "0x2867a5696132ebbef781e02f5d2d4372dbd52b011f9a785662607a0e235b490b",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 36 kPEPE Gtc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 98,
+      "b": true,
+      "p": "89228",
+      "s": "23",
+      "r": true,
+      "t": {
+       "limit": {
+        "tif": "Gtc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000285084,
+   "expiresAfter": 1760000345084,
+   "mainnet": false,
+   "connectionId": "0x8126e4e60f6aa5336271cbee92ab7065de2b03a1277f633da0ac9cebabda85c2",
+   "sig": {
+    "r": "0x6141f2c4d3a65e495be84ee4363fdc0f4431fbc51d436036c75b000df24c116c",
+    "s": "0x3535a476ed34e6250303a94cc1285cbd122ec31ec1023465070e6fd4c7c9c62c",
+    "v": 27
+   }
+  },
+  {
+   "name": "order 37 DOGE Alo",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 12,
+      "b": true,
+      "p": "85970",
+      "s": "5",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Alo"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000293003,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0xf002591340b8ecdd025bd2f10e1c010c2edea379bf3f70132fa5c217496e74b8",
+   "sig": {
+    "r": "0x869048f7d3b460c0a0de3fadad9a47708cc41a563c16eb1b8175d64d9fdeeef7",
+    "s": "0x2403a43ddc93735b3f660f04bad90b781841affe6db83c3a82b4184b8391c4cc",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 38 SOL Ioc",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 5,
+      "b": false,
+      "p": "27967",
+      "s": "4.92",
+      "r": false,
+      "t": {
+       "limit": {
+        "tif": "Ioc"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000300922,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x8ced3e20e81d325aea6ab9da85717994a9323433d21ee212247aec4c4109ab82",
+   "sig": {
+    "r": "0x4d285971c2127ba81140f8b2022b366bd26c2705b2f9cda20f9fd6bc3d54f586",
+    "s": "0x107c52f80425261d1ed300a112233e5f5923255bf46c3cc31bec89d0d10f59e1",
+    "v": 28
+   }
+  },
+  {
+   "name": "order 39 kPEPE tp",
+   "kind": "l1",
+   "action": {
+    "type": "order",
+    "orders": [
+     {
+      "a": 98,
+      "b": false,
+      "p": "114490",
+      "s": "34",
+      "r": true,
+      "t": {
+       "trigger": {
+        "isMarket": true,
+        "triggerPx": "115630",
+        "tpsl": "tp"
+       }
+      }
+     }
+    ],
+    "grouping": "na"
+   },
+   "vault": null,
+   "nonce": 1760000308841,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x02306099cb4c516ec7f8c8cdf5cb8173840034bc6e46a9dca0ed89d980270d89",
+   "sig": {
+    "r": "0x11a6a3b7dd8820309e25dcec67fd8593552995267b34bb3cc5a1c750f0190a41",
+    "s": "0x67b167b41ae9a12d8843b0b68458e4930f76a33b88a82426d6bb33f4955423e9",
+    "v": 28
+   }
+  },
+  {
+   "name": "cancel 0",
+   "kind": "l1",
+   "action": {
+    "type": "cancel",
+    "cancels": [
+     {
+      "a": 1,
+      "o": 1020648585456
+     }
+    ]
+   },
+   "vault": null,
+   "nonce": 1760000100000,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x8dad889ce5ab98c32166115dad5e0ed6f5557569f09e56fff50fe7270a6aafe8",
+   "sig": {
+    "r": "0x4d5f94d5f33cf2058ed5b742cfb7ed50ecf93724faa178c3d62b7ad26a0a34ca",
+    "s": "0x35cd01cfe223172569bbcb0cd3977531c04af354d35fa319b944cd28aa32943b",
+    "v": 28
+   }
+  },
+  {
+   "name": "cancel 1",
+   "kind": "l1",
+   "action": {
+    "type": "cancel",
+    "cancels": [
+     {
+      "a": 5,
+      "o": 191856096093
+     }
+    ]
+   },
+   "vault": null,
+   "nonce": 1760000100001,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x4569b9ce423a684885ba8e4defa93900bb2f87e071261455424119d6c1a2b8a9",
+   "sig": {
+    "r": "0x21891b9d25957bd91653a934a37cc97d50dc2d621cf5f4341beb97ca19e82405",
+    "s": "0x5f7ad09465cb80a0a22334cc20de324b9fcf8f51fa720b82eadf2aeed7114db5",
+    "v": 28
+   }
+  },
+  {
+   "name": "cancel 2",
+   "kind": "l1",
+   "action": {
+    "type": "cancel",
+    "cancels": [
+     {
+      "a": 0,
+      "o": 779439925560
+     },
+     {
+      "a": 98,
+      "o": 576660753188
+     },
+     {
+      "a": 0,
+      "o": 317838012090
+     }
+    ]
+   },
+   "vault": null,
+   "nonce": 1760000100002,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x4ca9a89e9459f081f6be2f9d4cef3de1333c10c4b5efd5745723c438e2789791",
+   "sig": {
+    "r": "0xfd8dcb934e7ea03031b370c3b81830106e071aeff7a45effc1a6477d378012ae",
+    "s": "0x611b0ffdbe7c33ca8fc7cf1f136b52a69c4fd7e68bc8818d475318ab1f97027f",
+    "v": 28
+   }
+  },
+  {
+   "name": "cancel 3",
+   "kind": "l1",
+   "action": {
+    "type": "cancel",
+    "cancels": [
+     {
+      "a": 1,
+      "o": 280751862781
+     },
+     {
+      "a": 1,
+      "o": 1074539147624
+     },
+     {
+      "a": 1,
+      "o": 443309865679
+     }
+    ]
+   },
+   "vault": null,
+   "nonce": 1760000100003,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x8eb64696a7ce8fc2b6a1f22ec01de811f4ec94f789199fd1110111abbabc3a32",
+   "sig": {
+    "r": "0x709d9e6e6c41622448dc4d4c9a85424e9b3e47fb779975291116729fc8ae2ef6",
+    "s": "0x3ed52a010583d91b7405c0fa344024f51b82108ff08908b50ae4acd7f3d037e",
+    "v": 27
+   }
+  },
+  {
+   "name": "cancel 4",
+   "kind": "l1",
+   "action": {
+    "type": "cancel",
+    "cancels": [
+     {
+      "a": 12,
+      "o": 162965756156
+     }
+    ]
+   },
+   "vault": null,
+   "nonce": 1760000100004,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x156ea35bad65b3deef78847ef912ebd487c5084ed6787e858a89f9dda54e504c",
+   "sig": {
+    "r": "0x7957d427a62c77f55e67f10c6b6426a7631596ce12dd0c7cf480f80d33e60c46",
+    "s": "0x7662250c6ec3f318d4fc6323db621676d6a00c214d38dc8c223ba0dba73754ad",
+    "v": 28
+   }
+  },
+  {
+   "name": "cancel 5",
+   "kind": "l1",
+   "action": {
+    "type": "cancel",
+    "cancels": [
+     {
+      "a": 1,
+      "o": 1040302693162
+     },
+     {
+      "a": 0,
+      "o": 577502536795
+     },
+     {
+      "a": 12,
+      "o": 333455612521
+     }
+    ]
+   },
+   "vault": null,
+   "nonce": 1760000100005,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x5c895caab1d33e7f1aaf9c2a5ca9f56d15593a71e30f38c844f62d33badd4462",
+   "sig": {
+    "r": "0x6fc12de8db5252b6029eb3931dd9d9918b39e1b249731d508d64b26fe5adbbad",
+    "s": "0x73e6c129d3a88a12682cf7d4bd0be5681fc4a77d204d603d970a5fd168b90155",
+    "v": 28
+   }
+  },
+  {
+   "name": "updateLeverage 0",
+   "kind": "l1",
+   "action": {
+    "type": "updateLeverage",
+    "asset": 1,
+    "isCross": true,
+    "leverage": 25
+   },
+   "vault": null,
+   "nonce": 1760000200000,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x123984dcced9946e10feb066620068ed13cc8fc151ee2ffad2464d3b3c286206",
+   "sig": {
+    "r": "0x697da31201c9c26a8d5fdb296ce7ccf88c8e9f7da373c682cfaac0743550fb05",
+    "s": "0x753c327df7e6989325e1ad466330429af6a7402cbb5abb9ca266fbe0dc0d65aa",
+    "v": 28
+   }
+  },
+  {
+   "name": "updateLeverage 1",
+   "kind": "l1",
+   "action": {
+    "type": "updateLeverage",
+    "asset": 12,
+    "isCross": false,
+    "leverage": 38
+   },
+   "vault": null,
+   "nonce": 1760000200001,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x0120ec4b5b5d0f1c09f58792d1d6c9aab7cc6a49123b268abf852427364588fb",
+   "sig": {
+    "r": "0xd56552fe4ab4695eeac0e1cc285bf76042c82466fc55bbec277abc7a5754fdd",
+    "s": "0x9bc855fe5b6a2a0fccb8ecc911e39b6897d740ab58cdd9e394027a95c3a058f",
+    "v": 28
+   }
+  },
+  {
+   "name": "updateLeverage 2",
+   "kind": "l1",
+   "action": {
+    "type": "updateLeverage",
+    "asset": 1,
+    "isCross": true,
+    "leverage": 31
+   },
+   "vault": null,
+   "nonce": 1760000200002,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x6de243b9632b5e848a47bb8409da51f6acaf9bf5b07dbf08c65cfb988a8272b9",
+   "sig": {
+    "r": "0x9693b52665410b4482e88ac46145b94c2522f5c818251413b5ae6f4252a439a2",
+    "s": "0x652ba518b6dde1d67f09985ec0ea241f0a1732646b970e4cd1064fd6a44c6e04",
+    "v": 28
+   }
+  },
+  {
+   "name": "updateLeverage 3",
+   "kind": "l1",
+   "action": {
+    "type": "updateLeverage",
+    "asset": 1,
+    "isCross": false,
+    "leverage": 5
+   },
+   "vault": null,
+   "nonce": 1760000200003,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x7e2262ce0d6e5893fd8b1ab3291131d03562311e60cd6615211f9d051e53dfaf",
+   "sig": {
+    "r": "0xe70755ee519eb5a1c12bbbd1a664d3823f082e05d7a7dc742b099147947a422b",
+    "s": "0x21f6e93cb36b7458169614fb29b9967690fdc337c1f96a31e8c91ff18a731afc",
+    "v": 28
+   }
+  },
+  {
+   "name": "updateLeverage 4",
+   "kind": "l1",
+   "action": {
+    "type": "updateLeverage",
+    "asset": 5,
+    "isCross": true,
+    "leverage": 37
+   },
+   "vault": null,
+   "nonce": 1760000200004,
+   "expiresAfter": null,
+   "mainnet": false,
+   "connectionId": "0x803646c4613d496ebadbc22dcdd3acbac7c3df9e354d1e46dbacb9884e513e3a",
+   "sig": {
+    "r": "0x6c82cc3f67a52060e279d9901a8bc9b3f9e0ce5a51620553e39d19cc33dd8613",
+    "s": "0x1b07ebe0f2c8c0a0a1ce97f10e806579c7e7d80b81a2f2f842a0dc753da629db",
+    "v": 28
+   }
+  },
+  {
+   "name": "updateLeverage 5",
+   "kind": "l1",
+   "action": {
+    "type": "updateLeverage",
+    "asset": 5,
+    "isCross": false,
+    "leverage": 39
+   },
+   "vault": null,
+   "nonce": 1760000200005,
+   "expiresAfter": null,
+   "mainnet": true,
+   "connectionId": "0x369d37361bb54f18f2f0c4b90b28d9e180d369ee142b0574ca0b1885769314d8",
+   "sig": {
+    "r": "0xfbd35c75ff7da888e87fc39ede5c7287bb3a4106ed7cbbde5fc01d7093dae754",
+    "s": "0x34e30688503c3d0ba8df3b0d4c149e9c1142d825393295cd456b40c431f47da1",
+    "v": 28
+   }
+  },
+  {
+   "name": "approveAgent 0",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:ApproveAgent",
+   "action": {
+    "type": "approveAgent",
+    "agentAddress": "0xd41c057fd1c78805AAC12B0A94a405c0461A6FBb",
+    "agentName": "peo valid_until 1760086700000",
+    "nonce": 1760000300000,
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Mainnet"
+   },
+   "sig": {
+    "r": "0x680f3ee3ed6c3e2d5cd133f109b791ddbe16c0cdec94bd30e87d8e139133da99",
+    "s": "0x4eaca8c42f3d2d7283e7d2110206a704084f8b3d7753793feefaf72ba274adfa",
+    "v": 28
+   }
+  },
+  {
+   "name": "approveAgent 1",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:ApproveAgent",
+   "action": {
+    "type": "approveAgent",
+    "agentAddress": "0xF1F6619B38A98d6De0800F1DefC0a6399eB6d30C",
+    "agentName": "",
+    "nonce": 1760000300001,
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Mainnet"
+   },
+   "sig": {
+    "r": "0x5e2b53a8f2e5e960ae694d8fa633cd0bc3c6c4dda42db50d98ae175e320703a7",
+    "s": "0x3a9404bf8665f24d3c50a95725882ff936c3248a674642f392c1d3b307a77570",
+    "v": 27
+   }
+  },
+  {
+   "name": "approveAgent 2",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:ApproveAgent",
+   "action": {
+    "type": "approveAgent",
+    "agentAddress": "0xF7Edc8FA1eCc32967F827C9043FcAe6ba73afA5c",
+    "agentName": "peo valid_until 1760086700002",
+    "nonce": 1760000300002,
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Testnet"
+   },
+   "sig": {
+    "r": "0x6c6ce0b91c88d401686e675f774bc2b022847d1e2d7001270343f1d1b4514f60",
+    "s": "0x6c66d60f44e519551239d9a73baf03f2b2a3f046b31eafddc21cd148af7ce4a7",
+    "v": 28
+   }
+  },
+  {
+   "name": "approveAgent 3",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:ApproveAgent",
+   "action": {
+    "type": "approveAgent",
+    "agentAddress": "0x4CCeBa2d7D2B4fdcE4304d3e09a1fea9fbEb1528",
+    "agentName": "",
+    "nonce": 1760000300003,
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Testnet"
+   },
+   "sig": {
+    "r": "0x79cf616d30d2f9c8f4af80c4461ecc379c622a2119a2782a0e234b60a4c0e686",
+    "s": "0x7335bf6317545be6fdbccc996c1198b38db516d5b24fa23467913c2f163901fd",
+    "v": 28
+   }
+  },
+  {
+   "name": "withdraw3 0",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:Withdraw",
+   "action": {
+    "destination": "0x14791697260E4c9A71f18484C9f997B308e59325",
+    "amount": "5",
+    "time": 1760000400000,
+    "type": "withdraw3",
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Mainnet"
+   },
+   "sig": {
+    "r": "0x93804018de9c66ea262e7f4cbf1e8b0d09bd3f41e0406119c889b2a60c74d830",
+    "s": "0x317221b321a53df883ecfed2602d3d45782cb3b7a27f75cf31f702d411e4bf6d",
+    "v": 28
+   }
+  },
+  {
+   "name": "withdraw3 1",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:Withdraw",
+   "action": {
+    "destination": "0x14791697260E4c9A71f18484C9f997B308e59325",
+    "amount": "12.5",
+    "time": 1760000400001,
+    "type": "withdraw3",
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Testnet"
+   },
+   "sig": {
+    "r": "0x250885859999ab3f87dc5119f3df06f207bd38759ed9660c2bf6e6c017645168",
+    "s": "0x1715aae79eb5f1163b76ee84cfc216323d389ef12651dafe1c66be036f466c05",
+    "v": 28
+   }
+  },
+  {
+   "name": "withdraw3 2",
+   "kind": "user",
+   "primaryType": "HyperliquidTransaction:Withdraw",
+   "action": {
+    "destination": "0x14791697260E4c9A71f18484C9f997B308e59325",
+    "amount": "1000",
+    "time": 1760000400002,
+    "type": "withdraw3",
+    "signatureChainId": "0x66eee",
+    "hyperliquidChain": "Testnet"
+   },
+   "sig": {
+    "r": "0x938001ed7422cbb7cebf99050239236910081af04c287a55ab46f58dfb24b125",
+    "s": "0x6ed99eadb0b6fcdb0058c2a4ef06205d4e36f04c59162ad6280f0b9f6d784a36",
+    "v": 27
+   }
+  }
+ ]
+}
