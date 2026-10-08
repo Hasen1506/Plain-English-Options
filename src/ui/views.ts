@@ -142,7 +142,7 @@ export function pairSpreads(pos: Position[]): { pairs: [Position, Position][]; s
   return { pairs, singles: left };
 }
 
-export function portfolioHtml(sub: SubaccountInfo | null, netName: string, connected: boolean, o: { mainnet?: boolean; maxCost?: number | null } = {}): string {
+export function portfolioHtml(sub: SubaccountInfo | null, netName: string, connected: boolean, o: { mainnet?: boolean; maxCost?: number | null; leverageCap?: number; leverageMax?: number; hasPositions?: boolean } = {}): string {
   if (!connected) return `<div class="x-card"><h2>Portfolio</h2><p class="x-empty">Connect your wallet to see positions and open orders on ${h(netName)}.</p></div>`;
   if (!sub) return `<div class="x-card"><h2>Portfolio</h2><p class="x-empty">No subaccount selected.</p></div>`;
   const { pairs, singles } = pairSpreads(sub.positions);
@@ -169,8 +169,10 @@ export function portfolioHtml(sub: SubaccountInfo | null, netName: string, conne
     (sub.positions.length
       ? `<table class="x-tbl" id="positions"><thead><tr><th>Instrument</th><th>Size</th><th>Avg</th><th>Mark</th><th>P/L</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
       : `<p class="x-empty">No open positions.</p>`) +
-    `</div><div class="x-card"><h2>Open orders</h2>${orders}<div class="x-sheet__btns" style="margin-top:10px"><button type="button" class="x-edit x-kill" id="cancelAll">Cancel all orders</button></div></div>` +
-    `<div class="x-card"><h2>Safety</h2><label for="maxCostIn">Optional limit per mainnet trade (USD). Empty = no limit.</label><input id="maxCostIn" class="x-in" inputmode="decimal" autocomplete="off" value="${o.maxCost ? h(String(o.maxCost)) : ""}" placeholder="No limit"><div class="x-sheet__btns" style="margin-top:8px"><button type="button" class="x-edit" id="maxCostSave">Save limit</button></div><p class="x-step">Mainnet trades always need REAL MONEY typed and enough collateral.${o.mainnet ? " You are on mainnet." : ""}</p></div>` +
+    `</div><div class="x-card"><h2>Open orders</h2>${orders}<div class="x-sheet__btns" style="margin-top:10px;flex-wrap:wrap"><button type="button" class="x-edit x-kill" id="cancelAll">Cancel all orders</button><button type="button" class="x-edit x-kill" id="closeAllPos"${o.hasPositions ? "" : " disabled"}>Close all positions</button></div><p class="x-step">Cancel all also removes take-profits and stop-losses. Close all cancels everything first, then closes every option and perp position with reduce-only orders.</p></div>` +
+    `<div class="x-card"><h2>Safety</h2><label for="maxCostIn">Optional limit per mainnet trade (USD). Empty = no limit. For perps it limits the money you put in.</label><input id="maxCostIn" class="x-in" inputmode="decimal" autocomplete="off" value="${o.maxCost ? h(String(o.maxCost)) : ""}" placeholder="No limit"><div class="x-sheet__btns" style="margin-top:8px"><button type="button" class="x-edit" id="maxCostSave">Save limit</button></div>` +
+    `<label for="levCapIn">Perp leverage cap (1–${o.leverageMax ?? 10}×)</label><input id="levCapIn" class="x-in" inputmode="decimal" autocomplete="off" value="${h(String(o.leverageCap ?? 5))}"><div class="x-sheet__btns" style="margin-top:8px"><button type="button" class="x-edit" id="levCapSave">Save cap</button></div>` +
+    `<p class="x-step">Mainnet trades always need REAL MONEY typed and enough collateral.${o.mainnet ? " You are on mainnet." : ""}</p></div>` +
     `<p class="x-step" id="portStep" role="status"></p>`
   );
 }
