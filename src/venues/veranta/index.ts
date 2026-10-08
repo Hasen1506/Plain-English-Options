@@ -68,8 +68,15 @@ export function createVerantaVenue(host: VerantaHost) {
   };
   const posOf = (name: string) => positions.find((p) => p.instrument === name) ?? null;
 
-  async function loadMarkets(): Promise<VerantaMarket[]> {
-    if (!usable()) return [];
+  // markets() and tickers() are asked for together: share one catalogue + price load
+  let loading: Promise<VerantaMarket[]> | null = null;
+  function loadMarkets(): Promise<VerantaMarket[]> {
+    if (!usable()) return Promise.resolve([]);
+    const net = host.net();
+    loading ??= loadMarketsNow().finally(() => (loading = null));
+    return loading.then((r) => (host.net() === net ? r : loadMarkets()));
+  }
+  async function loadMarketsNow(): Promise<VerantaMarket[]> {
     if (!pairs.length || host.now() - pairsAt > 60_000) {
       pairs = await A().pairs();
       pairsAt = host.now();
@@ -156,6 +163,9 @@ export function createVerantaVenue(host: VerantaHost) {
       if (!usable()) throw new Error("Veranta mainnet is coming soon; switch to Testnet");
       if (!markets.size) await loadMarkets();
       practice = await A().startPractice((s) => host.step?.(s));
+      // prices again (the faucet + key registration take a while): the order panel must not
+      // show a stale or missing price right after the account appears
+      await loadMarkets();
       await refreshAccounts();
     },
     async disconnect() {
