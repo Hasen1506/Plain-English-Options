@@ -317,7 +317,8 @@ export function startApp(opts: AppOptions = {}) {
     };
     inp.oninput = () => {
       const v = parseFloat(inp.value);
-      if (Number.isFinite(v) && v > 0) {
+      // mid-typing values outside the slider ("1" on the way to "1500") are applied on blur, clamped
+      if (Number.isFinite(v) && v >= min && v <= max) {
         rg.value = String(v);
         set(v);
       }
@@ -770,6 +771,20 @@ export function startApp(opts: AppOptions = {}) {
     });
     port.innerHTML = portfolioHtml(optionView, NETWORKS[net].name, W.st === "on", { mainnet: net === "mainnet", maxCost: settings.maxCost, leverageCap: settings.leverageCap, leverageMax: LEVERAGE_UI_MAX, hasPositions: !!s?.positions.length });
     if (s && W.st === "on") port.querySelector(".x-card")!.insertAdjacentHTML("afterend", perpPositionsHtml({ sub: s, triggers: portTrigSub === s.id ? portTriggers : [], tickers: perps.data().tk }));
+    // Hyperliquid / Veranta accounts are managed on the Perps tab: point there instead of leaving them out silently
+    const other = perps.connectedVenues();
+    if (other.length)
+      port.insertAdjacentHTML(
+        "beforeend",
+        `<div class="x-card" id="portVenues"><h2>Other perp venues</h2>${other.map((v) => `<div class="x-tap"><span>${h(v.name)} ${h(v.net.toLowerCase())} is connected · positions, orders and history are on the Perps tab</span><button type="button" class="x-edit x-small" data-open-venue="${h(v.id)}">Open ${h(v.name)}</button></div>`).join("")}</div>`,
+      );
+    port.querySelectorAll<HTMLButtonElement>("[data-open-venue]").forEach(
+      (b) =>
+        (b.onclick = () => {
+          perps.openVenue(b.dataset.openVenue!);
+          showView("perps");
+        }),
+    );
     const st = (t: string) => {
       portMsg = t; // survives the re-render that follows every refresh
       const el = document.getElementById("portStep");
@@ -863,7 +878,7 @@ export function startApp(opts: AppOptions = {}) {
           if (!p || !orderSigner()) return;
           if (!confirmMain("Close this position")) return;
           b.disabled = true;
-          st("Sign the closing order in your wallet");
+          st(orderSigner()!.silent ? "Sending the closing order…" : "Sign the closing order in your wallet");
           try {
             const { i, t } = await legData(name);
             const r = await closePosition(ctx(), i, t, p.amount);
@@ -925,7 +940,7 @@ export function startApp(opts: AppOptions = {}) {
           if (ps.some((p) => !p) || !orderSigner()) return;
           if (!confirmMain("Close this spread")) return;
           b.disabled = true;
-          st("Sign the closing orders in your wallet");
+          st(orderSigner()!.silent ? "Sending the closing orders…" : "Sign the closing orders in your wallet");
           try {
             const legs = await Promise.all(names.map(async (n, k) => ({ ...(await legData(n)), amount: ps[k]!.amount })));
             const out = await closeSpread(ctx(), legs.map((l) => ({ inst: l.i, ticker: l.t, amount: l.amount })));
@@ -988,7 +1003,15 @@ export function startApp(opts: AppOptions = {}) {
     if (v === "perps") perps.show();
     else perps.hide();
     $("buy").hidden = $("dockSep").hidden = v !== "build";
-    document.querySelectorAll<HTMLElement>(".x-ic").forEach((b) => b.classList.toggle("is-on", b.dataset.view === (v === "portfolio" || v === "history" || v === "perps" ? v : "build")));
+    // History lives under the Portfolio tab (Positions | History switch)
+    const tab = v === "history" ? "portfolio" : v === "portfolio" || v === "perps" ? v : "build";
+    document.querySelectorAll<HTMLElement>(".x-ic").forEach((b) => {
+      b.classList.toggle("is-on", b.dataset.view === tab);
+      if (b.dataset.view === tab) b.setAttribute("aria-current", "page");
+      else b.removeAttribute("aria-current");
+    });
+    $("portNav").hidden = tab !== "portfolio";
+    document.querySelectorAll<HTMLElement>("[data-subview]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.subview === v)));
     if (cdTimer && v !== "review") {
       clearInterval(cdTimer);
       cdTimer = null;
@@ -1027,7 +1050,14 @@ export function startApp(opts: AppOptions = {}) {
       (b.onclick = (e) => {
         e.stopPropagation();
         const v = b.dataset.view;
-        showView(v === "portfolio" || v === "history" || v === "perps" ? v : "build");
+        showView(v === "portfolio" || v === "perps" ? v : "build");
+      }),
+  );
+  document.querySelectorAll<HTMLElement>("[data-subview]").forEach(
+    (b) =>
+      (b.onclick = (e) => {
+        e.stopPropagation();
+        showView(b.dataset.subview === "history" ? "history" : "portfolio");
       }),
   );
 
@@ -1583,6 +1613,9 @@ export function startApp(opts: AppOptions = {}) {
     for (const k of Object.keys(currencies)) delete currencies[k];
     const hadWallet = W.st !== "none";
     W.signer = null;
+    // the one-tap key is registered on (and signs for) the network we are leaving: never carry it over
+    forgetSession();
+    W.tapAsked = false;
     W.subs = [];
     W.sel = null;
     W.st = hadWallet ? "reconnect" : "none";

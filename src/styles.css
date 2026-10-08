@@ -360,3 +360,29 @@ body.is-mainnet .x-bal { box-shadow: 0 0 0 2px #b3261e; }
 .x-btag { font: 600 9.5px/1 var(--sans); font-style: normal; text-transform: lowercase; letter-spacing: .02em; color: #6b6b6b; background: #F2F1EE; border-radius: 999px; padding: 3px 5px; align-self: center; }
 .x-list button.is-sel .x-btag { color: #fff; background: rgba(255,255,255,.16); }
 #ppMarketList .x-arow small { white-space: nowrap; }
+
+/* ---------- v3: labelled dock, Positions | History, portfolio summary, progressive detail ---------- */
+.x-ic { width: auto; min-width: 58px; height: 48px; border-radius: 16px; padding: 0 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.x-ic__l { font: 600 10.5px/1 var(--sans); letter-spacing: .01em; }
+.x-dock { border-radius: 24px; }
+.x-dock .x-buy { min-height: 48px; }
+@media (max-width: 370px) { .x-ic { min-width: 46px; padding: 0 4px; } .x-ic__l { font-size: 9.5px; } }
+.x-subnav { display: flex; justify-content: center; margin-top: 18px; }
+.x-subnav .x-seg button { min-height: 36px; padding: 0 18px; font-size: 13px; font-weight: 600; }
+.x-subnav + .x-port, .x-subnav ~ .x-hist { margin-top: 14px; }
+.x-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.x-sum > div { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.x-sum dt { font: 500 12px/1.2 var(--sans); color: var(--muted); }
+.x-sum dd { margin: 0; font: 600 20px/1.1 var(--sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.x-sum dd small { display: block; font: 500 12px/1.3 var(--sans); color: var(--muted); letter-spacing: 0; margin-top: 4px; }
+.x-more { margin-top: 4px; }
+.x-more summary { list-style: none; display: flex; justify-content: space-between; align-items: center; min-height: 44px; cursor: pointer; font: 600 14px/1 var(--sans); color: #444; }
+.x-more summary::-webkit-details-marker { display: none; }
+.x-more summary::after { content: "+"; font: 500 18px/1 var(--sans); }
+.x-more[open] summary::after { content: "−"; }
+.x-card > details.x-fold > summary { list-style: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.x-card > details.x-fold > summary::-webkit-details-marker { display: none; }
+.x-card > details.x-fold > summary h2 { margin: 0; }
+.x-card > details.x-fold > summary::after { content: "+"; font: 500 22px/1 var(--sans); color: #444; }
+.x-card > details.x-fold[open] > summary { margin-bottom: 10px; }
+.x-card > details.x-fold[open] > summary::after { content: "−"; }

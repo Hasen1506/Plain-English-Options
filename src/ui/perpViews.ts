@@ -39,7 +39,7 @@ export function marketsHtml(insts: PerpMarket[], tk: Record<string, PerpTicker>,
         `<tr data-perp="${h(i.name)}"${i.name === selected ? ' class="is-sel" aria-selected="true"' : ""}><td><button type="button" class="x-link" data-pick="${h(i.name)}"><b>${h(i.currency)}</b><span class="x-mono">-PERP</span></button></td>` +
         `<td class="n">${h(perpPrice(t?.mark))}</td><td class="n x-hide-s">${h(perpPrice(t?.index))}</td>` +
         `<td class="n ${ch == null ? "" : ch >= 0 ? "x-up" : "x-dn"}">${h(pctSigned(ch))}</td>` +
-        `<td class="n">${h(t ? fundingText(t.fundingRate) : "—")}</td>` +
+        `<td class="n">${t && t.fundingRate != null && Number.isFinite(t.fundingRate) ? `<span class="x-hide-s">${h(pctSigned(t.fundingRate, 4))}/h · </span>${h(pctSigned(fundingApr(t.fundingRate), 1))}/yr` : "—"}</td>` +
         `<td class="n x-hide-s">${oi === null ? "—" : "$" + h(compact(oi))}</td>` +
         `<td class="n x-hide-s">${h(String(Math.floor(i.maxLeverage * 100) / 100))}×</td></tr>`
       );
@@ -79,6 +79,8 @@ export interface PerpPanelModel {
   collateral?: string | null;
   /** Builder (HIP-3) market: who deployed it and what is different, in plain words. */
   builder?: { label: string; note: string } | null;
+  /** The "More details" fold is open (kept across re-renders). */
+  moreOpen?: boolean;
 }
 
 export function perpPanelHtml(m: PerpPanelModel): string {
@@ -108,27 +110,30 @@ export function perpPanelHtml(m: PerpPanelModel): string {
       : `<div><dt>Exchange check</dt><dd class="x-dn" id="perpMarginBad">Not enough margin for this size</dd></div>`
     : "";
   const fundingHr = q.fundingHourly;
+  // the rows that decide the trade stay in view; the mechanics fold under "More details"
   const rows =
     builderRow +
     `<div><dt>Size</dt><dd id="perpSize">${side} ${h(q.amount)} <span class="x-mono">${h(q.inst.name)}</span> · ${h(usd2(q.notional))} position</dd></div>` +
-    `<div><dt>Leverage</dt><dd>${q.leverage.toFixed(2)}× on ${h(usd2(q.putIn))} put in · cap ${m.leverageCap}×</dd></div>` +
     `<div><dt>${q.orderType === "market" ? "Expected entry" : "Limit price"}</dt><dd id="perpEntry">${h(perpPrice(q.entry))}${q.orderType === "market" ? ` · ${q.side === "buy" ? "ask" : "bid"} now` : q.tif === "post_only" ? " · post-only (maker)" : " · good till cancelled"}</dd></div>` +
-    (q.orderType === "market" ? `<div><dt>Price protection</dt><dd>Never fills worse than ${h(perpPrice(Number(q.limitPrice)))} (${pctSigned(Number(q.limitPrice) / q.entry - 1, 2)})</dd></div>` : "") +
     `<div><dt>Liquidation</dt><dd id="perpLiq"${q.liqPrice !== null && Math.abs(q.liqMove ?? 1) < 0.1 ? ' class="x-dn"' : ""}>${q.liqPrice === null ? (m.connected ? `None at this size (${m.marginMode === "isolated" ? "isolated" : "cross"} margin)` : "Connect to see") : `${h(perpPrice(q.liqPrice))} (${pctSigned(q.liqMove)})`}</dd></div>` +
     `<div><dt>Est. fees</dt><dd id="perpFee">${h(feeWords(q))}</dd></div>` +
-    `<div><dt>Funding</dt><dd id="perpFunding">${h(fundingText(q.fundingRate))}${fundingHr !== null ? ` · you ${fundingHr >= 0 ? "receive" : "pay"} ≈ ${h(usd2(Math.abs(fundingHr)))}/h` : ""}</dd></div>` +
-    `<div><dt>Margin used</dt><dd>${h(usd2(q.marginUsed))} initial (${(q.inst.imReq * 100).toFixed(1)}% of size)</dd></div>` +
     (q.takeProfit ? `<div><dt>Take-profit</dt><dd class="x-up">${h(perpPrice(Number(q.takeProfit)))} · ≈ +${h(usd2(Math.max(0, q.gainAtTp ?? 0)))}</dd></div>` : "") +
     (q.stopLoss ? `<div><dt>Stop-loss</dt><dd class="x-dn">${h(perpPrice(Number(q.stopLoss)))} · ≈ −${h(usd2(Math.max(0, q.lossAtSl ?? 0)))}</dd></div>` : "") +
     subRow +
-    (m.connected ? `<div><dt>Signed by</dt><dd id="perpSignedBy">${h(signedBy)}</dd></div>` : "") +
-    (m.mainnet && m.maxCost ? `<div><dt>Your limit</dt><dd>${h(usd2(m.maxCost))} put in per mainnet trade</dd></div>` : "") +
     margin;
+  const more =
+    `<div><dt>Leverage</dt><dd>${q.leverage.toFixed(2)}× on ${h(usd2(q.putIn))} put in · cap ${m.leverageCap}×</dd></div>` +
+    (q.orderType === "market" ? `<div><dt>Price protection</dt><dd>Never fills worse than ${h(perpPrice(Number(q.limitPrice)))} (${pctSigned(Number(q.limitPrice) / q.entry - 1, 2)})</dd></div>` : "") +
+    `<div><dt>Funding</dt><dd id="perpFunding">${h(fundingText(q.fundingRate))}${fundingHr !== null ? ` · you ${fundingHr >= 0 ? "receive" : "pay"} ≈ ${h(usd2(Math.abs(fundingHr)))}/h` : ""}</dd></div>` +
+    `<div><dt>Margin used</dt><dd>${h(usd2(q.marginUsed))} initial (${(q.inst.imReq * 100).toFixed(1)}% of size)</dd></div>` +
+    (m.connected ? `<div><dt>Signed by</dt><dd id="perpSignedBy">${h(signedBy)}</dd></div>` : "") +
+    (m.mainnet && m.maxCost ? `<div><dt>Your limit</dt><dd>${h(usd2(m.maxCost))} put in per mainnet trade</dd></div>` : "");
   const notes = [...q.problems.map((p) => `<li class="x-dn">${h(p)}</li>`), ...q.warnings.map((w) => `<li>${h(w)}</li>`)].join("");
   return (
     `<div class="x-card" id="perpDetails"><p class="x-loss" id="perpLoss">${h(maxLossWords(q, m.asset, m.subValue, m.venueName, m.canConnect ? (m.marginMode === "isolated" ? "isolated margin" : "account") : "subaccount"))}</p>` +
     (notes ? `<ul class="x-notes" id="perpNotes">${notes}</ul>` : "") +
-    `<dl class="x-rows">${rows}</dl></div>`
+    `<dl class="x-rows">${rows}</dl>` +
+    `<details class="x-more" id="perpMore"${m.moreOpen ? " open" : ""}><summary>More details · leverage, funding, signing</summary><dl class="x-rows">${more}</dl></details></div>`
   );
 }
 

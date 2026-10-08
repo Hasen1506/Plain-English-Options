@@ -224,7 +224,17 @@ export function portfolioHtml(sub: SubaccountInfo | null, netName: string, conne
         )
         .join("")}</tbody></table>`
     : `<p class="x-empty">No open orders.</p>`;
+  // at a glance: what the account is worth, how open positions are doing, what is still working
+  const upnl = sub.positions.reduce((t, p) => t + p.unrealizedPnl, 0);
+  const summary =
+    `<dl class="x-sum" id="portSummary">` +
+    `<div><dt>Subaccount value</dt><dd>${h(usd2(sub.value))}<small>#${sub.id} · ${h(netName)}</small></dd></div>` +
+    `<div><dt>Unrealised P&amp;L</dt><dd class="${upnl < 0 ? "x-dn" : upnl > 0 ? "x-up" : ""}">${h((upnl < 0 ? "−" : "+") + usd2(Math.abs(upnl)))}<small>all open positions</small></dd></div>` +
+    `<div><dt>Open positions</dt><dd>${sub.positions.length}<small>${pairs.length} spread${pairs.length === 1 ? "" : "s"} · ${singles.length} other</small></dd></div>` +
+    `<div><dt>Open orders</dt><dd>${sub.openOrders.length}<small>waiting on the book</small></dd></div>` +
+    `</dl>`;
   return (
+    summary +
     `<div class="x-card"><h2>Positions · #${sub.id} · ${h(netName)}</h2>` +
     (sub.positions.length
       ? `<div class="x-poslist" id="positions">${rows}</div>`
@@ -321,7 +331,7 @@ export function withdrawSheetHtml(m: { subId: number; balance: number; owner: st
 
 export function oneTapHtml(m: { subIds: number[]; hours: number; mainnet: boolean }): string {
   return (
-    `<h2>Enable one-tap trading?</h2><p>Your wallet signs once to create a temporary trading key that lives only in this tab. For ${m.hours} hours it can place option orders on subaccount${m.subIds.length > 1 ? "s" : ""} #${m.subIds.join(", #")}, so a spread is one tap instead of three wallet prompts.</p>` +
+    `<h2>Enable one-tap trading?</h2><p>Your wallet signs once to create a temporary trading key that lives only in this tab. For ${m.hours} hours it can place option and perp orders on subaccount${m.subIds.length > 1 ? "s" : ""} #${m.subIds.join(", #")}, so a spread is one tap instead of three wallet prompts.</p>` +
     `<p>It cannot withdraw, transfer or change keys. Closing the tab forgets it; Disconnect revokes it.${m.mainnet ? " Every mainnet trade still needs REAL MONEY typed." : ""}</p>` +
     `<div class="x-sheet__btns" style="margin:10px 0 8px"><button class="x-buy" type="button" id="tapOn">Enable one-tap trading</button><button class="x-edit" type="button" id="tapLater">Not now</button></div><p class="x-step" id="tapStep" role="status"></p>`
   );

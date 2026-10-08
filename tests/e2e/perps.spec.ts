@@ -103,7 +103,7 @@ test.describe("perps: trading", () => {
     await expect(page.locator("#portStep")).toContainText("All open orders cancelled");
     await expect(page.locator("#perpTriggers")).toHaveCount(0, { timeout: 10_000 });
 
-    await page.locator("[data-view=history]").click();
+    await page.locator("[data-subview=history]").click();
     await expect(page.locator("#perpPnl tbody tr")).toHaveCount(1, { timeout: 10_000 });
     await expect(page.locator("#perpPnl")).toContainText("ETH-PERP");
     await expect(page.locator("#perpPnlTotal")).toContainText("after fees and funding");

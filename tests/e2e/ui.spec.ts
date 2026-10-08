@@ -144,7 +144,7 @@ test.describe("portfolio and history without a wallet", () => {
     await expect(page.locator("#portfolio .x-card")).toHaveCount(1);
     await expect(page.locator("#history")).toBeHidden();
     await expect(page.locator("#portfolioEmpty")).toContainText("Connect a wallet");
-    await page.locator("[data-view=history]").click();
+    await page.locator("[data-subview=history]").click();
     await expect(page.locator("#portfolio")).toBeHidden();
     await expect(page.locator("#history .x-card")).toHaveCount(1);
     await expect(page.locator("main .x-card:visible")).toHaveCount(1);
