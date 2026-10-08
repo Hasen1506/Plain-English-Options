@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Say what you think a coin will do, in plain English: a defined-risk options spread or a perpetual on Derive." />
+    <meta name="description" content="Say what you think a coin will do, in plain English: a defined-risk options spread on Derive, or a perpetual on Derive or Hyperliquid." />
     <title>Plain English Options</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -73,11 +73,13 @@
           <details id="ppTpsl"><summary>Take-profit / stop-loss (optional)</summary>
             <label for="ppTp">Take-profit when the mark reaches</label><input id="ppTp" class="x-in" inputmode="decimal" autocomplete="off" placeholder="none">
             <label for="ppSl">Stop-loss when the mark reaches</label><input id="ppSl" class="x-in" inputmode="decimal" autocomplete="off" placeholder="none">
-            <p class="x-step">They close the position with a reduce-only market order. Derive keeps them for 30 days, so your wallet signs them even with one-tap on.</p>
+            <p class="x-step" id="ppTpslNote">They close the position with a reduce-only market order. Derive keeps them for 30 days, so your wallet signs them even with one-tap on.</p>
           </details>
         </div>
         <div id="perpPanel"></div>
         <div id="perpConfirmBox"></div>
+        <div id="venueCompareBox"></div>
+        <div id="venueAcctBox"></div>
         <div class="x-card"><h2>All perpetuals</h2><div id="perpMarketsBox"></div></div>
       </section>
 
@@ -88,7 +90,7 @@
 
       <div class="x-scrim" id="sheet" hidden><div class="x-sheet" role="dialog" aria-modal="true" aria-label="Wallet" id="sheetBody"></div></div>
 
-      <p class="x-foot">Live Derive v3 options and perps · orders are signed by your own wallet or a one-tap key it authorises · not financial advice · concept by @rightclcksaveas · <a href="https://github.com/Hasen1506/Plain-English-Options">source</a></p>
+      <p class="x-foot">Live Derive v3 options · perpetuals on Derive and Hyperliquid · orders are signed by your own wallet or a one-tap key it authorises · not financial advice · concept by @rightclcksaveas · <a href="https://github.com/Hasen1506/Plain-English-Options">source</a></p>
     </main>
 
     <nav class="x-dock" aria-label="App">
