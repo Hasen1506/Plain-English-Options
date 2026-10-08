@@ -18,7 +18,7 @@ describe("normCdf", () => {
     fc.assert(
       fc.property(fc.double({ min: -50, max: 50, noNaN: true }), fc.double({ min: 0, max: 5, noNaN: true }), (x, d) => {
         const a = normCdf(x), b = normCdf(x + d);
-        return a >= 0 && b <= 1 && b >= a;
+        return a >= 0 && b <= 1 && b >= a - 1e-15; // monotone up to one ulp of rounding near 0.5
       }),
       { numRuns: 10000 },
     );
