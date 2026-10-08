@@ -8,14 +8,24 @@
 //   leg2fail  · every fill-or-kill SELL is killed (tests the unwind)
 //   wrongru   · the wallet only has the RU0 subaccount
 //   openorder · 87139 starts with one resting order
+//   noaccount · the wallet has no Derive account until a deposit arrives
+// State is shared per ?sid=… so the mock wallet (Playwright side) can report
+// on-chain deposits through the side channel method mock/deposit.
 //
 //   node --experimental-strip-types tests/mock/server.ts [port]
 
 import { readFileSync } from "node:fs";
 import { WebSocketServer, type WebSocket } from "ws";
 import { getAddress, recoverAddress, verifyMessage } from "ethers";
-import { NETWORKS } from "../../src/config.ts";
+import { NETWORKS, SET_SESSION_KEY_MODULE, WITHDRAW_MODULE } from "../../src/config.ts";
 import { digest, encodeTradeData } from "../../src/net/signing.ts";
+import { encodeSessionKeyData } from "../../src/net/sessionKey.ts";
+import { encodeWithdrawData, toUnits } from "../../src/net/onchain.ts";
+import riskUniverses from "../fixtures/testnet-risk-universes.json" with { type: "json" };
+import mainnetPublic from "../fixtures/mainnet-public.json" with { type: "json" };
+
+const mainnetUniverses = (mainnetPublic as { frames: { method: string; result: unknown }[] }).frames.find((f) => f.method === "public/get_risk_universes")!.result;
+type NetId = "testnet" | "mainnet";
 import { parseInstruments, parseTickers, type Instrument, type Ticker } from "../../src/lib/ticker.ts";
 
 type Frame = { method: string; params: Record<string, unknown>; result: unknown };
@@ -80,11 +90,13 @@ interface Sub {
   positions: Map<string, Pos>;
   orders: Record<string, unknown>[];
   trades: Record<string, unknown>[];
+  history: Record<string, unknown>[];
 }
 
 function makeState(scenario: string): Map<number, Sub> {
   const subs = new Map<number, Sub>();
-  const mk = (id: number, ru: number, cash: number) => subs.set(id, { id, ru, cash, positions: new Map(), orders: [], trades: [] });
+  const mk = (id: number, ru: number, cash: number) => subs.set(id, { id, ru, cash, positions: new Map(), orders: [], trades: [], history: [] });
+  if (scenario === "noaccount") return subs;
   if (scenario !== "wrongru") mk(87139, 1, scenario === "poor" ? 5 : 2000);
   mk(87138, 0, 0);
   if (scenario === "openorder") {
@@ -98,7 +110,7 @@ function subJson(s: Sub) {
   return {
     subaccount_id: s.id,
     risk_universe_id: s.ru,
-    manager_id: s.ru,
+    manager_id: s.ru, // SM manager ids equal their universe ids (1–4) on Derive v3
     margin_type: "SM",
     subaccount_value: String(subValue(s)),
     collaterals_value: String(s.cash),
@@ -112,11 +124,29 @@ function subJson(s: Sub) {
 }
 
 let orderSeq = 0;
-function placeOrder(s: Sub, p: Record<string, unknown>, owner: string, scenario: string) {
-  const name = String(p.instrument_name);
-  const it = instruments.get(name);
+let clock = 0; // strictly increasing timestamps so history sorts deterministically
+const ts = () => RECORDED_AT + ++clock;
+
+interface SessionKeyRec {
+  expiry: number;
+  scopes: string[];
+  subaccountIds: number[];
+  label: string;
+}
+
+/** Who may sign an order for `owner`: the owner, or an unexpired session key with an order scope on this subaccount. */
+function authorised(ctx: Conn, signer: string, subId: number): boolean {
+  if (!ctx.wallet) return false;
+  if (getAddress(signer) === ctx.wallet) return true;
+  const k = ctx.st.keys.get(getAddress(signer));
+  if (!k || k.expiry * 1000 <= RECORDED_AT) return false;
+  if (!k.scopes.some((x) => ["trade:orderbook:option", "trade:orderbook:all", "trade:all", "admin"].includes(x))) return false;
+  return !k.subaccountIds.length || k.subaccountIds.includes(subId);
+}
+
+function orderDigest(p: Record<string, unknown>, owner: string, netId: NetId = "testnet"): { d: string; it: { inst: Instrument } } {
+  const it = instruments.get(String(p.instrument_name));
   if (!it) throw { code: 11000, message: "Instrument not found" };
-  // the signature must cover exactly the order on the wire (what Derive checks)
   const data = encodeTradeData({
     assetAddress: it.inst.assetAddress,
     subId: it.inst.subId,
@@ -126,14 +156,22 @@ function placeOrder(s: Sub, p: Record<string, unknown>, owner: string, scenario:
     recipientId: Number(p.subaccount_id),
     isBid: p.direction === "buy",
   });
-  const d = digest({ subaccountId: Number(p.subaccount_id), nonce: String(p.nonce), module: NETWORKS.testnet.tradeModule, data, expiry: Number(p.signature_expiry_sec), owner, signer: String(p.signer) }, NETWORKS.testnet);
+  return { d: digest({ subaccountId: Number(p.subaccount_id), nonce: String(p.nonce), module: NETWORKS[netId].tradeModule, data, expiry: Number(p.signature_expiry_sec), owner, signer: String(p.signer) }, NETWORKS[netId]), it };
+}
+
+function placeOrder(s: Sub, p: Record<string, unknown>, ctx: Conn) {
+  const owner = ctx.wallet!, scenario = ctx.scenario;
+  const name = String(p.instrument_name);
+  // the signature must cover exactly the order on the wire (what Derive checks)
+  const { d, it } = orderDigest(p, owner, ctx.net);
   let rec = "";
   try {
     rec = recoverAddress(d, String(p.signature));
   } catch {
     /* bad signature bytes */
   }
-  if (rec !== getAddress(String(p.signer)) || rec !== getAddress(owner)) throw { code: 14014, message: "Invalid signature" };
+  if (rec !== getAddress(String(p.signer)) || !authorised(ctx, rec, s.id)) throw { code: 14014, message: "Invalid signature" };
+  ctx.st.orderSigners.push(rec);
   if (Number(p.signature_expiry_sec) * 1000 < RECORDED_AT) throw { code: 14015, message: "Signature expired" };
   const t = tickers.get(name)!;
   const amt = Number(p.amount), lim = Number(p.limit_price), buy = p.direction === "buy";
@@ -159,14 +197,30 @@ function placeOrder(s: Sub, p: Record<string, unknown>, owner: string, scenario:
     pos.avg = na !== 0 && Math.sign(na) === Math.sign(pos.amount || na) && Math.abs(na) > Math.abs(pos.amount) ? (pos.avg * Math.abs(pos.amount) + bookPx * fill) / Math.abs(na) : pos.avg || bookPx;
     pos.amount = Math.round(na * 100) / 100;
     s.positions.set(name, pos);
-    const tr = { trade_id: `t-${orderSeq}`, order_id: id, instrument_name: name, direction: p.direction, trade_price: String(bookPx), trade_amount: String(fill), trade_fee: String(fee), timestamp: RECORDED_AT, liquidity_role: "taker" };
+    const tr = { trade_id: `t-${orderSeq}`, order_id: id, instrument_name: name, direction: p.direction, trade_price: String(bookPx), trade_amount: String(fill), trade_fee: String(fee), timestamp: ts(), liquidity_role: "taker" };
     trades.push(tr);
     s.trades.unshift(tr);
   }
   const status = fill === amt ? "filled" : tif === "gtc" ? "open" : "cancelled";
-  const order = { order_id: id, instrument_name: name, direction: p.direction, amount: String(amt), filled_amount: String(fill), average_price: String(fill ? bookPx : 0), limit_price: String(lim), order_status: status, time_in_force: tif, order_fee: String(fee) };
+  const order = { order_id: id, instrument_name: name, direction: p.direction, amount: String(amt), filled_amount: String(fill), average_price: String(fill ? bookPx : 0), limit_price: String(lim), order_status: status, time_in_force: tif, order_fee: String(fee), creation_timestamp: ts(), label: p.label ?? "" };
   if (status === "open") s.orders.push(order);
+  s.history.unshift(order);
   return { order, trades };
+}
+
+function verifyAction(ctx: Conn, p: Record<string, unknown>, subaccountId: number, module: string, data: string): string {
+  const d = digest({ subaccountId, nonce: String(p.nonce), module, data, expiry: Number(p.signature_expiry_sec), owner: ctx.wallet!, signer: String(p.signer) }, NETWORKS[ctx.net]);
+  let rec = "";
+  try {
+    rec = recoverAddress(d, String(p.signature));
+  } catch {
+    /* bad bytes */
+  }
+  if (rec !== getAddress(String(p.signer))) throw { code: 14014, message: "Invalid signature" };
+  const n = BigInt(String(p.nonce));
+  if (n <= ctx.st.lastNonce) throw { code: 14024, message: "Nonce must increase" };
+  ctx.st.lastNonce = n;
+  return rec;
 }
 
 function privateAnswer(method: string, p: Record<string, unknown>, ctx: Conn): unknown {
@@ -207,22 +261,110 @@ function privateAnswer(method: string, p: Record<string, unknown>, ctx: Conn): u
       return { is_valid: ok, invalid_reason: ok ? null : s.ru !== 1 ? "Wrong risk universe" : "Insufficient margin", estimated_fee: String(fee), estimated_total_cost: String(cost), best_quote: null };
     }
     case "private/order":
-      return placeOrder(subOf(p.subaccount_id), p, ctx.wallet, ctx.scenario);
+      return placeOrder(subOf(p.subaccount_id), p, ctx);
+    case "private/order_debug": {
+      subOf(p.subaccount_id);
+      const { d } = orderDigest(p, ctx.wallet, ctx.net);
+      let rec: string | null = null;
+      try {
+        rec = recoverAddress(d, String(p.signature));
+      } catch {
+        rec = null;
+      }
+      ctx.st.debugCalls++;
+      return { typed_data_hash: d, domain_separator: NETWORKS[ctx.net].domainSeparator, action_typehash: "", expected_signer: String(p.signer).toLowerCase(), recovered_signer: rec, module: NETWORKS[ctx.net].tradeModule, owner: ctx.wallet, encoded_data: "", encoded_data_hashed: "", action_hash: "", input_data: {} };
+    }
+    case "private/cancel_all": {
+      const s = subOf(p.subaccount_id);
+      for (const o of s.orders) s.history.unshift({ ...o, order_status: "cancelled", creation_timestamp: ts() });
+      s.orders = [];
+      return "ok";
+    }
+    case "private/get_order_history":
+      return { orders: subOf(p.subaccount_id).history, pagination: { num_pages: 1, count: subOf(p.subaccount_id).history.length } };
+    case "private/set_session_key": {
+      if (getAddress(String(p.wallet)) !== ctx.wallet) throw { code: 14001, message: "Wrong wallet" };
+      const data = encodeSessionKeyData({ sessionKey: String(p.public_session_key), expirySec: Number(p.expiry_sec), protocolScopes: p.protocol_scopes as string[], subaccountIds: (p.subaccount_ids as number[]) ?? [] });
+      const rec = verifyAction(ctx, p, 0, SET_SESSION_KEY_MODULE, data);
+      if (rec !== ctx.wallet) throw { code: 14014, message: "Only the owner may set this key" };
+      if (Number(p.expiry_sec) * 1000 < RECORDED_AT + 300_000) throw { code: 14039, message: "Session key expiry must be at least 5 minutes in the future" };
+      ctx.st.keys.set(getAddress(String(p.public_session_key)), { expiry: Number(p.expiry_sec), scopes: p.protocol_scopes as string[], subaccountIds: (p.subaccount_ids as number[]) ?? [], label: String(p.label ?? "") });
+      ctx.st.keyCalls.push({ key: getAddress(String(p.public_session_key)), expiry: Number(p.expiry_sec) });
+      return { public_session_key: p.public_session_key, expiry_sec: p.expiry_sec, protocol_scopes: p.protocol_scopes, subaccount_ids: p.subaccount_ids, label: p.label, offchain_scopes: p.offchain_scopes, ip_whitelist: [] };
+    }
+    case "private/session_keys":
+      return { public_session_keys: [...ctx.st.keys.entries()].map(([k, v]) => ({ public_session_key: k, expiry_sec: v.expiry, protocol_scopes: v.scopes, subaccount_ids: v.subaccountIds, label: v.label, offchain_scopes: [], ip_whitelist: [], registered_sec: 0 })) };
+    case "private/withdraw": {
+      const s = subOf(p.subaccount_id);
+      const units = toUnits(String(p.amount_in_underlying), 6);
+      const data = encodeWithdrawData("0x57B03E14d409ADC7fAb6CFc44b5886CAD2D5f02b", String(p.max_fee_usd), String(p.recipient ?? ctx.wallet), units);
+      const rec = verifyAction(ctx, p, s.id, WITHDRAW_MODULE, data);
+      if (rec !== ctx.wallet) throw { code: 14014, message: "Withdrawals need the owner" };
+      const amt = Number(p.amount_in_underlying);
+      if (amt > s.cash) throw { code: 11000, message: "Insufficient balance" };
+      s.cash -= amt;
+      return { operation_id: 1000 + ++orderSeq, op_uuid: "mock-withdraw-" + orderSeq };
+    }
+    case "mock/state":
+      return { orderSigners: ctx.st.orderSigners, keyCalls: ctx.st.keyCalls, debugCalls: ctx.st.debugCalls };
   }
   throw { code: -32601, message: "Method not found", data: method };
 }
 
+interface Shared {
+  subs: Map<number, Sub>;
+  keys: Map<string, SessionKeyRec>;
+  keyCalls: { key: string; expiry: number }[];
+  orderSigners: string[];
+  debugCalls: number;
+  lastNonce: bigint;
+  pending: Record<string, unknown>[];
+  nextSub: number;
+}
 interface Conn {
   wallet: string | null;
+  net: NetId;
   scenario: string;
   subs: Map<number, Sub>;
+  st: Shared;
+}
+
+const shared = new Map<string, Shared>();
+function stateFor(sid: string, scenario: string): Shared {
+  let st = shared.get(sid);
+  if (!st) {
+    st = { subs: makeState(scenario), keys: new Map(), keyCalls: [], orderSigners: [], debugCalls: 0, lastNonce: 0n, pending: [], nextSub: 90001 };
+    shared.set(sid, st);
+  }
+  return st;
+}
+
+/** Side channel used by the mock wallet when it "mines" an ActionManager deposit. */
+function mockDeposit(st: Shared, p: Record<string, unknown>) {
+  const amount = Number(p.amount);
+  if (p.subaccountId) {
+    const s = st.subs.get(Number(p.subaccountId));
+    if (!s) throw { code: 14001, message: "Subaccount not found" };
+    s.cash += amount;
+  } else {
+    const mgr = Number(p.managerId);
+    const ru = (riskUniverses as { risk_universe_id: number; managers: { manager_id: number }[] }[]).find((u) => u.managers.some((m) => m.manager_id === mgr))!.risk_universe_id;
+    if (!st.subs.size) st.subs.set(st.nextSub, { id: st.nextSub++, ru: 0, cash: 0, positions: new Map(), orders: [], trades: [], history: [] }); // fallback subaccount
+    const id = st.nextSub++;
+    st.subs.set(id, { id, ru, cash: amount, positions: new Map(), orders: [], trades: [], history: [] });
+  }
+  st.pending.push({ action_type: p.subaccountId ? "deposit" : "deposit_to_new_subaccount", amount: String(amount), status: "confirmed", tx_hash: p.txHash ?? "0x", timestamp: ts() });
+  return { ok: true };
 }
 
 export function startMock(port: number) {
   const wss = new WebSocketServer({ port });
   wss.on("connection", (ws: WebSocket, req) => {
-    const scenario = new URL(req.url ?? "/", "http://x").searchParams.get("scenario") ?? "default";
-    const ctx: Conn = { wallet: null, scenario, subs: makeState(scenario) };
+    const q = new URL(req.url ?? "/", "http://x").searchParams;
+    const scenario = q.get("scenario") ?? "default";
+    const sid = q.get("sid") ?? `anon-${Math.random()}`;
+    const st = stateFor(sid, scenario);
+    const ctx: Conn = { wallet: null, net: q.get("net") === "mainnet" ? "mainnet" : "testnet", scenario, subs: st.subs, st };
     // the parser must shrug off junk the real feed never sends
     ws.send("not json at all");
     ws.send(JSON.stringify({ method: "subscription", params: { channel: "x", data: {} } }));
@@ -238,11 +380,20 @@ export function startMock(port: number) {
       let out: unknown;
       try {
         if (m.method === "public/login") {
-          const rec = verifyMessage(String(p.timestamp), String(p.signature));
-          if (getAddress(rec) !== getAddress(String(p.wallet))) throw { code: 14014, message: "Invalid signature" };
-          ctx.wallet = getAddress(String(p.wallet));
+          const rec = getAddress(verifyMessage(String(p.timestamp), String(p.signature)));
+          const wallet = getAddress(String(p.wallet));
+          const key = ctx.st.keys.get(rec);
+          if (rec !== wallet && !(key && key.expiry * 1000 > RECORDED_AT)) throw { code: 14014, message: "Invalid signature" };
+          if (!ctx.subs.size) throw { code: 14000, message: "Account not found: Requested account does not exist." };
+          ctx.wallet = wallet;
           out = { id: m.id, result: [...ctx.subs.keys()] };
-        } else if (m.method.startsWith("private/")) out = { id: m.id, result: privateAnswer(m.method, p, ctx) };
+        } else if (m.method === "mock/deposit") {
+          out = { id: m.id, result: mockDeposit(ctx.st, p) };
+        } else if (m.method === "public/get_risk_universes") {
+          out = { id: m.id, result: ctx.net === "mainnet" ? mainnetUniverses : riskUniverses };
+        } else if (m.method === "public/get_pending_deposits") {
+          out = { id: m.id, result: { wallet: p.wallet, pending_deposits: ctx.st.pending } };
+        } else if (m.method.startsWith("private/") || m.method === "mock/state") out = { id: m.id, result: privateAnswer(m.method, p, ctx) };
         else out = { id: m.id, result: publicAnswer(m.method, p) };
       } catch (e) {
         const err = e as { code?: number; message?: string; data?: unknown };
