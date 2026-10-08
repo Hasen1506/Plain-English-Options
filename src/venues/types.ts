@@ -85,6 +85,12 @@ export interface PerpVenue {
   readonly caps: VenueCapabilities;
   /** Worst-price protection for market orders, as a fraction through the touch. */
   readonly slippage: number;
+  /**
+   * How far this adapter has been proven, shown next to its name. Absent = proven
+   * end to end with real testnet orders. `usable: false` = listed as "coming soon"
+   * and cannot be picked (no data, no trading).
+   */
+  readonly status?: { tag: string; detail: string; usable: boolean };
 
   // ---- network / connection ----
   networkName(): string; // "Testnet" | "Mainnet"
