@@ -138,6 +138,8 @@ export interface PerpVenue {
   // ---- optional: venues with their own wallet connection (Hyperliquid, Veranta) ----
   /** Connect the injected wallet to this venue (Derive uses the app's own sign-in instead). */
   connect?(): Promise<void>;
+  /** Words on the connect button (Veranta testnet: "Start practice account"). */
+  connectLabel?(): string;
   /** Revoke/expire the one-tap key and forget the wallet. */
   disconnect?(): Promise<void>;
   /** The market on screen (venues that fetch a book per market). */
@@ -150,6 +152,8 @@ export interface PerpVenue {
   riskWords?(): string;
   /** Where the collateral lives, in plain words ("USDC deposited on Hyperliquid (from Arbitrum)"). */
   collateralWords?(): string;
+  /** Venue-specific liquidation estimate for an isolated quote (Veranta: loss = 85% of margin). */
+  liquidationPrice?(q: PerpQuote): number | null;
   /** Leverage the venue will actually use for a requested one (Hyperliquid: whole numbers). */
   effectiveLeverage?(market: string, lev: number): number;
   /** Orders that are open (resting limits) for the account, when the venue tracks them separately. */
