@@ -16,6 +16,8 @@ import { parseTrades } from "../lib/history.ts";
 import { parseFunding } from "../lib/perpHistory.ts";
 import type { SubaccountInfo } from "../lib/ticker.ts";
 import type { PerpVenue, VenueAccount } from "./types.ts";
+import { categoryFromDerive } from "../lib/categories.ts";
+import { indexChartParams, parseIndexChart } from "../lib/spark.ts";
 
 export interface DeriveHost {
   client(): DeriveClient;
@@ -82,7 +84,9 @@ export function createDeriveVenue(host: DeriveHost): PerpVenue {
 
     async markets() {
       const r = await host.client().call("public/get_all_instruments", { instrument_type: "perp", expired: false, page: 1, page_size: 1000 });
-      const list = parsePerpInstruments(r).filter((i) => i.isActive);
+      const list = parsePerpInstruments(r)
+        .filter((i) => i.isActive)
+        .map((i) => (categoryFromDerive(i.name) === "crypto" ? i : { ...i, category: categoryFromDerive(i.name) }));
       byName.clear();
       byNameNet = host.net();
       for (const i of list) byName.set(i.name, i);
@@ -166,5 +170,9 @@ export function createDeriveVenue(host: DeriveHost): PerpVenue {
       return { trades: parseTrades(t).filter((x) => isPerpName(x.instrument)), funding: parseFunding(f) };
     },
     isPerp: isPerpName,
+    async sparkline(name) {
+      const cur = byName.get(name)?.currency ?? name.replace(/-PERP$/, "");
+      return parseIndexChart(await host.client().call("public/get_index_chart_data", indexChartParams(cur, host.now())));
+    },
   };
 }
