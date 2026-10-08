@@ -44,6 +44,16 @@ export interface VerantaApi {
 
 const rec = (r: { route?: string; txHash?: string; orderId?: number; trackingId?: string; requestId?: string }): VReceipt => ({ route: String(r.route ?? ""), txHash: r.txHash, orderId: r.orderId ?? null, trackingId: r.trackingId, requestId: r.requestId });
 
+/**
+ * Veranta's history API pages from 1: page 0 answers {success:false, "Unable to get the trade
+ * history."} (seen live 2026-10-08), which must surface as an error, never as "no trades".
+ */
+export async function historyPage(info: { tradeHistory(trader: `0x${string}`, page: number, size: number): Promise<unknown> }, trader: string): Promise<VHistoryRow[]> {
+  const r = (await info.tradeHistory(trader as `0x${string}`, 1, 100)) as { success?: boolean; errorMessage?: string; trades?: VHistoryRow[] } | null;
+  if (!r || r.success === false) throw new Error(r?.errorMessage ?? "Veranta's history API did not answer");
+  return r.trades ?? [];
+}
+
 /** The real thing: veranta-sdk 0.3.1 in the browser (loaded only when Veranta is picked). */
 export function sdkVerantaApi(net: NetworkId): VerantaApi {
   const N = VERANTA_NETWORKS[net];
@@ -156,8 +166,7 @@ export function sdkVerantaApi(net: NetworkId): VerantaApi {
     },
     async history() {
       if (!traderAddr) return [];
-      const r = (await (await publicClient()).info.tradeHistory(traderAddr as `0x${string}`, 0, 100)) as { trades?: VHistoryRow[] };
-      return r?.trades ?? [];
+      return historyPage((await publicClient()).info, traderAddr);
     },
     async endPractice() {
       const t = T, sa = sessionAddr;
