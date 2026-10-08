@@ -1,0 +1,108 @@
+{
+  "at": "2026-10-08T03:44:56.523Z",
+  "network": "testnet",
+  "instrument": "ETH-PERP",
+  "riskUniverse": 1,
+  "subaccount": 87142,
+  "baseline": {
+    "size": 0,
+    "value": 1035.147801455023,
+    "openOrders": 0
+  },
+  "sessionKey": {
+    "address": "0x53a29E3C4388d3320B6dAb9ac15B5cD77487Da75",
+    "scopes": [
+      "trade:orderbook:option",
+      "trade:orderbook:perp"
+    ]
+  },
+  "marginCheck": {
+    "amount": "0.101",
+    "valid": true,
+    "preIM": 1035.147804985852,
+    "postIM": 1018.039249745665,
+    "postMM": 1022.18677829788,
+    "ourLiqEstimate": null
+  },
+  "openLong": {
+    "amount": "0.101",
+    "avg": 2567.51,
+    "fee": 0.087766160055,
+    "liqEstimate": null,
+    "triggers": [
+      {
+        "id": "a1b73ccc-de67-4ebe-aedb-4a9094d73b4f",
+        "status": "untriggered",
+        "error": null
+      },
+      {
+        "id": "a8cd96ce-220e-4100-b919-0e8e25df1276",
+        "status": "untriggered",
+        "error": null
+      }
+    ]
+  },
+  "positionAfterLong": {
+    "size": 0.101,
+    "avg": 2568.378971881732,
+    "liq": null,
+    "funding": 0,
+    "leverage": 0.250520736779,
+    "ourLiqEstimate": null
+  },
+  "triggersListed": [
+    {
+      "id": "a1b73ccc-de67-4ebe-aedb-4a9094d73b4f",
+      "type": "takeprofit",
+      "price": 3080.79,
+      "side": "sell",
+      "amount": 0.101
+    },
+    {
+      "id": "a8cd96ce-220e-4100-b919-0e8e25df1276",
+      "type": "stoploss",
+      "price": 2053.86,
+      "side": "sell",
+      "amount": 0.101
+    }
+  ],
+  "triggerOrdersSupported": true,
+  "short": {
+    "amount": "0.101",
+    "open": 2567.11,
+    "half": 0.05,
+    "rest": 0.051
+  },
+  "flip": "Flipped: now short 0.101.",
+  "resting": {
+    "price": "2528.43",
+    "tif": "post_only",
+    "cancelled": true
+  },
+  "history": {
+    "trades": 9,
+    "ourRealisedExFees": -0.16909000000006424,
+    "fees": 0.712047353246,
+    "ourRealisedNet": -0.8811373532460642,
+    "exchangeRealisedSum": -0.8811373532390001,
+    "fundingEvents": 42
+  },
+  "valueAfter": 1034.266670554552,
+  "valueChange": -0.8811309004709074,
+  "sessionKeyRevoked": true,
+  "orders": {
+    "openLong": "f2e33aa3-7e6c-4c0a-bde6-39fda78f9cf2",
+    "takeProfit": "a1b73ccc-de67-4ebe-aedb-4a9094d73b4f",
+    "stopLoss": "a8cd96ce-220e-4100-b919-0e8e25df1276",
+    "closeLong": "92af51fd-3e9b-4d67-b4ce-5184e0212c5b",
+    "openShort": "4c9222bc-8aa5-49bd-b60f-648958ce6544",
+    "closeShortHalf": "fac0e60a-bba3-4621-8ec4-7e3f6e37e359",
+    "closeShortRest": "c1911ef7-9f66-4b5d-9bd9-036e5068bcdb",
+    "flipOpenLong": "8f8f9fef-87f3-446e-8442-f356d9f3fe5f",
+    "flipClose": "66f25063-c928-427b-9b5b-2a483ffb4d54",
+    "flipOpenShort": "706a6197-b8a4-44bc-99a7-833e1fda1f97",
+    "flipCloseShort": "9ccc5e8e-56f1-4369-8d0c-7d1e9dc892bb",
+    "restingLimit": "ac2dd0c4-0499-4f8d-a7f3-7b99cecf6406"
+  },
+  "ok": true
+}
