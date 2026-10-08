@@ -1,0 +1,11 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+coverage/
+*.log
+.env
+.env.*
+*.key
+secrets/
+dist-e2e/

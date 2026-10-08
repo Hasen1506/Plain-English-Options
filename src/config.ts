@@ -1,0 +1,49 @@
+// Network and protocol constants for Derive v3.
+// Domain separators and the action typehash match derive-py config/contracts.py
+// and derive-ts src/signing/eip712.ts; tests/unit/signing.test.ts recomputes them.
+
+export type NetworkId = "testnet" | "mainnet";
+
+export interface Network {
+  id: NetworkId;
+  name: string;
+  wsUrl: string;
+  chainId: number;
+  domainSeparator: string;
+  tradeModule: string;
+}
+
+export const ACTION_TYPEHASH = "0x4d7a9f27c403ff9c0f19bce61d76d82f9aa29f8d6d4b0c5474607d9770d1af17";
+export const MATCHING_VERIFYING_CONTRACT = "0xeB8d770ec18DB98Db922E9D83260A585b9F0DeAD";
+export const TRADE_MODULE = "0xB8D20c2B7a1Ad2EE33Bc50eF10876eD3035b5e7b";
+
+export const NETWORKS: Record<NetworkId, Network> = {
+  testnet: {
+    id: "testnet",
+    name: "Testnet",
+    wsUrl: "wss://testnet.api.derive.xyz/v3/ws",
+    chainId: 11155111,
+    domainSeparator: "0x24d674cd5f2b9d564691c51e9d88f649b99246a2244dd74ce27b96578d773e85",
+    tradeModule: TRADE_MODULE,
+  },
+  mainnet: {
+    id: "mainnet",
+    name: "Mainnet",
+    wsUrl: "wss://api.derive.xyz/v3/ws",
+    chainId: 1,
+    domainSeparator: "0xda616dfabb88681b08e1592820a41d55ddc62d68de110e327ae99d734506fe19",
+    tradeModule: TRADE_MODULE,
+  },
+};
+
+/** Assets offered in the sentence builder (those with listed options on v3). */
+export const ASSETS = ["ETH", "BTC", "SOL", "HYPE", "ADA", "LIT", "CC"] as const;
+export type Asset = (typeof ASSETS)[number];
+
+/** Ticker sets older than this are refetched; quotes older than QUOTE_MAX_AGE_MS block Confirm. */
+export const TICKER_REFRESH_MS = 10_000;
+export const QUOTE_MAX_AGE_MS = 60_000;
+/** Expiries closer than this are hidden (too little time for a "by <date>" view). */
+export const MIN_EXPIRY_MS = 2 * 86_400_000;
+/** Typed phrase required to confirm a mainnet trade. */
+export const MAINNET_PHRASE = "REAL MONEY";
