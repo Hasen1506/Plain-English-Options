@@ -1464,6 +1464,7 @@ export function startApp(opts: AppOptions = {}) {
       now,
       eth,
       apiOverride: () => (opts.hlOverride ? opts.hlOverride.replace("{net}", net) : null),
+      apiOverrideFor: (n) => (opts.hlOverride ? opts.hlOverride.replace("{net}", n) : null),
       sheet: { open: (html) => openSheet(html), close: () => closeSheet() },
       changed: () => venueChanged(),
     },
