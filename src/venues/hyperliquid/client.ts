@@ -68,9 +68,10 @@ export class HlClient {
     return n;
   }
 
-  /** Send an L1 action signed by `key` (the agent). */
-  async l1(action: Packable, key: SigningKey, expiresAfter: number | null = null): Promise<unknown> {
+  /** Send an L1 action signed by `key` (the agent). Actions that carry their own nonce field are built from the nonce. */
+  async l1(build: Packable | ((nonce: number) => Packable), key: SigningKey, expiresAfter: number | null = null): Promise<unknown> {
     const nonce = this.nonce();
+    const action = typeof build === "function" ? build(nonce) : build;
     const signature = signL1(key, action, nonce, this.mainnet, null, expiresAfter);
     return this.post("/exchange", { action, nonce, signature, vaultAddress: null, ...(expiresAfter !== null ? { expiresAfter } : {}) });
   }
