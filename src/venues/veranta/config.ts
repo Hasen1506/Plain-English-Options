@@ -58,7 +58,7 @@ export const VERANTA_STATUS: Record<NetworkId, VenueStatus> = {
   testnet: {
     tag: "testnet practice account",
     detail:
-      "Veranta's testnet is a copy of Base with the same chain id, so your wallet is never asked to sign there. The app creates a practice account in this tab, funds it with test USDC from Veranta's testnet faucet and trades it through Veranta's own SDK. The trading calls were tested live on testnet with Veranta's SDK from a script on 2026-10-08; the in-browser flow is not live-tested yet.",
+      "Veranta's testnet is a copy of Base with the same chain id, so your wallet is never asked to sign there. The app creates a practice account in this tab, funds it with test USDC from Veranta's testnet faucet and trades it through Veranta's own SDK. This in-browser flow passed a live test on Veranta testnet on 2026-10-08 (open, close, flip, limit and cancel, ended flat with allowance 0).",
     usable: true,
   },
   mainnet: {
