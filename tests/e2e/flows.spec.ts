@@ -121,7 +121,8 @@ test.describe("trading against the mock exchange", () => {
     await expect(fills.nth(1)).toContainText("filled");
 
     await page.locator("#toPort").click();
-    await expect(page.locator("#positions tbody tr")).toHaveCount(2);
+    await expect(page.locator("#positions [data-leg]")).toHaveCount(2);
+    await expect(page.locator("#positions .x-pos")).toHaveCount(1); // one card per spread
     await page.locator("[data-close-spread]").click();
     await expect(page.locator("#portStep")).toContainText("filled", { timeout: 10_000 });
     await expect(page.locator("#portfolio")).toContainText("No open positions.", { timeout: 10_000 });
