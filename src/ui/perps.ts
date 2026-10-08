@@ -5,11 +5,13 @@
 
 import { QUOTE_MAX_AGE_MS, TICKER_REFRESH_MS } from "../config.ts";
 import { friendlyWalletError } from "../net/signer.ts";
-import { quotePerp, type PerpDir, type PerpMarket, type PerpOrderType, type PerpQuote, type PerpTicker } from "../lib/perp.ts";
+import { liquidationPrice, mmRequirement, moveTo, quotePerp, type PerpDir, type PerpMarket, type PerpOrderType, type PerpQuote, type PerpTicker } from "../lib/perp.ts";
 import { perpConfirmState } from "../lib/guards.ts";
 import { escapeHtml as h, money } from "../lib/format.ts";
 import type { PerpVenue, VenueAccount, VenueMarginCheck } from "../venues/types.ts";
-import { fundingText, marketsHtml, perpConfirmHtml, perpPanelHtml, perpPrice, pctSigned } from "./perpViews.ts";
+import { compareHtml, fundingText, marketsHtml, perpConfirmHtml, perpPanelHtml, perpPrice, pctSigned, venueAccountHtml, type CompareRow } from "./perpViews.ts";
+import { perpHistoryRows } from "../lib/perpHistory.ts";
+import type { VenueTrigger } from "../venues/types.ts";
 
 export interface PerpDeps {
   venues: PerpVenue[];
@@ -57,23 +59,33 @@ export function createPerps(d: PerpDeps) {
     const i = inst(), t = tk[P.name];
     if (!i || !t) return { q: null, fail: insts.length ? `No live price for ${P.name}` : "Loading perpetual markets…" };
     const s = sub();
+    const v = venue();
+    const lev = v.effectiveLeverage?.(P.name, P.lev) ?? P.lev;
+    const isolated = v.marginMode?.() === "isolated";
     const r = quotePerp({
       inst: i,
       ticker: t,
       dir: P.dir,
       risk: P.risk,
-      leverage: P.lev,
+      leverage: lev,
       orderType: P.orderType,
       limitPrice: P.limit,
       postOnly: P.postOnly,
       takeProfit: P.tp,
       stopLoss: P.sl,
       slippage: venue().slippage,
-      headroomMM: s?.maintenanceMargin ?? null,
+      headroomMM: isolated ? null : (s?.maintenanceMargin ?? null),
       headroomIM: s?.initialMargin ?? null,
-      existing: s?.positions.find((p) => p.instrument === P.name)?.amount ?? 0,
+      existing: isolated ? 0 : (s?.positions.find((p) => p.instrument === P.name)?.amount ?? 0),
       leverageCap: d.settings().leverageCap,
     });
+    if (r.ok && isolated && s) {
+      // isolated: only this position's margin (notional ÷ leverage) backs it
+      const q = r.quote;
+      const signed = q.side === "buy" ? q.n : -q.n;
+      const liq = liquidationPrice({ size: signed, price: q.entry, headroom: q.putIn - mmRequirement(q.inst, q.n, q.entry) - q.estFee, mmReq: q.inst.mmReq });
+      return { q: { ...q, liqPrice: liq, liqMove: moveTo(q.entry, liq) }, fail: null };
+    }
     if (r.ok) return { q: r.quote, fail: null };
     const why: Record<string, string> = {
       "no-price": `No live price for ${P.name}`,
@@ -97,6 +109,8 @@ export function createPerps(d: PerpDeps) {
         if (g !== gen) return;
         insts = list.filter((i) => i.isActive);
         if (!insts.some((i) => i.name === P.name) && insts[0]) P.name = insts[0].name;
+        venue().focus?.(P.name);
+        loadTickers(true);
         render();
       })
       .catch(() => {})
@@ -186,7 +200,22 @@ export function createPerps(d: PerpDeps) {
       canWithdraw: v.caps.withdraw,
       maxCost: v.isMainnet() ? d.settings().maxCost : null,
       leverageCap: d.settings().leverageCap,
+      canConnect: !!v.connect,
+      accountLabel: v.connect ? "Account" : "Subaccount",
+      marginModes: v.marginModes,
+      marginMode: v.marginMode?.(),
+      collateral: v.collateralWords?.() ?? null,
     });
+    const vc = document.getElementById("perpVenueConnect");
+    if (vc) vc.onclick = () => void connectVenue();
+    const mode = document.getElementById("perpMode") as HTMLSelectElement | null;
+    if (mode)
+      mode.onchange = () => {
+        venue().setMarginMode?.(mode.value as "cross" | "isolated");
+        P.marginKey = "";
+        confirmSig = "";
+        rerenderAll();
+      };
     const pick = document.getElementById("perpSub") as HTMLSelectElement | null;
     if (pick)
       pick.onchange = () => {
@@ -205,7 +234,7 @@ export function createPerps(d: PerpDeps) {
     maybeMargin(q);
   }
   function renderConfirmBox() {
-    $("perpConfirmBox").innerHTML = perpConfirmHtml({ mainnet: venue().isMainnet(), netName: venue().networkName(), connected: venue().connected(), dryRun: venue().caps.dryRun });
+    $("perpConfirmBox").innerHTML = perpConfirmHtml({ mainnet: venue().isMainnet(), netName: venue().networkName(), connected: venue().connected(), dryRun: venue().caps.dryRun, venueName: venue().name, riskWords: venue().riskWords?.() });
     const ag = $<HTMLInputElement>("perpAgree");
     ag.checked = P.agreed;
     ag.onchange = () => {
@@ -264,19 +293,26 @@ export function createPerps(d: PerpDeps) {
   }
   function rerenderAll() {
     if (!visible) return;
-    const sig = `${venue().id}|${venue().networkName()}|${venue().connected()}`;
+    const sig = `${venue().id}|${venue().networkName()}|${venue().connected()}|${venue().marginMode?.() ?? ""}`;
     if (sig !== confirmSig) {
       confirmSig = sig;
       renderConfirmBox();
     }
     $("perpNetNote").hidden = !venue().isMainnet();
+    $("ppTpslNote").textContent = venue().signer()?.triggersNeedWallet === false || venue().id !== "derive"
+      ? `They close the position with a reduce-only market order on ${venue().name}, placed together with your order and signed the same way (no extra wallet prompt with one-tap on).`
+      : "They close the position with a reduce-only market order. Derive keeps them for 30 days, so your wallet signs them even with one-tap on.";
     renderVenues();
     render();
+    renderVenueAcct();
+    renderCompare();
   }
 
   function pickMarket(name: string) {
     if (name === P.name) return;
     P.name = name;
+    venue().focus?.(name);
+    loadTickers(true);
     P.limit = P.tp = P.sl = null;
     ($("ppLimit") as HTMLInputElement).value = "";
     ($("ppTp") as HTMLInputElement).value = "";
@@ -421,29 +457,268 @@ export function createPerps(d: PerpDeps) {
     }
   }
 
+  // ---------- venues with their own wallet (Hyperliquid, Veranta): connect, account card ----------
+  type VOrders = Awaited<ReturnType<NonNullable<PerpVenue["openOrders"]>>>;
+  let acctData: { venueId: string; triggers: VenueTrigger[]; orders: VOrders; history: { rows: ReturnType<typeof perpHistoryRows>["rows"]; total: number } | null; historyError: string | null; at: number } | null = null;
+  let acctBusy = false;
+  let acctMsg = "";
+  let acctQueued = false;
+
+  async function connectVenue() {
+    const v = venue();
+    const out = document.getElementById("perpStep");
+    try {
+      if (out) out.textContent = `Connecting your wallet to ${v.name}…`;
+      await v.connect!();
+      if (out) out.textContent = "";
+      P.marginKey = "";
+      confirmSig = "";
+      acctData = null;
+      rerenderAll();
+      void loadVenueAcct(true);
+    } catch (e) {
+      if (out) out.textContent = "Not connected: " + friendlyWalletError(e).message;
+    }
+  }
+
+  async function loadVenueAcct(force = false) {
+    const v = venue();
+    if (!v.connect || !v.connected() || acctBusy) return;
+    if (!force && acctData && acctData.venueId === v.id && d.now() - acctData.at < 15_000) return;
+    acctBusy = true;
+    const g = gen;
+    try {
+      await v.refreshAccounts();
+      const acct = v.selectedAccount(P.name);
+      const [triggers, orders, hist] = await Promise.all([
+        acct ? v.triggers(acct).catch(() => [] as VenueTrigger[]) : Promise.resolve([] as VenueTrigger[]),
+        acct && v.openOrders ? v.openOrders(acct).catch(() => [] as VOrders) : Promise.resolve([] as VOrders),
+        acct ? v.history(acct).then((x) => ({ ok: x, err: null as string | null }), (e) => ({ ok: null, err: (e as Error).message })) : Promise.resolve({ ok: null, err: null as string | null }),
+      ]);
+      if (g !== gen) return;
+      const ph = hist.ok ? perpHistoryRows(hist.ok.trades, hist.ok.funding) : null;
+      acctData = { venueId: v.id, triggers, orders, history: ph, historyError: hist.err ? "History unavailable: " + hist.err : null, at: d.now() };
+    } catch {
+      /* keep the last good data */
+    } finally {
+      acctBusy = false;
+    }
+    renderVenueAcct();
+    renderPanel();
+  }
+
+  function renderVenueAcct() {
+    const box = document.getElementById("venueAcctBox");
+    if (!box) return;
+    const v = venue();
+    if (!visible || !v.connect || !v.connected()) {
+      box.innerHTML = "";
+      return;
+    }
+    const a = v.selectedAccount(P.name);
+    const mine = acctData && acctData.venueId === v.id ? acctData : null;
+    const ext = v as unknown as { agentAddress?: () => string | null; sessionAddress?: () => string | null; user?: () => string | null };
+    box.innerHTML = venueAccountHtml({
+      venue: v.name,
+      netName: v.networkName(),
+      address: ext.user?.() ?? "",
+      oneTapKey: ext.agentAddress?.() ?? ext.sessionAddress?.() ?? null,
+      account: a,
+      triggers: mine?.triggers ?? [],
+      orders: mine?.orders ?? [],
+      tickers: tk,
+      history: mine?.history ?? null,
+      historyError: mine?.historyError ?? null,
+      canDeposit: v.caps.deposit,
+      canWithdraw: v.caps.withdraw,
+      oneTapWords: v.id === "hyperliquid" ? "can trade, cannot withdraw · expires in 24 h or on Disconnect" : "can trade, cannot withdraw or approve · revoked on Disconnect",
+    });
+    const st = (t: string) => {
+      acctMsg = t;
+      const el = document.getElementById("venueStep");
+      if (el) el.textContent = t;
+    };
+    st(acctMsg);
+    const real = (what: string) => !v.isMainnet() || window.confirm(`${what} with real money on ${v.name} mainnet?`);
+    const act = async (what: string, run: () => Promise<string>) => {
+      if (!real(what)) return;
+      st(v.signer()?.oneTap ? "Sending…" : "Sign in your wallet…");
+      try {
+        st(await run());
+      } catch (e) {
+        st(what + " failed: " + friendlyWalletError(e).message);
+      }
+      acctData = null;
+      void loadVenueAcct(true);
+    };
+    const said = (r: { status: string; filled: number; amount: number; orderId: string | null; error: string | null }) => `${r.status}: ${r.filled} of ${r.amount} · order ${r.orderId ?? "—"}${r.error ? " · " + r.error : ""}`;
+    const pos = (name: string) => a?.positions.find((p) => p.instrument === name) ?? null;
+    box.querySelectorAll<HTMLButtonElement>("[data-perp-close]").forEach((b) => (b.onclick = () => void act("Close this perp", async () => said(await v.close(a!, b.dataset.perpClose!, pos(b.dataset.perpClose!)!.amount, 1)))));
+    box.querySelectorAll<HTMLButtonElement>("[data-perp-half]").forEach((b) => (b.onclick = () => void act("Close half of this perp", async () => said(await v.close(a!, b.dataset.perpHalf!, pos(b.dataset.perpHalf!)!.amount, 0.5)))));
+    box.querySelectorAll<HTMLButtonElement>("[data-perp-flip]").forEach(
+      (b) =>
+        (b.onclick = () =>
+          void act("Flip this perp", async () => {
+            const r = await v.flip(a!, b.dataset.perpFlip!, pos(b.dataset.perpFlip!)!.amount);
+            return `${r.message} · orders ${[r.close.orderId, r.open?.orderId].filter(Boolean).join(", ")}`;
+          })),
+    );
+    box.querySelectorAll<HTMLButtonElement>("[data-cancel-trigger]").forEach(
+      (b) =>
+        (b.onclick = () =>
+          void act("Cancel take-profit / stop-loss", async () => {
+            await v.cancelTrigger(a!, b.dataset.cancelTrigger!);
+            return "Take-profit / stop-loss cancelled";
+          })),
+    );
+    box.querySelectorAll<HTMLButtonElement>("[data-venue-cancel]").forEach(
+      (b) =>
+        (b.onclick = () =>
+          void act("Cancel order", async () => {
+            await v.cancelOrder!(a!, b.dataset.venueCancel!, b.dataset.venueInst!);
+            return "Order cancelled";
+          })),
+    );
+    const on = (id: string, f: () => void) => {
+      const el = document.getElementById(id);
+      if (el) el.onclick = f;
+    };
+    on("venueDeposit", () => (a ? v.deposit(a) : v.newAccount(P.name)));
+    on("venueWithdraw", () => {
+      if (a) v.withdraw(a);
+    });
+    on("venueCancelAll", () =>
+      void act("Cancel every order", async () => {
+        if (a) await v.cancelAll(a);
+        return "All open orders cancelled, take-profits and stop-losses too";
+      }),
+    );
+    on("venueCloseAll", () => {
+      if (!a || !a.positions.length) return;
+      if (!window.confirm(`Cancel every order and close all ${a.positions.length} position${a.positions.length === 1 ? "" : "s"} on ${v.name}${v.isMainnet() ? " with real money" : ""}?`)) return;
+      void (async () => {
+        st("Cancelling orders and closing positions…");
+        const out: string[] = [];
+        try {
+          await v.cancelAll(a);
+          out.push("orders cancelled");
+        } catch (e) {
+          out.push("cancel all failed: " + friendlyWalletError(e).message);
+        }
+        for (const p of [...a.positions]) {
+          try {
+            const r = await v.close(a, p.instrument, p.amount, 1);
+            out.push(`${p.instrument} ${r.status}${r.error ? " (" + r.error + ")" : ""}`);
+          } catch (e) {
+            out.push(`${p.instrument} not closed: ${friendlyWalletError(e).message}`);
+          }
+        }
+        st(out.join(" · "));
+        acctData = null;
+        void loadVenueAcct(true);
+      })();
+    });
+    on("venueDisconnect", () => {
+      void (async () => {
+        st("Revoking the one-tap key (sign in your wallet)…");
+        try {
+          await v.disconnect!();
+          st("Disconnected. The one-tap key is revoked.");
+        } catch (e) {
+          st("Disconnected here; the key could not be revoked (" + friendlyWalletError(e).message + ") and expires on its own.");
+        }
+        acctData = null;
+        confirmSig = "";
+        rerenderAll();
+      })();
+    });
+  }
+
+  // ---------- venue comparison ----------
+  const cmp = new Map<string, { insts: PerpMarket[]; tk: Record<string, PerpTicker>; at: number; busy: boolean; failed: boolean }>();
+  function loadCompare(force = false) {
+    if (d.venues.length < 2) return;
+    d.venues.forEach((v) => {
+      const c = cmp.get(v.id) ?? { insts: [], tk: {}, at: 0, busy: false, failed: false };
+      cmp.set(v.id, c);
+      if (v === venue() || c.busy || (!force && d.now() - c.at < 30_000)) return;
+      c.busy = true;
+      Promise.all([c.insts.length ? Promise.resolve(c.insts) : v.markets(), v.tickers()])
+        .then(([i, t]) => {
+          c.insts = i;
+          c.tk = t;
+          c.failed = false;
+        })
+        .catch(() => {
+          c.failed = true;
+        })
+        .finally(() => {
+          c.at = d.now();
+          c.busy = false;
+          renderCompare();
+        });
+    });
+  }
+  function compareRows(): CompareRow[] {
+    const cur = inst()?.currency ?? P.name.replace(/-PERP$/, "");
+    return d.venues.map((v, idx) => {
+      const own = v === venue();
+      const c = cmp.get(v.id);
+      const list = own ? insts : (c?.insts ?? []);
+      const ticks = own ? tk : (c?.tk ?? {});
+      const m = list.find((x) => x.name === P.name) ?? list.find((x) => x.currency === cur) ?? null;
+      const t = m ? ticks[m.name] : undefined;
+      return {
+        venueIdx: idx,
+        venue: v.name,
+        listed: !!m,
+        loading: !m && !own && (!c || !c.at),
+        mark: t?.mark ?? null,
+        fundingRate: t?.fundingRate ?? null,
+        taker: m?.takerFeeRate ?? null,
+        maker: m?.makerFeeRate ?? null,
+        maxLeverage: m?.maxLeverage ?? null,
+        minOrder: m ? (m.minNotional ? `$${m.minNotional}` : `${m.minAmount} ${m.currency}`) : null,
+        selected: own,
+        note: c?.failed && !own ? "prices unavailable right now" : undefined,
+      };
+    });
+  }
+  function renderCompare() {
+    const box = document.getElementById("venueCompareBox");
+    if (!box || !visible) return;
+    box.innerHTML = compareHtml(inst()?.currency ?? P.name.replace(/-PERP$/, ""), compareRows());
+    box.querySelectorAll<HTMLButtonElement>("[data-cmp-pick]").forEach((b) => (b.onclick = () => pickVenue(Number(b.dataset.cmpPick))));
+  }
+
+  function pickVenue(i: number) {
+    if (i === venueIdx || !d.venues[i]) return;
+    venueIdx = i;
+    gen++;
+    acctData = null;
+    acctMsg = "";
+    insts = [];
+    tk = {};
+    tkAt = 0;
+    P.margin = null;
+    P.marginKey = "";
+    P.agreed = false;
+    P.typed = "";
+    confirmSig = "";
+    venue().focus?.(P.name);
+    loadInstruments();
+    loadTickers(true);
+    loadCompare(true);
+    rerenderAll();
+    void loadVenueAcct(true);
+  }
+
   function renderVenues() {
     const box = $("venuePick");
     box.hidden = d.venues.length < 2; // one venue: no picker
     if (box.hidden) return;
     box.innerHTML = d.venues.map((v, i) => `<button type="button" data-venue="${i}" aria-pressed="${i === venueIdx}">${h(v.name)}</button>`).join("");
-    box.querySelectorAll<HTMLButtonElement>("[data-venue]").forEach(
-      (b) =>
-        (b.onclick = () => {
-          const i = Number(b.dataset.venue);
-          if (i === venueIdx) return;
-          venueIdx = i;
-          gen++;
-          insts = [];
-          tk = {};
-          tkAt = 0;
-          P.margin = null;
-          P.marginKey = "";
-          confirmSig = "";
-          loadInstruments();
-          loadTickers(true);
-          rerenderAll();
-        }),
-    );
+    box.querySelectorAll<HTMLButtonElement>("[data-venue]").forEach((b) => (b.onclick = () => pickVenue(Number(b.dataset.venue))));
   }
 
   // ---------- wiring ----------
@@ -499,9 +774,12 @@ export function createPerps(d: PerpDeps) {
     show() {
       visible = true;
       confirmSig = "";
+      venue().focus?.(P.name);
       loadInstruments();
       loadTickers(true);
+      loadCompare();
       rerenderAll();
+      void loadVenueAcct();
     },
     hide() {
       visible = false;
@@ -510,6 +788,8 @@ export function createPerps(d: PerpDeps) {
     /** Network switched or socket reopened: forget market data. */
     reset() {
       gen++;
+      cmp.clear();
+      acctData = null;
       insts = [];
       tk = {};
       tkAt = 0;
@@ -533,7 +813,9 @@ export function createPerps(d: PerpDeps) {
     tick() {
       if (!visible) return;
       renderLive();
-      if (venue().isLive()) loadTickers();
+      if (venue().isLive() || venue().connect) loadTickers();
+      loadCompare();
+      void loadVenueAcct();
       setConfirm();
     },
     /** Wallet / subaccount changed. */
@@ -542,7 +824,21 @@ export function createPerps(d: PerpDeps) {
       P.margin = null;
       rerenderAll();
     },
-    state: () => ({ ...P, venue: venue().id, quote: quote().q, markets: insts.map((i) => i.name), scope: venue().accountScope(P.name), oneTap: oneTap() }),
+    /** A venue's own account/key changed (connect, one-tap approval, refresh). */
+    venueChanged() {
+      if (!visible) return;
+      renderPanel();
+      renderVenueAcct();
+      // orders/triggers/history changed with it: reload them (no-op while a load is running)
+      if (!acctQueued) {
+        acctQueued = true;
+        queueMicrotask(() => {
+          acctQueued = false;
+          void loadVenueAcct(true);
+        });
+      }
+    },
+    state: () => ({ ...P, venue: venue().id, quote: quote().q, markets: insts.map((i) => i.name), scope: venue().accountScope(P.name), oneTap: oneTap(), marginMode: venue().marginMode?.() ?? "cross", compare: compareRows() }),
     venue,
     data: () => ({ insts, tk }),
   };
