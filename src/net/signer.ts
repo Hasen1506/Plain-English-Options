@@ -81,6 +81,29 @@ export const ADD_CHAIN: Record<number, object> = {
     rpcUrls: ["https://ethereum-sepolia-rpc.publicnode.com"],
     blockExplorerUrls: ["https://sepolia.etherscan.io"],
   },
+  // Hyperliquid deposits (USDC on Arbitrum via CCTP)
+  42161: {
+    chainId: "0xa4b1",
+    chainName: "Arbitrum One",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://arb1.arbitrum.io/rpc"],
+    blockExplorerUrls: ["https://arbiscan.io"],
+  },
+  421614: {
+    chainId: "0x66eee",
+    chainName: "Arbitrum Sepolia",
+    nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"],
+    blockExplorerUrls: ["https://sepolia.arbiscan.io"],
+  },
+  // Veranta (USDC stays in the wallet on Base)
+  8453: {
+    chainId: "0x2105",
+    chainName: "Base",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://mainnet.base.org"],
+    blockExplorerUrls: ["https://basescan.org"],
+  },
 };
 
 const isUnknownChain = (e: unknown) => walletErrorCode(e) === 4902 || /unrecognized chain|unknown chain|not been added/i.test((e as { message?: string })?.message ?? "");
