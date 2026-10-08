@@ -118,11 +118,13 @@ npm run test:live      # opt-in, real testnet orders, see below
 npm run check:mainnet  # read-only mainnet signature check (order_debug only): ETH spread + ETH-PERP market and post-only; needs env
 npm run record:perps   # re-record the public perp fixtures (mainnet + testnet)
 npm run record:mainnet # re-record the read-only mainnet fixtures
+npm run record:sparks  # re-record 24 h of hourly index candles per asset (asset-list sparklines in the e2e mock)
 npm run test:live:browser # opt-in: Veranta testnet in Chromium through the UI (production build)
 ```
 
 - **Property tests** (`tests/unit`): probability bounds and monotonicity, strike bracketing, never using dead instruments, cost ≥ 0, size on step and ≥ minimum, tick-aligned limits, max loss = debit + fees, payoff ≤ width − debit, Confirm never enabled without a live price / with a short balance / in the wrong universe, ticker parsing round-trips and never throws, EIP-712 typed data hashes to the exchange digest, leg-2 failure always leaves you flat or flagged.
 - **Differential tests** (`tests/diff`): the app's maths against independent references: perp sizing, P&L and liquidation against an exact-rational reference (`perp-reference`), Hyperliquid rounding, liquidation and funding against the official SDK formula and docs (`hl-reference`), and the old single-file prototype's pricing code is extracted verbatim from `tests/fixtures/old-prototype.html` and compared with the new modules on thousands of random inputs. Intentional differences are asserted and documented in the test file.
+- **UI** (`tests/e2e/ui.spec.ts`): the concept-video polish: popovers (live cost under the amount slider; price, 24h % and a sparkline per token from Derive's `public/get_index_chart_data`, none drawn when there is no data; target badge and chance; expiries tagged weekly / monthly / quarterly with a chance pill each), spring-in popovers and number roll that switch off under `prefers-reduced-motion`, the two-column review (stacked on phones), one empty state per tab without a wallet, and the perps venue picker with status dots.
 - **E2E** (`tests/e2e`): real user flows in Chromium (desktop and mobile) against `tests/mock/server.ts` (Derive) and `tests/mock/venues-server.ts` (Hyperliquid and Veranta, port 8788), which replay frames recorded from testnet (`npm run record`) and verifies every login and order signature. An injected EIP-1193 mock wallet signs with a fixed test key.
 - **Live smoke** (`tests/live`, never in CI): logs in on testnet, places a minimum-size ETH call spread on subaccount 87139 (or `DERIVE_SUBACCOUNT_ID`), checks fills and positions, then closes it.
 

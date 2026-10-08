@@ -38,6 +38,8 @@ import { isAligned } from "../../src/lib/units.ts";
 type Frame = { method: string; params: Record<string, unknown>; result: unknown };
 const pub = JSON.parse(readFileSync(new URL("../fixtures/testnet-public.json", import.meta.url), "utf8")) as { recordedAt: number; frames: Frame[] };
 const RECORDED_AT = pub.recordedAt;
+// 24 h of hourly index candles per asset, recorded from testnet (scripts/record-index-chart.ts)
+const indexChart = JSON.parse(readFileSync(new URL("../fixtures/index-chart-testnet.json", import.meta.url), "utf8")) as { series: Record<string, unknown> };
 
 const instruments = new Map<string, { raw: Record<string, unknown>; inst: Instrument }>();
 const tickers = new Map<string, Ticker>();
@@ -77,6 +79,11 @@ function publicAnswer(method: string, p: Record<string, unknown>): unknown {
     const t = rawTickers.get(String(p.instrument_name));
     if (t) return t;
     throw { code: -32602, message: "Invalid params", data: "Instrument not found" };
+  }
+  if (method === "public/get_index_chart_data") {
+    if (!p.period) throw { code: -32602, message: "Invalid params", data: "missing field `period`" };
+    const ser = indexChart.series[String(p.currency)];
+    return Array.isArray(ser) ? ser : [];
   }
   if (method === "public/get_instrument") {
     const i = instruments.get(String(p.instrument_name));

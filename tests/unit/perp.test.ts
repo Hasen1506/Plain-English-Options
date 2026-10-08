@@ -287,6 +287,15 @@ describe("the order builder (quotePerp)", () => {
     expect(q.liqPrice).toBeNull();
     expect(maxLossWords(q, "ETH", 50_000)).toMatch(/would not be liquidated/);
   });
+  it("no wallet: names the venue (never a literal ${venue} placeholder)", () => {
+    const q = ok({ headroomMM: 50_000 });
+    for (const v of ["Derive", "Hyperliquid", "Veranta"]) {
+      const w = maxLossWords(q, "ETH", null, v);
+      expect(w).toContain(`Connect a wallet to see where ${v} would liquidate.`);
+      expect(w).not.toContain("${");
+    }
+    expect(maxLossWords(q, "ETH", null)).toContain("where Derive would liquidate");
+  });
   it("touch outside the exchange band: the protected market order is flagged as unlikely to fill", () => {
     const q = ok({ ticker: mkPerpTicker({ ask: 2650, maxPrice: 2600 }) });
     expect(Number(q.limitPrice)).toBeLessThanOrEqual(2600);

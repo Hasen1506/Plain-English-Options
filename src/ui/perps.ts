@@ -8,6 +8,7 @@ import { friendlyWalletError } from "../net/signer.ts";
 import { liquidationPrice, mmRequirement, moveTo, quotePerp, type PerpDir, type PerpMarket, type PerpOrderType, type PerpQuote, type PerpTicker } from "../lib/perp.ts";
 import { perpConfirmState } from "../lib/guards.ts";
 import { escapeHtml as h, money } from "../lib/format.ts";
+import { fillRange, popIn, popOut } from "./motion.ts";
 import type { PerpVenue, VenueAccount, VenueMarginCheck } from "../venues/types.ts";
 import { compareHtml, fundingText, marketsHtml, perpConfirmHtml, perpPanelHtml, perpPrice, pctSigned, venueAccountHtml, type CompareRow } from "./perpViews.ts";
 import { perpHistoryRows } from "../lib/perpHistory.ts";
@@ -354,7 +355,9 @@ export function createPerps(d: PerpDeps) {
   // ---------- popovers ----------
   const pop = $("perpPop");
   function closePop() {
+    popOut(pop);
     pop.hidden = true;
+    pop.classList.remove("is-in");
     P.open = null;
     document.querySelectorAll("#perps .x-pill.is-on").forEach((b) => {
       b.classList.remove("is-on");
@@ -364,13 +367,19 @@ export function createPerps(d: PerpDeps) {
   function slider(cap: string, val: number, min: number, max: number, step: number, unit: string, onSet: (v: number) => void, l: string, r: string) {
     pop.innerHTML =
       `<p class="x-pop__cap">${h(cap)}</p><label class="x-field"><span>${h(unit)}</span><input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" id="ppIn" aria-label="Value"><small>type or drag</small></label>` +
-      `<input class="x-range" type="range" id="ppRg" aria-label="Slider"><div class="x-ends"><span>${h(l)}</span><b></b><span>${h(r)}</span></div>`;
+      `<div class="x-rangewrap x-rangewrap--${unit === "$" ? "amt" : "tgt"}"><input class="x-range" type="range" id="ppRg" aria-label="Slider"></div><div class="x-ends"><span>${h(l)}</span><b></b><span>${h(r)}</span></div>`;
     const inp = $<HTMLInputElement>("ppIn"), rg = $<HTMLInputElement>("ppRg");
+    const onSet0 = onSet;
+    onSet = (v: number) => {
+      fillRange(rg);
+      onSet0(v);
+    };
     rg.min = String(min);
     rg.max = String(max);
     rg.step = String(step);
     rg.value = String(val);
     inp.value = String(val);
+    fillRange(rg);
     rg.oninput = () => {
       inp.value = rg.value;
       onSet(+rg.value);
@@ -431,8 +440,10 @@ export function createPerps(d: PerpDeps) {
     }
     pop.hidden = false;
     const root = $("perps").getBoundingClientRect(), r = btn.getBoundingClientRect();
-    pop.style.left = Math.max(0, Math.min(r.left - root.left, document.documentElement.clientWidth - 20 - root.left - pop.offsetWidth)) + "px";
+    const left = Math.max(0, Math.min(r.left - root.left, document.documentElement.clientWidth - 20 - root.left - pop.offsetWidth));
+    pop.style.left = left + "px";
     pop.style.top = r.bottom - root.top + 8 + "px";
+    popIn(pop, r.left - root.left - left + Math.min(r.width, pop.offsetWidth) / 2);
   }
   function set(p: Partial<typeof P>) {
     Object.assign(P, p);
@@ -752,19 +763,30 @@ export function createPerps(d: PerpDeps) {
     }
     const box = $("venuePick");
     box.hidden = d.venues.length < 2; // one venue: no picker
-    if (box.hidden) return;
+    const st = $("venueStatus");
+    if (box.hidden) {
+      st.hidden = true;
+      return;
+    }
+    // status dot: green = live-tested, amber = not live-tested, blue = practice account, grey = not available here
+    const tone = (v: PerpVenue) => (!v.status ? "ok" : !v.status.usable ? "off" : /not live-tested/i.test(v.status.tag) ? "warn" : "info");
     box.innerHTML = d.venues
-      .map((v, i) =>
-        v.status && !v.status.usable
-          ? `<button type="button" data-venue="${i}" aria-pressed="false" disabled title="${h(v.status.detail)}">${h(v.name)} <small>(${h(v.status.tag)})</small></button>`
-          : `<button type="button" data-venue="${i}" aria-pressed="${i === venueIdx}"${v.status ? ` title="${h(v.status.detail)}"` : ""}>${h(v.name)}${v.status ? ` <small>(${h(v.status.tag)})</small>` : ""}</button>`,
-      )
+      .map((v, i) => {
+        const dot = `<i class="x-dot is-${tone(v)}" aria-hidden="true"></i>`;
+        const tag = v.status ? `<span class="x-sr"> (${h(v.status.tag)})</span>` : "";
+        return v.status && !v.status.usable
+          ? `<button type="button" data-venue="${i}" aria-pressed="false" disabled title="${h(v.status.detail)}">${dot}${h(v.name)}<small aria-hidden="true">soon</small>${tag}</button>`
+          : `<button type="button" data-venue="${i}" aria-pressed="${i === venueIdx}"${v.status ? ` title="${h(v.status.tag)}"` : ""}>${dot}${h(v.name)}${tag}</button>`;
+      })
       .join("");
     box.querySelectorAll<HTMLButtonElement>("[data-venue]:not([disabled])").forEach((b) => (b.onclick = () => pickVenue(Number(b.dataset.venue))));
-    const st = $("venueStatus");
     const vs = venue().status;
     st.hidden = !vs;
-    st.textContent = vs ? `${venue().name} is ${vs.tag}: ${vs.detail}` : "";
+    const wasOpen = !!st.querySelector("details[open]");
+    st.className = `x-venuest is-${tone(venue())}`;
+    st.innerHTML = vs
+      ? `<details${wasOpen ? " open" : ""}><summary><i class="x-dot is-${tone(venue())}" aria-hidden="true"></i><span>${h(venue().name)} is ${h(vs.tag)}</span><em>Details</em></summary><p>${h(vs.detail)}</p></details>`
+      : "";
   }
 
   // ---------- wiring ----------

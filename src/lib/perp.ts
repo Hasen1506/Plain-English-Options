@@ -461,7 +461,7 @@ export function maxLossWords(q: PerpQuote, asset: string, subValue: number | nul
   const pctMove = Math.abs(q.riskPrice / q.entry - 1) * 100;
   const way = q.dir === "long" ? "falls" : "rises";
   const own = `If ${asset} ${way} ${pctMove.toFixed(1)}% to ${px(q.riskPrice)}, you have lost the ${money2(q.putIn)} you put in.`;
-  if (q.liqPrice === null) return own + (subValue === null ? " Connect a wallet to see where ${venue} would liquidate." : ` Your ${account} has enough collateral that this position alone would not be liquidated.`);
+  if (q.liqPrice === null) return own + (subValue === null ? ` Connect a wallet to see where ${venue} would liquidate.` : ` Your ${account} has enough collateral that this position alone would not be liquidated.`);
   const liqPct = Math.abs((q.liqMove ?? 0) * 100);
   const beyond = q.dir === "long" ? q.liqPrice < q.riskPrice : q.liqPrice > q.riskPrice;
   return (

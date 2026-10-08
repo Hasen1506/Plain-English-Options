@@ -15,6 +15,8 @@ import { isPerpName } from "../lib/perp.ts";
 import type { VenueTrigger } from "../venues/types.ts";
 import { parseFunding, perpHistoryRows, type PerpHistoryRow } from "../lib/perpHistory.ts";
 import { createPerps } from "./perps.ts";
+import { fillRange, popIn, popOut, reducedMotion, setText } from "./motion.ts";
+import { indexChartParams, parseIndexChart, sparkSvg } from "../lib/spark.ts";
 import { httpVerantaApi } from "../venues/veranta/api.ts";
 import { createVenues, type PerpVenue } from "../venues/index.ts";
 import { perpHistoryHtml, perpPositionsHtml } from "./perpViews.ts";
@@ -34,7 +36,7 @@ import { initialState, reduce, sentence, type Action, type BuilderState, type Po
 import { expiriesFor, liveQuote, probabilityFor, spotOf } from "../lib/market.ts";
 import { confirmState } from "../lib/guards.ts";
 import { escapeHtml as h, money, pct, price, signedMoney, usd2, type ExpiryLabel } from "../lib/format.ts";
-import { chartSvg, depositSheetHtml, historyHtml, oneTapHtml, planHtml, portfolioHtml, resultHtml, reviewHtml, withdrawSheetHtml } from "./views.ts";
+import { chartSvg, ringHtml, depositSheetHtml, historyHtml, oneTapHtml, planHtml, portfolioHtml, resultHtml, reviewHtml, withdrawSheetHtml } from "./views.ts";
 
 type View = "build" | "review" | "done" | "portfolio" | "history" | "perps";
 type WalletSt = "none" | "busy" | "on" | "reconnect" | "err" | "nosub" | "noaccount";
@@ -74,6 +76,9 @@ export function startApp(opts: AppOptions = {}) {
   const instLoaded: Partial<Record<Asset, boolean>> = {};
   const perp: Partial<Record<Asset, Ticker>> = {};
   const TK: Record<string, TkEntry> = {};
+  const spark: Partial<Record<Asset, number[]>> = {}; // 24 h hourly index closes, for the asset list
+  const sparkAt: Partial<Record<Asset, number>> = {};
+  let rollUntil = 0; // numbers count up for a moment after the token or date changes
   let universes: RiskUniverse[] = [];
 
   const W = {
@@ -213,6 +218,7 @@ export function startApp(opts: AppOptions = {}) {
   function dispatch(a: Action) {
     const prevKey = S.expiryKey, prevAsset = S.asset;
     S = reduce(S, a);
+    if (S.asset !== prevAsset || (S.expiryKey !== prevKey && prevKey !== null)) rollUntil = now() + 1500;
     if (S.asset !== prevAsset) {
       if (!inst[S.asset]) loadInstruments(S.asset);
       else syncExpiries();
@@ -222,30 +228,39 @@ export function startApp(opts: AppOptions = {}) {
   }
 
   // ---------- render: builder ----------
+  const pillOf = (id: string) => $(id).closest<HTMLElement>(".x-pill");
   function renderBuilder() {
     const q = quote();
     const ex = curExpiry();
     const v = sentence(S, q.spot, ex?.short ?? (instLoaded[S.asset] && !expiries().length ? "no dates" : null), q);
-    $("pAmt").textContent = v.amount;
-    $("pAsset").textContent = v.asset;
+    const roll = now() < rollUntil;
+    setText($("pAmt"), v.amount, { pill: pillOf("pAmt") });
+    setText($("pAsset"), v.asset, { pill: pillOf("pAsset") });
     $("pDirT").textContent = v.dirWord;
     $("dirIc").innerHTML = S.dir === "up" ? UP : DN;
-    $("pTgt").textContent = v.target;
-    $("pPct").textContent = v.move;
+    const tp = pillOf("pTgt");
+    setText($("pTgt"), v.target, { animate: roll, pill: tp });
+    setText($("pPct"), v.move, { animate: roll, pill: tp });
     $("pPct").classList.toggle("is-down", v.moveDown);
-    $("pDate").textContent = v.date;
+    setText($("pDate"), v.date, { pill: pillOf("pDate") });
     $("kind").textContent = v.kind;
-    $("spotTag").textContent = `${S.asset} ${price(q.spot)}`;
-    $("qCost").textContent = v.cost;
-    if (v.note) $("qCost").insertAdjacentHTML("beforeend", `<small class="x-mk">${h(v.note)}</small>`);
-    $("qChance").textContent = v.chance;
+    setText($("spotTag"), `${S.asset} ${price(q.spot)}`, { animate: roll });
+    const costN = v.cost.replace(/^It costs\s*/, "");
+    setText($("qCostN"), costN, { animate: roll && !v.note });
+    const mk = $("qCostMk");
+    mk.hidden = !v.note;
+    mk.textContent = v.note ?? "";
+    setText($("qChance"), v.chance, { animate: roll });
     const hint = $("hint");
     hint.hidden = !v.hint;
     hint.textContent = v.hint ?? "";
-    $("buyAmt").textContent = v.buy;
+    setText($("buyAmt"), v.buy, { animate: roll });
     ($("buy") as HTMLButtonElement).disabled = !v.buyEnabled;
     renderLive();
     if (S.open === "tgt") setTgtCap(q);
+    if (S.open === "amt") setAmtCap(v);
+    if (S.open === "date") paintDatePop();
+    if (S.open === "asset") paintAssetPop();
   }
 
   function renderLive() {
@@ -268,33 +283,43 @@ export function startApp(opts: AppOptions = {}) {
   // ---------- popovers ----------
   const pop = $("pop"), builder = $("builder");
   function closePop() {
+    popOut(pop);
     pop.hidden = true;
+    pop.classList.remove("is-in");
     document.querySelectorAll(".x-pill.is-on").forEach((b) => {
       b.classList.remove("is-on");
       b.setAttribute("aria-expanded", "false");
     });
     if (S.open) dispatch({ type: "close" });
   }
-  function sliderPop(cap: string, val: number, min: number, max: number, step: number, l: string, r: string, onSet: (v: number) => void, capId = "") {
+  function sliderPop(o: { cap: string; val: number; min: number; max: number; step: number; l: string; r: string; tone: "amt" | "tgt"; capId: string; badge?: boolean; onSet: (v: number) => void }) {
+    const { min, max, step } = o;
     const dp = step < 1 ? Math.min(6, Math.max(0, -Math.floor(Math.log10(step)))) : 0;
     pop.innerHTML =
-      `<p class="x-pop__cap">${h(cap)}</p><label class="x-field"><span>$</span><input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" id="popIn" aria-label="Value"><small>type or drag</small></label>` +
-      `<input class="x-range" type="range" id="popRg" aria-label="Slider"><div class="x-ends"><span>${h(l)}</span><b id="${capId}"></b><span>${h(r)}</span></div>`;
+      `<p class="x-pop__cap">${h(o.cap)}</p><label class="x-field"><span>$</span><input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" id="popIn" aria-label="Value"><small>type or drag</small></label>` +
+      `<div class="x-rangewrap x-rangewrap--${o.tone}"><input class="x-range" type="range" id="popRg" aria-label="Slider">${o.badge ? '<span class="x-badge" id="tgtBadge" aria-hidden="true"></span>' : ""}</div>` +
+      `<div class="x-ends"><span>${h(o.l)}</span><b id="${o.capId}"></b><span>${h(o.r)}</span></div>` +
+      (o.badge ? '<p class="x-pop__note" id="tgtPays" hidden></p>' : "");
     const inp = $<HTMLInputElement>("popIn"), rg = $<HTMLInputElement>("popRg");
     rg.min = String(min);
     rg.max = String(max);
     rg.step = String(step);
-    rg.value = String(val);
-    inp.value = String(+val.toFixed(dp));
+    rg.value = String(o.val);
+    inp.value = String(+o.val.toFixed(dp));
+    fillRange(rg);
+    const set = (v: number) => {
+      fillRange(rg);
+      o.onSet(v);
+    };
     rg.oninput = () => {
       inp.value = String(+(+rg.value).toFixed(dp));
-      onSet(+rg.value);
+      set(+rg.value);
     };
     inp.oninput = () => {
       const v = parseFloat(inp.value);
       if (Number.isFinite(v) && v > 0) {
         rg.value = String(v);
-        onSet(v);
+        set(v);
       }
     };
     const commit = () => {
@@ -303,7 +328,7 @@ export function startApp(opts: AppOptions = {}) {
       v = Math.min(max, Math.max(min, v));
       inp.value = String(+v.toFixed(dp));
       rg.value = String(v);
-      onSet(v);
+      set(v);
     };
     inp.onblur = commit;
     inp.onkeydown = (e) => {
@@ -314,12 +339,12 @@ export function startApp(opts: AppOptions = {}) {
       }
     };
   }
-  function listPop(items: { l: string; r: string; c?: string; sel?: boolean }[], onPick: (i: number) => void) {
+  function listPop(cap: string, rows: { html: string; sel?: boolean; attr?: string }[], onPick: (i: number) => void) {
     pop.innerHTML =
-      '<ul class="x-list">' +
-      items.map((it, i) => `<li><button type="button" data-i="${i}"${it.sel ? ' class="is-sel"' : ""}><span>${it.l}</span><em${it.c ? ` class="${it.c}"` : ""}>${it.r}</em></button></li>`).join("") +
+      `<p class="x-pop__cap">${h(cap)}</p><ul class="x-list">` +
+      rows.map((it, i) => `<li style="--i:${i}"><button type="button" data-i="${i}"${it.attr ?? ""}${it.sel ? ' class="is-sel" aria-current="true"' : ""}>${it.html}</button></li>`).join("") +
       "</ul>";
-    pop.querySelectorAll<HTMLButtonElement>("button").forEach(
+    pop.querySelectorAll<HTMLButtonElement>("button[data-i]").forEach(
       (b) =>
         (b.onclick = () => {
           onPick(+b.dataset.i!);
@@ -327,12 +352,89 @@ export function startApp(opts: AppOptions = {}) {
         }),
     );
   }
+  // 24h change: the perp ticker's figure, else the change across the recorded index candles
+  function change24Any(a: Asset): number | null {
+    // (testnet perps often show exactly 0 with no trades; the index candles still moved)
+    const c = change24(a);
+    if (c !== null && Number.isFinite(c) && c !== 0) return c;
+    const s = spark[a];
+    return s && s.length > 1 ? s[s.length - 1]! / s[0]! - 1 : c;
+  }
+  function assetRow(a: Asset): string {
+    const ch = change24Any(a);
+    const has = ch !== null && Number.isFinite(ch);
+    const chTxt = has ? (ch! > 0 ? "+" : "") + (ch! * 100).toFixed(1) + "%" : "";
+    return `<span class="x-arow"><b>${a}</b><small>${h(price(spotFor(a)))}</small></span><em class="${has ? (ch! >= 0 ? "x-up" : "x-dn") : ""}" data-chg="${a}">${chTxt}</em><span class="x-sparkbox" data-spark="${a}">${sparkSvg(spark[a] ?? [])}</span>`;
+  }
+  function paintAssetPop() {
+    if (S.open !== "asset") return;
+    for (const a of ASSETS) {
+      const b = pop.querySelector<HTMLElement>(`[data-spark="${a}"]`);
+      if (b && !b.firstChild) b.innerHTML = sparkSvg(spark[a] ?? []);
+      const c = pop.querySelector<HTMLElement>(`[data-chg="${a}"]`);
+      const ch = change24Any(a);
+      if (c && !c.textContent && ch !== null && Number.isFinite(ch)) {
+        c.textContent = (ch > 0 ? "+" : "") + (ch * 100).toFixed(1) + "%";
+        c.className = ch >= 0 ? "x-up" : "x-dn";
+      }
+    }
+  }
+  function loadSpark(a: Asset) {
+    const at = sparkAt[a] ?? 0;
+    if (at && now() - at < 600_000) return;
+    sparkAt[a] = now();
+    const g = gen;
+    client
+      .call("public/get_index_chart_data", indexChartParams(a, now()))
+      .then((r) => {
+        if (g !== gen) return;
+        spark[a] = parseIndexChart(r);
+        paintAssetPop();
+      })
+      .catch(() => {
+        if (g === gen) spark[a] = []; // no data: the list simply shows no sparkline
+      });
+  }
+  function dateChance(e: ExpiryLabel): number | null {
+    const t = TK[tkKey(S.asset, e.key)];
+    return t && Object.keys(t.tk).length ? probabilityFor(S, inst[S.asset] ?? [], t.tk, e.key, e.expiryMs, now()) : null;
+  }
+  const KIND: Record<ExpiryLabel["kind"], string> = { daily: "Daily", weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly" };
+  function dateRow(e: ExpiryLabel): string {
+    const [day] = e.list.split(" · ");
+    const p = dateChance(e);
+    return `<span class="x-drow"><b>${h(day!)}</b><small>${e.days} day${e.days === 1 ? "" : "s"} · ${KIND[e.kind]}</small></span><em class="x-chance${p === null ? " is-na" : ""}" data-chance="${h(e.key)}" title="Chance it happens">${p === null ? "—" : pct(p)}</em>`;
+  }
+  function paintDatePop() {
+    if (S.open !== "date") return;
+    for (const e of expiries()) {
+      const el = pop.querySelector<HTMLElement>(`[data-chance="${e.key}"]`);
+      if (!el) continue;
+      const p = dateChance(e);
+      const t = p === null ? "—" : pct(p);
+      if (el.textContent !== t) {
+        el.textContent = t;
+        el.classList.toggle("is-na", p === null);
+      }
+    }
+  }
   function setTgtCap(q: QuoteResult & { spot: number | null }) {
     const cap = document.getElementById("tgtCap");
     if (!cap) return;
     const sp = q.spot, p = sp && S.target ? Math.round((S.target / sp - 1) * 100) : 0;
     const pays = q.quote && S.target && Math.abs(S.target - q.quote.legs.K2) / q.quote.legs.K2 > 0.005 ? " · pays at " + price(q.quote.legs.K2) : "";
-    cap.textContent = (q.probability !== null && q.fail !== "wrong-side" ? pct(q.probability) + " chance" : q.fail === "wrong-side" ? "Wrong side of spot" : "…") + ` · ${p >= 0 ? "+" : ""}${p}% from now` + pays;
+    cap.textContent = (q.probability !== null && q.fail !== "wrong-side" ? pct(q.probability) + " chance" : q.fail === "wrong-side" ? "Wrong side of spot" : "…") + ` · ${p >= 0 ? "+" : ""}${p}% from now`;
+    const pe = document.getElementById("tgtPays");
+    if (pe) {
+      pe.hidden = !pays;
+      pe.textContent = pays ? `Listed strike: the spread pays at ${price(q.quote!.legs.K2)}` : "";
+    }
+    const badge = document.getElementById("tgtBadge");
+    if (badge) badge.textContent = `${p >= 0 ? "+" : ""}${p}%`;
+  }
+  function setAmtCap(v: { buy: string; buyEnabled: boolean }) {
+    const cap = document.getElementById("amtCap");
+    if (cap) cap.textContent = v.buyEnabled ? "costs " + v.buy : "cost …";
   }
   function openPop(kind: Pop, btn: HTMLElement) {
     if (S.open === kind) return closePop();
@@ -343,35 +445,32 @@ export function startApp(opts: AppOptions = {}) {
     S = reduce(S, { type: "open", pop: kind });
     btn.classList.add("is-on");
     btn.setAttribute("aria-expanded", "true");
-    if (kind === "amt") sliderPop("How much you want to make", S.amount, 50, 10000, 50, "$50", "$10,000", (v) => dispatch({ type: "amount", value: v }));
+    if (kind === "amt") sliderPop({ cap: "How much do you want to make?", val: S.amount, min: 50, max: 10000, step: 50, l: "$50", r: "$10k", tone: "amt", capId: "amtCap", onSet: (v) => dispatch({ type: "amount", value: v }) });
     if (kind === "tgt" && sp) {
       const st = Number((sp / 1000).toPrecision(2));
-      sliderPop(`${S.asset} price now ${price(sp)}`, S.target ?? sp, sp * 0.5, sp * 2, st, price(sp * 0.5), price(sp * 2), (v) => dispatch({ type: "target", value: v }), "tgtCap");
+      sliderPop({ cap: `${S.asset} reference price ${price(sp)}`, val: S.target ?? sp, min: sp * 0.5, max: sp * 2, step: st, l: price(sp * 0.5), r: price(sp * 2), tone: "tgt", capId: "tgtCap", badge: true, onSet: (v) => dispatch({ type: "target", value: v }) });
     }
     if (kind === "asset") {
+      ASSETS.forEach(loadSpark);
       listPop(
-        ASSETS.map((a) => {
-          const ch = change24(a);
-          const has = ch !== null && Number.isFinite(ch);
-          return { l: `<b>${a}</b> ${h(price(spotFor(a)))}`, r: has ? (ch! > 0 ? "+" : "") + (ch! * 100).toFixed(1) + "%" : "", c: has ? (ch! >= 0 ? "x-up" : "x-dn") : "", sel: a === S.asset };
-        }),
+        "Choose an options token",
+        ASSETS.map((a) => ({ html: assetRow(a), sel: a === S.asset })),
         (i) => {
           const a = ASSETS[i]!;
           dispatch({ type: "asset", asset: a, spot: spotFor(a) });
         },
       );
+      pop.querySelector(".x-list")!.classList.add("x-list--assets");
     }
     if (kind === "date") {
       const exs = expiries();
       exs.forEach((e) => fetchTk(S.asset, e.key));
       listPop(
-        exs.map((e) => {
-          const t = TK[tkKey(S.asset, e.key)];
-          const p = t && Object.keys(t.tk).length ? probabilityFor(S, inst[S.asset] ?? [], t.tk, e.key, e.expiryMs, now()) : null;
-          return { l: h(e.list), r: (p === null ? "—" : pct(p)) + " chance", sel: e.key === S.expiryKey };
-        }),
+        "Pick an expiry · chance it happens",
+        exs.map((e) => ({ html: dateRow(e), sel: e.key === S.expiryKey })),
         (i) => dispatch({ type: "expiry", key: exs[i]!.key }),
       );
+      pop.querySelector(".x-list")!.classList.add("x-list--dates");
     }
     pop.hidden = false;
     renderBuilder();
@@ -379,6 +478,13 @@ export function startApp(opts: AppOptions = {}) {
     const left = Math.max(0, Math.min(r.left - br.left, document.documentElement.clientWidth - 20 - br.left - w));
     pop.style.left = left + "px";
     pop.style.top = r.bottom - br.top + 8 + "px";
+    popIn(pop, r.left - br.left - left + Math.min(r.width, w) / 2);
+    const sel = pop.querySelector<HTMLElement>(".is-sel");
+    const list = pop.querySelector<HTMLElement>(".x-list");
+    if (sel && list && list.scrollHeight > list.clientHeight) list.scrollTop = Math.max(0, sel.offsetTop - list.clientHeight / 2);
+    // keep the whole popover above the dock
+    const pb = pop.getBoundingClientRect().bottom, room = window.innerHeight - 96;
+    if (pb > room) window.scrollBy({ top: pb - room, behavior: reducedMotion() ? "auto" : "smooth" });
   }
   document.querySelectorAll<HTMLElement>(".x-sent .x-pill[data-pop]").forEach((b) => {
     b.insertAdjacentHTML("beforeend", CHEV);
@@ -449,6 +555,7 @@ export function startApp(opts: AppOptions = {}) {
       createUrl: NETWORKS[net].appUrl,
       oneTap: !!(W.session && sessionKeyUsable(W.session.expirySec, now())),
       maxCost: net === "mainnet" ? settings.maxCost : null,
+      wallet: W.owner || null,
     });
     rvAt = curTk()?.at ?? 0;
     const ag = $<HTMLInputElement>("agree");
@@ -483,17 +590,32 @@ export function startApp(opts: AppOptions = {}) {
     const mk = document.getElementById("newSubBtn");
     if (mk) mk.onclick = () => void openDepositSheet("new");
     const tip = $("tip"), chart = $("chart"), ch = chartSvg(q.quote);
-    chart.querySelectorAll<SVGRectElement>("rect").forEach(
-      (r) =>
-        (r.onclick = (e) => {
-          e.stopPropagation();
-          const p = ch.pts[+r.dataset.i!]!, cr = chart.getBoundingClientRect(), rr = r.getBoundingClientRect();
-          tip.hidden = false;
-          tip.textContent = price(p.x) + " · " + signedMoney(p.pl);
-          tip.style.left = Math.min(Math.max(rr.left + rr.width / 2 - cr.left, 60), cr.width - 60) + "px";
-          tip.style.top = "-30px";
-        }),
-    );
+    const showTip = (r: SVGRectElement) => {
+      const p = ch.pts[+r.dataset.i!]!, cr = chart.getBoundingClientRect(), rr = r.getBoundingClientRect();
+      tip.hidden = false;
+      tip.textContent = price(p.x) + " · " + signedMoney(p.pl);
+      tip.classList.toggle("is-dn", p.pl < 0);
+      tip.style.left = Math.min(Math.max(rr.left + rr.width / 2 - cr.left, 60), cr.width - 60) + "px";
+      tip.style.top = "-34px";
+      chart.querySelectorAll("rect.is-hot").forEach((x) => x.classList.remove("is-hot"));
+      r.classList.add("is-hot");
+      chart.classList.add("is-hovering");
+    };
+    chart.querySelectorAll<SVGRectElement>("rect").forEach((r) => {
+      r.onclick = (e) => {
+        e.stopPropagation();
+        showTip(r);
+      };
+      r.onpointerenter = (e) => {
+        if (e.pointerType === "mouse") showTip(r);
+      };
+    });
+    chart.onpointerleave = (e) => {
+      if (e.pointerType !== "mouse") return;
+      tip.hidden = true;
+      chart.classList.remove("is-hovering");
+      chart.querySelectorAll("rect.is-hot").forEach((x) => x.classList.remove("is-hot"));
+    };
     $("step").textContent = R.step;
     setConfirm();
     if (focusId) document.getElementById(focusId)?.focus();
@@ -522,7 +644,20 @@ export function startApp(opts: AppOptions = {}) {
     const c = confirmInput();
     b.disabled = !c.enabled;
     b.dataset.reason = c.reason;
-    b.innerHTML = c.enabled ? `${h(c.label)} <span class="x-ring" aria-label="Quote refreshes in ${countdown} seconds">${countdown}</span>` : h(c.label);
+    const ring = b.querySelector<HTMLElement>(".x-ring");
+    if (c.enabled && ring && b.dataset.label === c.label) {
+      // same label: only the countdown moves (the arc eases between seconds)
+      const fg = ring.querySelector<SVGCircleElement>(".x-ring__fg")!;
+      const C = Number(fg.getAttribute("stroke-dasharray"));
+      const prev = Number(ring.querySelector("b")!.textContent);
+      fg.style.transition = countdown > prev ? "none" : "";
+      fg.setAttribute("stroke-dashoffset", (C * (1 - countdown / 10)).toFixed(2));
+      ring.querySelector("b")!.textContent = String(countdown);
+      ring.setAttribute("aria-label", `Quote refreshes in ${countdown} seconds`);
+      return;
+    }
+    b.dataset.label = c.enabled ? c.label : "";
+    b.innerHTML = c.enabled ? `<span>${h(c.label)}</span> ${ringHtml(countdown)}` : h(c.label);
   }
 
   function startCountdown() {
@@ -1384,6 +1519,13 @@ export function startApp(opts: AppOptions = {}) {
     e.stopPropagation();
     void openWallet();
   };
+  // the empty states' "Connect wallet" buttons do what the balance pill does
+  document.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest?.("[data-connect]");
+    if (!b) return;
+    e.stopPropagation();
+    void openWallet();
+  });
 
   // ---------- network ----------
   function connect() {
@@ -1426,6 +1568,10 @@ export function startApp(opts: AppOptions = {}) {
     $("netNote").hidden = n !== "mainnet";
     client.close();
     for (const k of Object.keys(TK)) delete TK[k];
+    for (const a of ASSETS) {
+      delete spark[a];
+      delete sparkAt[a];
+    }
     for (const a of ASSETS) {
       delete inst[a];
       delete instLoaded[a];

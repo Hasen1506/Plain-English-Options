@@ -34,7 +34,7 @@
           <button type="button" class="x-pill x-lav" data-pop="date" aria-haspopup="dialog"><span id="pDate">…</span></button>
         </h1>
         <div class="x-quote">
-          <span class="x-cost" id="qCost">It costs …</span>
+          <span class="x-cost" id="qCost"><span class="x-cost__l">It costs</span> <b id="qCostN">…</b><small class="x-mk" id="qCostMk" hidden></small></span>
           <span class="x-grey" id="qChance">Waiting for a live price</span>
         </div>
         <p class="x-hint" id="hint" hidden></p>
@@ -42,14 +42,14 @@
       </section>
 
       <section class="x-builder x-perps" id="perps" aria-label="Trade perpetuals" hidden>
+        <div class="x-venues"><span class="x-seg x-seg--venue" role="group" aria-label="Venue" id="venuePick" hidden></span></div>
+        <div class="x-venuest" id="venueStatus" role="note" hidden></div>
         <div class="x-tags">
-          <span class="x-seg" role="group" aria-label="Venue" id="venuePick" hidden></span>
           <span class="x-tag x-tag--dark">Perpetual</span>
           <span class="x-tag"><b>●</b> <span id="perpSpot">…</span></span>
           <span class="x-tag is-sim" id="perpLive" role="status"><b>●</b> <span id="perpLiveTxt">Connecting…</span></span>
           <span class="x-seg" role="group" aria-label="Network"><button type="button" data-net="testnet" aria-pressed="true">Testnet</button><button type="button" data-net="mainnet" aria-pressed="false">Mainnet</button></span>
         </div>
-        <p class="x-amber" id="venueStatus" role="note" hidden></p>
         <p class="x-amber" id="perpNetNote" role="note" hidden>Mainnet: orders use real money.</p>
         <h1 class="x-sent">
           I think
