@@ -217,6 +217,7 @@ export function createPerps(d: PerpDeps) {
     $("perpLive").classList.toggle("is-sim", cls === "sim");
     $("perpLive").classList.toggle("is-amber", cls === "amber");
   }
+  let moreOpen = false; // the panel's "More details" fold, kept across re-renders
   function renderPanel() {
     const { q, fail } = quote();
     const v = venue();
@@ -250,7 +251,10 @@ export function createPerps(d: PerpDeps) {
       marginMode: v.marginMode?.(),
       collateral: v.collateralWords?.() ?? null,
       builder: inst()?.builder ?? null,
+      moreOpen,
     });
+    const more = document.getElementById("perpMore") as HTMLDetailsElement | null;
+    if (more) more.ontoggle = () => (moreOpen = more.open);
     const vc = document.getElementById("perpVenueConnect");
     if (vc) vc.onclick = () => void connectVenue();
     const mode = document.getElementById("perpMode") as HTMLSelectElement | null;
@@ -1085,6 +1089,13 @@ export function createPerps(d: PerpDeps) {
     state: () => ({ ...P, venue: venue().id, quote: quote().q, markets: insts.map((i) => i.name), scope: venue().accountScope(P.name), oneTap: oneTap(), marginMode: venue().marginMode?.() ?? "cross", compare: compareRows() }),
     venue,
     data: () => ({ insts, tk }),
+    /** Venues with their own wallet connection that are connected now (their positions live on the Perps tab). */
+    connectedVenues: () => d.venues.filter((v) => v.connect && v.connected()).map((v) => ({ id: v.id, name: v.name, net: v.networkName() })),
+    /** Make a venue the Perps tab's venue (before showing the tab). */
+    openVenue(id: string) {
+      const i = d.venues.findIndex((v) => v.id === id);
+      if (i >= 0 && i !== venueIdx) pickVenue(i);
+    },
   };
 }
 

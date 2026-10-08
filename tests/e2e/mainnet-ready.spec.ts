@@ -39,6 +39,23 @@ test.describe("one-tap trading (session key)", () => {
     expect(app.wallet!.typedData.length).toBe(signed + 1);
   });
 
+  test("switching network drops the one-tap key: it was registered on the other network", async ({ page }) => {
+    await openApp(page);
+    await connectWallet(page, { oneTap: "enable" });
+    await expect(page.locator("#balNet")).toContainText("one-tap");
+    await page.locator("#builder [data-net=mainnet]").click();
+    await expect(page.locator("#liveTxt")).toContainText("Live · Derive mainnet", { timeout: 15_000 });
+    const st = () => page.evaluate(() => (window as unknown as { __peo: { state: () => { wallet: { oneTap: boolean; sessionKey: string | null } } } }).__peo.state().wallet);
+    expect(await st()).toMatchObject({ oneTap: false, sessionKey: null });
+    // signing in on mainnet offers a fresh mainnet key instead of reusing the testnet one
+    await page.locator("#balBtn").click();
+    await page.locator("#signIn").click();
+    await expect(page.locator("#tapOn")).toBeVisible();
+    await page.locator("#tapLater").click();
+    await expect(page.locator("#balNet")).not.toContainText("one-tap");
+    expect((await st()).oneTap).toBe(false);
+  });
+
   test("without one-tap every order is a wallet prompt (3 signatures)", async ({ page }) => {
     const app = await openApp(page);
     await connectWallet(page);
@@ -161,7 +178,7 @@ test.describe("dry run, kill switch, history, limits", () => {
     await page.locator("#toPort").click();
     await page.locator("[data-close-spread]").click();
     await expect(page.locator("#portfolio")).toContainText("No open positions.", { timeout: 10_000 });
-    await page.locator("[data-view=history]").click();
+    await page.locator("[data-subview=history]").click();
     await expect(page.locator("#closedSpreads tbody tr")).toHaveCount(1);
     await expect(page.locator("#trades tbody tr")).toHaveCount(4);
     await expect(page.locator("#orderHistory tbody tr")).toHaveCount(4);
