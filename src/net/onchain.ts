@@ -216,7 +216,7 @@ export interface GasEstimate {
 }
 
 /** Gas limit fallbacks when a step cannot be simulated (e.g. deposit before its approve is mined). */
-export const GAS_FALLBACK: Record<TxStep["kind"], bigint> = { approve: 70_000n, deposit: 250_000n };
+export const GAS_FALLBACK: Record<TxStep["kind"], bigint> = { approve: 70_000n, deposit: 400_000n }; // a Sepolia depositToNewSubaccount used 336,770 gas
 
 export async function estimateDepositGas(p: Eip1193, plan: DepositPlan): Promise<GasEstimate> {
   let approximate = false;
