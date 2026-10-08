@@ -7,7 +7,7 @@
 // without waiting for the user to approve another wallet prompt.
 
 import type { Network } from "../config.ts";
-import type { Instrument, Ticker } from "../lib/ticker.ts";
+import type { Instrument, Ticker, Tradable } from "../lib/ticker.ts";
 import { maxFeePerUnit, protectiveLimit, type SpreadQuote } from "../lib/spread.ts";
 import { alignDown, fromE18, toE18 } from "../lib/units.ts";
 import { encodeTradeData, makeNonce, type ActionFields } from "./signing.ts";
@@ -17,10 +17,10 @@ export interface Rpc {
   call<T = unknown>(method: string, params?: object): Promise<T>;
 }
 
-export type Tif = "gtc" | "ioc" | "fok";
+export type Tif = "gtc" | "ioc" | "fok" | "post_only";
 
 export interface OrderRequest {
-  inst: Instrument;
+  inst: Tradable;
   direction: "buy" | "sell";
   amount: string;
   limitPrice: string;
@@ -28,6 +28,10 @@ export interface OrderRequest {
   tif: Tif;
   reduceOnly?: boolean;
   label?: string;
+  /** "market": crosses now, never rests (limit_price is still signed as the worst price). Default "limit". */
+  orderType?: "limit" | "market";
+  /** Stop-loss / take-profit: dormant until the mark crosses `price`. Not part of the signed data. */
+  trigger?: { type: "stoploss" | "takeprofit"; price: string };
 }
 
 export interface Ctx {
@@ -74,11 +78,13 @@ export async function signOrder(req: OrderRequest, ctx: Ctx, expirySec = 600): P
     signer: ctx.signer.signer,
     signature,
     signature_expiry_sec: expiry,
-    order_type: "limit",
+    order_type: req.orderType ?? "limit",
     time_in_force: req.tif,
     reduce_only: req.reduceOnly ?? false,
     mmp: false,
     label: req.label ?? "peo",
+    ...(req.tif === "post_only" ? { reject_post_only: true } : {}),
+    ...(req.trigger ? { trigger_type: req.trigger.type, trigger_price: fromE18(toE18(req.trigger.price)), trigger_price_type: "mark" } : {}),
   };
 }
 
