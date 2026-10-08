@@ -104,7 +104,7 @@ tests/                 unit, diff, e2e, live, mock server, recorded fixtures
 
 ## Fund mainnet
 
-See "Funding mainnet" in `docs/qa-mainnet.md` sections 5–7. In short: hold USDC (Circle, `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`) and a little ETH for gas in your wallet on Ethereum mainnet, switch the app to Mainnet, sign in, and use the deposit sheet. ETH and BTC options need a subaccount in risk universe 1 (PRIME, standard-margin manager 1). The minimum deposit is $5; the app's ETH spreads start at 0.1 contracts.
+See "Funding mainnet" in `docs/qa-mainnet.md` sections 5–7. In short: hold USDC (Circle, `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`) and a little ETH for gas in your wallet on Ethereum mainnet, switch the app to Mainnet, sign in, and use the deposit sheet. ETH and BTC options need a subaccount in risk universe 1 (PRIME, standard-margin manager 1). The minimum deposit is $5; the app's ETH spreads start at 0.1 contracts. Gas: the approve plus `depositToNewSubaccount` used about 130k + 337k gas on Sepolia (a mainnet USDC approve is usually ~50k); keep roughly 0.005 ETH in the wallet to cover the two transactions with room for a gas spike.
 
 ## Known limits
 
