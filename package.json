@@ -18,6 +18,7 @@
     "record": "node --experimental-strip-types scripts/record-fixtures.ts",
     "check:mainnet": "node --experimental-strip-types --no-warnings scripts/check-mainnet.ts",
     "record:mainnet": "node --experimental-strip-types --no-warnings scripts/record-mainnet.ts",
+    "record:sparks": "node --experimental-strip-types --no-warnings scripts/record-index-chart.ts",
     "record:perps": "node --experimental-strip-types --no-warnings scripts/record-perps.ts",
     "test:live:browser": "playwright test -c playwright.live.config.ts"
   },
