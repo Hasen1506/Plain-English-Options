@@ -616,9 +616,21 @@ export function startApp(opts: AppOptions = {}) {
       })
       .catch(() => {});
   }
+  const DRAFT_INPUTS = ["maxCostIn", "levCapIn"];
   function renderPortfolio() {
     const s = sub();
     const optionView = s ? { ...s, positions: s.positions.filter((p) => !isPerpName(p.instrument)) } : null;
+    // A refresh re-renders this card at any moment (positions, triggers, prices). Keep what
+    // the user is typing into the settings fields instead of resetting it to the saved value,
+    // so "type 2, tap Save cap" can never save the old cap.
+    // Focus and selection are kept too, so typing that straddles a re-render lands in the new field.
+    const drafts = DRAFT_INPUTS.flatMap((id) => {
+      const el = document.getElementById(id) as HTMLInputElement | null;
+      if (!el) return [];
+      const focused = document.activeElement === el;
+      if (el.value === el.defaultValue && !focused) return [];
+      return [{ id, value: el.value, focused, sel: [el.selectionStart, el.selectionEnd] as const }];
+    });
     port.innerHTML = portfolioHtml(optionView, NETWORKS[net].name, W.st === "on", { mainnet: net === "mainnet", maxCost: settings.maxCost, leverageCap: settings.leverageCap, leverageMax: LEVERAGE_UI_MAX, hasPositions: !!s?.positions.length });
     if (s && W.st === "on") port.querySelector(".x-card")!.insertAdjacentHTML("afterend", perpPositionsHtml({ sub: s, triggers: portTrigSub === s.id ? portTriggers : [], tickers: perps.data().tk }));
     const st = (t: string) => {
@@ -627,6 +639,15 @@ export function startApp(opts: AppOptions = {}) {
       if (el) el.textContent = t;
     };
     st(portMsg);
+    for (const d of drafts) {
+      const el = document.getElementById(d.id) as HTMLInputElement | null;
+      if (!el) continue;
+      el.value = d.value;
+      if (d.focused) {
+        el.focus();
+        if (d.sel[0] !== null && d.sel[1] !== null) el.setSelectionRange(d.sel[0], d.sel[1]);
+      }
+    }
     port.querySelectorAll<HTMLButtonElement>("[data-cancel]").forEach(
       (b) =>
         (b.onclick = async () => {
@@ -679,6 +700,7 @@ export function startApp(opts: AppOptions = {}) {
     const capSave = document.getElementById("maxCostSave");
     if (capIn && capSave)
       capSave.onclick = () => {
+        capIn.defaultValue = capIn.value; // saved: no longer a draft
         settings.maxCost = parseMaxCost(capIn.value);
         if (settings.maxCost === null) storage?.removeItem(MAX_COST_STORAGE_KEY);
         else storage?.setItem(MAX_COST_STORAGE_KEY, String(settings.maxCost));
@@ -689,6 +711,7 @@ export function startApp(opts: AppOptions = {}) {
     const levSave = document.getElementById("levCapSave");
     if (levIn && levSave)
       levSave.onclick = () => {
+        levIn.defaultValue = levIn.value; // saved: no longer a draft
         settings.leverageCap = parseLeverageCap(levIn.value, LEVERAGE_UI_MAX, LEVERAGE_DEFAULT_CAP);
         storage?.setItem(LEVERAGE_STORAGE_KEY, String(settings.leverageCap));
         st(`Perp leverage capped at ${settings.leverageCap}×`);
