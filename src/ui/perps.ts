@@ -13,6 +13,8 @@ import type { PerpVenue, VenueAccount, VenueMarginCheck } from "../venues/types.
 import { compareHtml, fundingText, marketsHtml, perpConfirmHtml, perpPanelHtml, perpPrice, pctSigned, venueAccountHtml, type CompareRow } from "./perpViews.ts";
 import { perpHistoryRows } from "../lib/perpHistory.ts";
 import type { VenueTrigger } from "../venues/types.ts";
+import { CATEGORY_LABEL, CATEGORY_WORDS, categoriesOf, categoryOf, type MarketCategory } from "../lib/categories.ts";
+import { changeText, sparkSvg } from "../lib/spark.ts";
 
 export interface PerpDeps {
   venues: PerpVenue[];
@@ -53,6 +55,8 @@ export function createPerps(d: PerpDeps) {
     open: null as PPop | null,
     margin: null as VenueMarginCheck | null,
     marginKey: "",
+    /** The category the market list shows (null: the selected market's). */
+    cat: null as MarketCategory | null,
   };
 
   const inst = () => insts.find((i) => i.name === P.name) ?? null;
@@ -128,8 +132,13 @@ export function createPerps(d: PerpDeps) {
         if (instBusyGen === g) instBusyGen = -1;
       });
   }
+  let tkAgain = false; // a forced load asked for while one was running: run it right after
   function loadTickers(force = false) {
-    if (tkBusyGen === gen || (!force && d.now() - tkAt < TICKER_REFRESH_MS)) return;
+    if (tkBusyGen === gen) {
+      if (force) tkAgain = true;
+      return;
+    }
+    if (!force && d.now() - tkAt < TICKER_REFRESH_MS) return;
     const g = (tkBusyGen = gen);
     if (tkRetry.gen !== g) Object.assign(tkRetry, { gen: g, n: 0 });
     venue()
@@ -139,10 +148,16 @@ export function createPerps(d: PerpDeps) {
         tk = r;
         tkAt = d.now();
         render();
+        paintMarketPrices();
       })
       .catch(() => {})
       .finally(() => {
         if (tkBusyGen === g) tkBusyGen = -1;
+        if (tkAgain && g === gen) {
+          tkAgain = false;
+          loadTickers(true);
+          return;
+        }
         // a forced load that found prices missing (late feed) tries again soon instead of waiting a full refresh
         if (g === gen && visible && !tk[P.name] && insts.length && tkRetry.gen === g && tkRetry.n++ < 5) setTimeout(() => g === gen && loadTickers(true), 2000);
       });
@@ -234,6 +249,7 @@ export function createPerps(d: PerpDeps) {
       marginModes: v.marginModes,
       marginMode: v.marginMode?.(),
       collateral: v.collateralWords?.() ?? null,
+      builder: inst()?.builder ?? null,
     });
     const vc = document.getElementById("perpVenueConnect");
     if (vc) vc.onclick = () => void connectVenue();
@@ -307,14 +323,29 @@ export function createPerps(d: PerpDeps) {
     b.dataset.reason = c.reason;
     b.textContent = c.label;
   }
+  /** The selected market's category (the table under the builder shows that category only). */
+  const curCat = (): MarketCategory => categoryOf(inst() ?? {});
   function renderMarkets() {
-    $("perpMarketsBox").innerHTML = marketsHtml(insts, tk, P.name);
+    const c = curCat();
+    $("perpMarketsBox").innerHTML = marketsHtml(insts.filter((i) => categoryOf(i) === c), tk, P.name);
     $("perpMarketsBox")
       .querySelectorAll<HTMLButtonElement>("[data-pick]")
       .forEach((b) => (b.onclick = () => pickMarket(b.dataset.pick!)));
   }
+  /** The confirm box (risk words, REAL MONEY) follows the venue, network, connection and the market's margin words. */
+  function syncConfirmBox() {
+    const v = venue();
+    const words = v.riskWords?.() ?? "";
+    const sig = `${v.id}|${v.networkName()}|${v.connected()}|${v.marginMode?.() ?? ""}|${words}`;
+    if (sig === confirmSig) return;
+    // new words need a new tick: an agreement to other risk words does not carry over
+    if (confirmSig && confirmSig.split("|").slice(4).join("|") !== words) P.agreed = false;
+    confirmSig = sig;
+    renderConfirmBox();
+  }
   function render() {
     if (!visible) return;
+    syncConfirmBox();
     const { q } = quote();
     renderSentence(q);
     renderPanel();
@@ -322,11 +353,7 @@ export function createPerps(d: PerpDeps) {
   }
   function rerenderAll() {
     if (!visible) return;
-    const sig = `${venue().id}|${venue().networkName()}|${venue().connected()}|${venue().marginMode?.() ?? ""}`;
-    if (sig !== confirmSig) {
-      confirmSig = sig;
-      renderConfirmBox();
-    }
+    syncConfirmBox();
     $("perpNetNote").hidden = !venue().isMainnet();
     $("ppTpslNote").textContent = venue().signer()?.triggersNeedWallet === false || venue().id !== "derive"
       ? `They close the position with a reduce-only market order on ${venue().name}, placed together with your order and signed the same way (no extra wallet prompt with one-tap on).`
@@ -340,6 +367,7 @@ export function createPerps(d: PerpDeps) {
   function pickMarket(name: string) {
     if (name === P.name) return;
     P.name = name;
+    P.cat = null;
     venue().focus?.(name);
     loadTickers(true);
     P.limit = P.tp = P.sl = null;
@@ -355,6 +383,12 @@ export function createPerps(d: PerpDeps) {
   // ---------- popovers ----------
   const pop = $("perpPop");
   function closePop() {
+    sparkObs?.disconnect();
+    sparkObs = null;
+    if (P.open === "market" && primeSeen.size) {
+      primeSeen = new Set();
+      venue().prime?.([]); // stop pricing the list's extra rows once it is closed
+    }
     popOut(pop);
     pop.hidden = true;
     pop.classList.remove("is-in");
@@ -415,22 +449,9 @@ export function createPerps(d: PerpDeps) {
     btn.classList.add("is-on");
     btn.setAttribute("aria-expanded", "true");
     if (kind === "market") {
-      pop.innerHTML =
-        '<ul class="x-list" id="ppMarketList">' +
-        insts
-          .map((i, k) => {
-            const t = tk[i.name];
-            return `<li><button type="button" data-k="${k}"${i.name === P.name ? ' class="is-sel"' : ""}><span><b>${h(i.currency)}</b> ${h(perpPrice(t?.mark))}</span><em>${h(t ? fundingText(t.fundingRate).split(" · ")[1] ?? "" : "")} funding</em></button></li>`;
-          })
-          .join("") +
-        "</ul>";
-      pop.querySelectorAll<HTMLButtonElement>("button[data-k]").forEach(
-        (b) =>
-          (b.onclick = () => {
-            pickMarket(insts[+b.dataset.k!]!.name);
-            closePop();
-          }),
-      );
+      const cats = categoriesOf(insts);
+      P.cat = cats.includes(P.cat ?? curCat()) ? (P.cat ?? curCat()) : (cats[0] ?? null);
+      renderMarketPop();
     }
     if (kind === "risk") slider("Money you put in (margin)", P.risk, 5, 10000, 5, "$", (v) => ((riskTouched = true), set({ risk: v })), "$5", "$10,000");
     if (kind === "lev") {
@@ -445,6 +466,160 @@ export function createPerps(d: PerpDeps) {
     pop.style.top = r.bottom - root.top + 8 + "px";
     popIn(pop, r.left - root.left - left + Math.min(r.width, pop.offsetWidth) / 2);
   }
+  // ---------- market list: categories, rows with 24h change and sparklines ----------
+  const sparks = new Map<string, { v: number[]; at: number }>();
+  const sparkKey = (name: string) => `${venue().id}|${venue().networkName()}|${name}`;
+  let sparkQueue: string[] = [];
+  let sparkBusy = 0;
+  let sparkObs: IntersectionObserver | null = null;
+  // venues that price pair by pair (Veranta): price the rows that scroll into view
+  let primeSeen = new Set<string>();
+  let primeTimer: ReturnType<typeof setTimeout> | null = null;
+  function wantPrice(name: string) {
+    const v = venue();
+    if (!v.prime || tk[name] || primeSeen.has(name)) return;
+    primeSeen.add(name);
+    if (primeTimer) clearTimeout(primeTimer);
+    primeTimer = setTimeout(() => {
+      primeTimer = null;
+      v.prime!([...primeSeen]);
+      loadTickers(true);
+    }, 250);
+  }
+  const viewMarkets = () => (P.cat ? insts.filter((i) => categoryOf(i) === P.cat) : insts);
+  /** 24h change: the venue's figure, else the change across the sparkline's hourly closes. */
+  function change24(name: string): number | null {
+    const c = tk[name]?.change24h;
+    if (c != null && Number.isFinite(c) && c !== 0) return c;
+    const sp = sparks.get(sparkKey(name))?.v;
+    return sp && sp.length > 1 ? sp[sp.length - 1]! / sp[0]! - 1 : (c ?? null);
+  }
+  function marketRow(i: PerpMarket): string {
+    const ch = change24(i.name);
+    const has = ch !== null && Number.isFinite(ch);
+    const tag = i.builder ? `<i class="x-btag">${h(i.builder.dex)}</i>` : "";
+    return `<span class="x-arow"><b>${h(i.currency)}</b>${tag}<small data-px="${h(i.name)}">${h(perpPrice(tk[i.name]?.mark))}</small></span><em class="${has ? (ch! >= 0 ? "x-up" : "x-dn") : ""}" data-chg="${h(i.name)}">${has ? changeText(ch!) : ""}</em><span class="x-sparkbox" data-spark="${h(i.name)}">${sparkSvg(sparks.get(sparkKey(i.name))?.v ?? [])}</span>`;
+  }
+  function renderMarketPop() {
+    const cats = categoriesOf(insts);
+    const list = viewMarkets();
+    const sel = list.findIndex((i) => i.name === P.name);
+    const b = list.find((i) => i.builder)?.builder;
+    const dexes = [...new Set(list.filter((i) => i.builder).map((i) => i.builder!.label))];
+    pop.innerHTML =
+      `<p class="x-pop__cap">Choose a perpetual market</p>` +
+      (cats.length > 1
+        ? `<div class="x-seg x-seg--cats" role="group" aria-label="Market category: ${h(P.cat ? CATEGORY_WORDS[P.cat] : "")}">${cats.map((c) => `<button type="button" data-cat="${c}" aria-pressed="${c === P.cat}"><i class="x-dot x-cat--${c}" aria-hidden="true"></i>${h(CATEGORY_LABEL[c])}</button>`).join("")}</div>`
+        : "") +
+      `<ul class="x-list x-list--assets" id="ppMarketList">` +
+      list.map((i, k) => `<li style="--i:${Math.min(k, 14)}"><button type="button" data-k="${k}"${k === sel ? ' class="is-sel" aria-current="true"' : ""}>${marketRow(i)}</button></li>`).join("") +
+      "</ul>" +
+      (b ? `<p class="x-pop__note" id="ppBuilderNote">${h(dexes.join(" · "))}. HIP-3 markets are deployed by a third party on Hyperliquid, may trade 24/7 while the underlying market is closed, and have their own leverage caps and isolated margin.</p>` : "");
+    pop.querySelectorAll<HTMLButtonElement>("button[data-k]").forEach(
+      (btn) =>
+        (btn.onclick = () => {
+          pickMarket(list[+btn.dataset.k!]!.name);
+          closePop();
+        }),
+    );
+    pop.querySelectorAll<HTMLButtonElement>("button[data-cat]").forEach(
+      (btn) =>
+        (btn.onclick = () => {
+          const c = btn.dataset.cat as MarketCategory;
+          if (c === P.cat) return;
+          P.cat = c;
+          renderMarketPop();
+        }),
+    );
+    const ul = pop.querySelector<HTMLElement>(".x-list");
+    const selEl = pop.querySelector<HTMLElement>(".is-sel");
+    if (selEl && ul && ul.scrollHeight > ul.clientHeight) ul.scrollTop = Math.max(0, selEl.offsetTop - ul.clientHeight / 2);
+    // venues that price pair by pair (Veranta): the first rows now, later ones as they scroll into view
+    primeSeen = new Set();
+    list.slice(0, 24).forEach((i) => wantPrice(i.name));
+    // the pills scroll sideways when they do not fit: keep the chosen one in view, fade the cut edge
+    const seg = pop.querySelector<HTMLElement>(".x-seg--cats");
+    if (seg) {
+      const on = seg.querySelector<HTMLElement>('[aria-pressed="true"]');
+      if (on) seg.scrollLeft = Math.max(0, on.offsetLeft - (seg.clientWidth - on.offsetWidth) / 2);
+      const edge = () => {
+        seg.classList.toggle("is-cut-r", seg.scrollLeft + seg.clientWidth < seg.scrollWidth - 2);
+        seg.classList.toggle("is-cut-l", seg.scrollLeft > 2);
+      };
+      edge();
+      seg.onscroll = edge;
+    }
+    watchSparks();
+  }
+  /** Fetch sparklines only for rows that scroll into view, a few at a time, cached 10 minutes. */
+  function watchSparks() {
+    sparkObs?.disconnect();
+    sparkQueue = [];
+    const v = venue();
+    if (!v.sparkline && !v.prime) return;
+    const want = (name: string) => {
+      wantPrice(name);
+      if (!v.sparkline) return;
+      const c = sparks.get(sparkKey(name));
+      if (c && d.now() - c.at < 600_000) return;
+      if (!sparkQueue.includes(name)) sparkQueue.push(name);
+      pumpSparks();
+    };
+    const boxes = [...pop.querySelectorAll<HTMLElement>("[data-spark]")];
+    if (typeof IntersectionObserver === "undefined") {
+      boxes.slice(0, 12).forEach((b) => want(b.dataset.spark!));
+      return;
+    }
+    sparkObs = new IntersectionObserver(
+      (es) => es.forEach((e) => e.isIntersecting && want((e.target as HTMLElement).dataset.spark!)),
+      { root: pop.querySelector(".x-list"), rootMargin: "60px 0px" },
+    );
+    boxes.forEach((b) => sparkObs!.observe(b));
+  }
+  function pumpSparks() {
+    const v = venue();
+    while (sparkBusy < 3 && sparkQueue.length) {
+      const name = sparkQueue.shift()!;
+      const key = sparkKey(name);
+      sparks.set(key, { v: sparks.get(key)?.v ?? [], at: d.now() });
+      sparkBusy++;
+      const g = gen;
+      v.sparkline!(name)
+        .then((vals) => {
+          if (g !== gen) return;
+          sparks.set(key, { v: vals, at: d.now() });
+          paintSpark(name);
+        })
+        .catch(() => {})
+        .finally(() => {
+          sparkBusy--;
+          if (g === gen) pumpSparks();
+        });
+    }
+  }
+  function paintSpark(name: string) {
+    if (P.open !== "market") return;
+    const esc = CSS.escape(name);
+    const b = pop.querySelector<HTMLElement>(`[data-spark="${esc}"]`);
+    if (b && !b.firstChild) b.innerHTML = sparkSvg(sparks.get(sparkKey(name))?.v ?? []);
+    const c = pop.querySelector<HTMLElement>(`[data-chg="${esc}"]`);
+    const ch = change24(name);
+    if (c && ch !== null && Number.isFinite(ch)) {
+      const t = changeText(ch);
+      if (c.textContent !== t) c.textContent = t;
+      c.className = ch >= 0 ? "x-up" : "x-dn";
+    }
+  }
+  /** Prices arrived while the list is open: fill in the rows that had none. */
+  function paintMarketPrices() {
+    if (P.open !== "market") return;
+    pop.querySelectorAll<HTMLElement>("[data-px]").forEach((el) => {
+      const t = perpPrice(tk[el.dataset.px!]?.mark);
+      if (el.textContent !== t) el.textContent = t;
+    });
+    viewMarkets().forEach((i) => paintSpark(i.name));
+  }
+
   function set(p: Partial<typeof P>) {
     Object.assign(P, p);
     render();
@@ -736,6 +911,7 @@ export function createPerps(d: PerpDeps) {
     if (i === venueIdx || !d.venues[i] || d.venues[i].status?.usable === false) return;
     venueIdx = i;
     gen++;
+    P.cat = null;
     acctData = null;
     acctMsg = "";
     insts = [];
