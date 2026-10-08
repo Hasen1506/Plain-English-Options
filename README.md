@@ -6,7 +6,7 @@ Say what you think a coin will do, in plain English, and get a defined-risk opti
 
 The app turns that sentence into a listed debit spread, prices it from the live Derive v3 order book, shows the payoff, and places it with your own wallet.
 
-**Live app:** https://hasen1506.github.io/plain-english-options/
+**Live app:** https://hasen1506.github.io/Plain-English-Options/
 
 Concept: the @rightclcksaveas video. Not financial advice.
 
@@ -36,7 +36,7 @@ Concept: the @rightclcksaveas video. Not financial advice.
 
 ```bash
 npm ci
-npm run dev            # http://localhost:5173/plain-english-options/
+npm run dev            # http://localhost:5173/
 npm run build          # static site in dist/
 ```
 
