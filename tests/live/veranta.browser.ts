@@ -9,7 +9,9 @@ import { writeFileSync } from "node:fs";
 import { Veranta } from "veranta-sdk";
 
 const steps: { step: string; said: string; at: string }[] = [];
-const said = async (page: Page, sel: string, step: string, want: RegExp) => {
+const said = async (page: Page, sel: string, step: string, want: RegExp, before?: string) => {
+  // when the same box already holds an earlier message, wait for new text first
+  if (before !== undefined) await expect.poll(async () => (await page.locator(sel).innerText()).trim(), { timeout: 120_000 }).not.toBe(before);
   await expect(page.locator(sel)).toContainText(want, { timeout: 120_000 });
   const t = (await page.locator(sel).innerText()).trim();
   steps.push({ step, said: t, at: new Date().toISOString() });
@@ -88,8 +90,9 @@ test("Veranta testnet in the browser: practice account → long with TP/SL → c
   await openTpsl(page);
   await page.locator("#ppTp").fill("");
   await page.locator("#ppSl").fill("");
+  const beforeShort = (await page.locator("#perpStep").innerText()).trim();
   await confirm(page);
-  await said(page, "#perpStep", "market short", /Filled/);
+  await said(page, "#perpStep", "market short", /Filled/, beforeShort);
   await expect(card.locator("tr[data-perp-pos='ETH-PERP']")).toContainText("Short", { timeout: 60_000 });
   await card.locator("[data-perp-close='ETH-PERP']").click();
   await said(page, "#venueStep", "close short", /filled/);
