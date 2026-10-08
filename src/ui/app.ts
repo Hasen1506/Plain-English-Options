@@ -15,6 +15,7 @@ import { isPerpName } from "../lib/perp.ts";
 import type { VenueTrigger } from "../venues/types.ts";
 import { parseFunding, perpHistoryRows, type PerpHistoryRow } from "../lib/perpHistory.ts";
 import { createPerps } from "./perps.ts";
+import { httpVerantaApi } from "../venues/veranta/api.ts";
 import { createVenues, type PerpVenue } from "../venues/index.ts";
 import { perpHistoryHtml, perpPositionsHtml } from "./perpViews.ts";
 import {
@@ -48,6 +49,7 @@ interface TkEntry {
 export interface AppOptions {
   wsOverride?: string | null; // e2e builds only
   hlOverride?: string | null; // e2e builds only: Hyperliquid mock base URL
+  vrOverride?: string | null; // e2e builds only: Veranta mock base URL ({net} is replaced)
   now?: () => number;
   ethereum?: Eip1193 | null;
 }
@@ -1467,6 +1469,13 @@ export function startApp(opts: AppOptions = {}) {
       apiOverrideFor: (n) => (opts.hlOverride ? opts.hlOverride.replace("{net}", n) : null),
       sheet: { open: (html) => openSheet(html), close: () => closeSheet() },
       changed: () => venueChanged(),
+    },
+    veranta: {
+      net: () => net,
+      now,
+      api: (n) => (opts.vrOverride ? httpVerantaApi(opts.vrOverride.replace("{net}", n)) : null),
+      changed: () => venueChanged(),
+      step: (s) => toast(s),
     },
     derive: {
       client: () => client,
