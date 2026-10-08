@@ -165,7 +165,7 @@ const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 export async function placeSpread(ctx: Ctx, q: SpreadQuote, onStep?: (s: string) => void): Promise<SpreadResult> {
   const L = q.legs.long, S = q.legs.short;
   const idx = L.ticker.index || S.ticker.index;
-  onStep?.("Sign the orders in your wallet (3 signatures)");
+  onStep?.(ctx.signer.silent ? "Signing with your one-tap key" : "Sign the orders in your wallet (3 signatures)");
   const longOrder = await signOrder(
     { inst: L.instrument, direction: "buy", amount: q.amount, limitPrice: q.longLimit, maxFee: maxFeePerUnit(L.instrument, idx, Number(q.longLimit), q.n), tif: "fok" },
     ctx,
