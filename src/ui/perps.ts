@@ -30,7 +30,11 @@ export function createPerps(d: PerpDeps) {
   const venue = () => d.venues[venueIdx]!;
   let insts: PerpMarket[] = [];
   let tk: Record<string, PerpTicker> = {};
-  let tkAt = 0, tkBusy = false, instBusy = false, gen = 0;
+  // busy flags belong to one venue generation: a slow answer from the venue we just left
+  // must not block (or be mistaken for) the first load of the venue we switched to
+  let tkAt = 0, tkBusyGen = -1, instBusyGen = -1, gen = 0;
+  const tkRetry = { gen: 0, n: 0 };
+  let riskTouched = false; // the user picked the amount: never resize it for them
   let visible = false;
   const P = {
     name: "ETH-PERP",
@@ -100,26 +104,28 @@ export function createPerps(d: PerpDeps) {
 
   // ---------- data ----------
   function loadInstruments() {
-    if (instBusy || insts.length) return;
-    instBusy = true;
-    const g = gen;
+    if (instBusyGen === gen || insts.length) return;
+    const g = (instBusyGen = gen);
     venue()
       .markets()
       .then((list) => {
         if (g !== gen) return;
         insts = list.filter((i) => i.isActive);
         if (!insts.some((i) => i.name === P.name) && insts[0]) P.name = insts[0].name;
+        defaultAboveMinimum();
         venue().focus?.(P.name);
         loadTickers(true);
         render();
       })
       .catch(() => {})
-      .finally(() => (instBusy = false));
+      .finally(() => {
+        if (instBusyGen === g) instBusyGen = -1;
+      });
   }
   function loadTickers(force = false) {
-    if (tkBusy || (!force && d.now() - tkAt < TICKER_REFRESH_MS)) return;
-    tkBusy = true;
-    const g = gen;
+    if (tkBusyGen === gen || (!force && d.now() - tkAt < TICKER_REFRESH_MS)) return;
+    const g = (tkBusyGen = gen);
+    if (tkRetry.gen !== g) Object.assign(tkRetry, { gen: g, n: 0 });
     venue()
       .tickers()
       .then((r) => {
@@ -129,7 +135,23 @@ export function createPerps(d: PerpDeps) {
         render();
       })
       .catch(() => {})
-      .finally(() => (tkBusy = false));
+      .finally(() => {
+        if (tkBusyGen === g) tkBusyGen = -1;
+        // a forced load that found prices missing (late feed) tries again soon instead of waiting a full refresh
+        if (g === gen && visible && !tk[P.name] && insts.length && tkRetry.gen === g && tkRetry.n++ < 5) setTimeout(() => g === gen && loadTickers(true), 2000);
+      });
+  }
+  /**
+   * The default amount must be a valid order on every venue: when the market's minimum
+   * position (money put in × leverage) is at or above the default, raise the default to the
+   * next $5 step that clears the minimum by 10%. Never touches an amount the user picked.
+   */
+  function defaultAboveMinimum() {
+    const i = inst();
+    if (riskTouched || !i?.minNotional) return;
+    const need = (i.minNotional * 1.1) / Math.max(P.lev, 1);
+    if (P.risk >= need) return;
+    P.risk = Math.ceil(need / 5) * 5;
   }
   function maybeMargin(q: PerpQuote | null) {
     const s = sub();
@@ -396,7 +418,7 @@ export function createPerps(d: PerpDeps) {
           }),
       );
     }
-    if (kind === "risk") slider("Money you put in (margin)", P.risk, 5, 10000, 5, "$", (v) => set({ risk: v }), "$5", "$10,000");
+    if (kind === "risk") slider("Money you put in (margin)", P.risk, 5, 10000, 5, "$", (v) => ((riskTouched = true), set({ risk: v })), "$5", "$10,000");
     if (kind === "lev") {
       const i = inst();
       const max = Math.max(1, Math.min(d.settings().leverageCap, i?.maxLeverage ?? 1));
