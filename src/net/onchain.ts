@@ -72,8 +72,15 @@ export function parseRiskUniverses(raw: unknown): RiskUniverse[] {
 
 /** The risk universe whose managers list `${asset}-OPTION` (fetched per network, never assumed). */
 export function riskUniverseForOptions(universes: RiskUniverse[], asset: string): number | null {
-  const want = `${asset}-OPTION`;
-  const u = universes.find((x) => x.managers.some((m) => m.instruments.includes(want)));
+  return riskUniverseFor(universes, `${asset}-OPTION`);
+}
+
+/**
+ * The universe a product trades in, by the manager instrument list
+ * ("ETH-OPTION", "ETH-PERP"). A perp instrument name is its own product name.
+ */
+export function riskUniverseFor(universes: RiskUniverse[], product: string): number | null {
+  const u = universes.find((x) => x.id !== 0 && x.managers.some((m) => m.instruments.includes(product)));
   return u ? u.id : null;
 }
 
