@@ -8,5 +8,6 @@ const params = new URLSearchParams(location.search);
 const e2e = import.meta.env.VITE_E2E === "1";
 const wsOverride = e2e ? params.get("ws") : null;
 const hlOverride = e2e ? params.get("hl") : null;
+const vrOverride = e2e ? params.get("vr") : null;
 
-startApp({ wsOverride, hlOverride });
+startApp({ wsOverride, hlOverride, vrOverride });

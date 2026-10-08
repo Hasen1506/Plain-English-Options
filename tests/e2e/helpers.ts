@@ -25,9 +25,10 @@ export async function openApp(page: Page, scenario = "default", opts: WalletOpts
   const w = opts.wallet !== false ? await injectWallet(page, sid, opts) : null;
   const ws = `${MOCK}?scenario=${scenario}&sid=${sid}`;
   const hl = `${VENUES}/hl/{net}/${sid}`;
+  const vr = `${VENUES}/vr/{net}/${sid}`;
   // Circle's fee API (CORS open in real life): the recorded answer of 2026-10-08
   await page.route(/iris-api(-sandbox)?\.circle\.com/, (r) => r.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify([{ finalityThreshold: 1000, minimumFee: 0, forwardFee: { low: 200000, med: 200000, high: 200000 } }, { finalityThreshold: 2000, minimumFee: 0, forwardFee: { low: 200000, med: 200000, high: 200000 } }]) }));
-  await page.goto(`/?ws=${encodeURIComponent(ws)}&hl=${encodeURIComponent(hl)}`);
+  await page.goto(`/?ws=${encodeURIComponent(ws)}&hl=${encodeURIComponent(hl)}&vr=${encodeURIComponent(vr)}`);
   await expect(page.locator("#liveTxt")).toContainText("Live · Derive testnet", { timeout: 15_000 });
   return { sid, wallet: w, mock: (method: string, params: object = {}) => mockCall(sid, scenario, method, params, w?.address) };
 }

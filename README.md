@@ -39,7 +39,7 @@ Concept: the @rightclcksaveas video. Not financial advice.
 - **Risk universe:** a perp trades only from a subaccount whose manager lists it (`public/get_risk_universes`; ETH-PERP and BTC-PERP are universe 1, PRIME). The tab lists only those subaccounts, with Deposit / Withdraw buttons and "Deposit into a new one" when there is none.
 - **Margin:** Derive subaccounts are cross-margined. Liquidation price is estimated from the subaccount's own maintenance headroom (exact for a one-perp account, shown as "near" otherwise); before Confirm, `private/get_margin` simulates the trade on the exchange. Fees = notional × taker (or maker) rate + base fee.
 - **Portfolio:** perp positions with size, entry, mark, uPnL, funding (settled + pending), liquidation price (Derive's own figure), take-profit / stop-loss triggers with Cancel, Close / Close ½ / Flip, and a margin-usage warning from 50% (danger from 80%). **History:** per perp market, the number of trades, average-cost realised P&L, fees, funding and the net; the total equals Derive's own `realized_pnl` (checked on live testnet fills).
-- **Venue adapters:** the Perps tab, Portfolio and History only talk to the `PerpVenue` interface (`src/venues/types.ts`: markets/tickers, account routing, sizing rules via `PerpMarket`, open/close/flip/triggers/cancel-all, history, one-tap signer, deposit/withdraw, dry run). Adapters: Derive (`src/venues/derive.ts`) and Hyperliquid (`src/venues/hyperliquid/`), registered in `src/venues/index.ts`. A venue picker and a side-by-side comparison table (price, funding, taker/maker fee, max leverage, minimum order) appear once there are two. Each adapter carries an honest `status`: a venue that has not completed a real testnet round trip is labelled in the picker, the comparison table and a banner.
+- **Venue adapters:** the Perps tab, Portfolio and History only talk to the `PerpVenue` interface (`src/venues/types.ts`: markets/tickers, account routing, sizing rules via `PerpMarket`, open/close/flip/triggers/cancel-all, history, one-tap signer, deposit/withdraw, dry run). Adapters: Derive (`src/venues/derive.ts`), Hyperliquid (`src/venues/hyperliquid/`) and Veranta (`src/venues/veranta/`), registered in `src/venues/index.ts`. A venue picker and a side-by-side comparison table (price, funding, taker/maker fee, max leverage, minimum order) appear once there are two. Each adapter carries an honest `status`: a venue that has not completed a real testnet round trip is labelled in the picker, the comparison table and a banner.
 
 ## Hyperliquid (not live-tested yet)
 
@@ -62,6 +62,27 @@ Status: **built and tested against a mock exchange and Hyperliquid's own signatu
 - **No real order, TP/SL, close, flip or cancel has been sent with a funded account.** The live round trip in `tests/live/hyperliquid.test.ts` needs a funded testnet key (`HL_TESTNET_KEY_FILE`).
 - Our test address `0xEAA4…7D81` sent a 19 USDC CCTP deposit on 2026-10-08 (Arbitrum Sepolia tx `0x65c15cbd…7a7e`, HyperEVM forward tx `0xfa6018b4…09d6`). Circle minted and forwarded 18.8 USDC to the CoreDepositWallet, but Hyperliquid testnet never created the account (`userRole: missing`, `coreUserExists` false), the known testnet behaviour in hyperliquid-dex/node#138. Unlocking testnet needs that address to have a Hyperliquid **mainnet** account (a ≥5 USDC mainnet deposit), which this project's rules do not allow. Details: `docs/live-hyperliquid-testnet.json`.
 - The deposit and withdraw flows have only run against the mock (the deposit's Arbitrum Sepolia transaction did go through on-chain).
+
+## Veranta on Base (testnet practice account; mainnet coming soon)
+
+Status: **live-tested once in the browser on Veranta testnet (2026-10-08) with a practice account; mainnet is coming soon and cannot be picked.** The app's own UI, as a production build in Chromium, opened, closed, flipped and cancelled real testnet orders through Veranta's SDK. Nothing has run on mainnet.
+
+- **Why a practice account:** Veranta's testnet is a private fork of Base with the **same chain id (8453)** and the same contracts. A browser wallet cannot point at it safely (its "Base" is the real Base), and an EIP-712 signature made for the fork is also valid on mainnet. So on testnet the app **never asks your wallet to sign**: Start creates a trader key and a session key in the tab (memory only, gone on reload), funds the trader with test USDC from Veranta's fork faucet (falling back to another fork USDC holder through the fork's own `dev_impersonateTransaction` when the faucet runs dry), and registers the session key for 30 days (Veranta's default). Mainnet Veranta is shown as **coming soon** and cannot be picked.
+- **SDK:** the official `veranta-sdk` 0.3.1 (with `viem` 2.57.4), pinned, lazy-loaded only when Veranta is picked. Every endpoint it calls answers CORS with `*`, so it runs in the static app.
+- **Orders:** no order book: market orders fill at the oracle price ± the pair spread, signed by the session key and relayed gaslessly (`trade.marketOpen` / `limitOpen` / `marketClose` / `cancelLimitOrder` / `updateTpSl`). 1% worst-price slippage. TP/SL sit on the position itself (Veranta stores a take-profit on every position; an "empty" one is the pair's maximum gain). Close / Close ½ close collateral; Flip closes in full, then reopens the other way with what came back. Veranta keeps every trade separate, so the app refuses a second position in the same market.
+- **USDC approvals:** always for **exactly** the next trade's collateral, never unlimited; the trade uses it up. Disconnect sets any leftover allowance back to 0 and revokes the session key.
+- **Minimums, fees, liquidation** (live pair catalogue, `markets.pairs()`): minimum position = money put in × leverage ≥ `minLevPosUSDC` (ETH/USD: $100); the default order is raised above the minimum if needed. Open fee = maker (0.01%) when the trade moves open interest toward balance, taker (0.045%) when it adds to the heavier side, a blend when it crosses the middle; it is taken from the collateral. Isolated margin; liquidation when the loss reaches 85% of the margin.
+
+### What is verified for Veranta
+- **SDK round trip on the real testnet** (Node, the same calls the app makes, 2026-10-08): faucet, 30-day session key, exact approvals, market long 40 × 5 with TP/SL (order 6445226), partial close (6445227), close (6445228), short (6445229), close (6445230), limit −15% placed and cancelled, flat, allowance 0, session key revoked. Every tx hash: `docs/live-veranta-sdk-testnet.json`.
+- **Browser round trip on the real testnet, once** (`npm run test:live:browser`, the production build in Chromium using only the app's UI, 2026-10-08): practice account from the faucet with a 30-day session key, market long $50 × 5 with TP/SL (order 6445257), close ½ (6445259), flip (6445261 close, 6445262 short), close (6445263), a fresh short (6445264) and its close (6445265), a limit order 15% below placed and cancelled; ended flat (0 positions, 0 limit orders), USDC allowance 0 and the session key unable to sign after Disconnect. Order ids and tx hashes come from Veranta's history API: `docs/live-veranta-testnet.json`. In that record the UI text saved for the "market short" step is stale (it repeats the long's message); the order itself (6445264) is in the history. The limit order's UI message showed `order 0:0` rather than a real index.
+- Unit + fast-check properties (`tests/unit/veranta-rules.test.ts`): catalogue → markets on the recorded testnet and mainnet catalogues, sizing never below the minimum, fee always between maker and taker, liquidation loss exactly 85% of margin, USDC rounding never above what was asked, position / limit / history parsers.
+- Differential (`tests/diff/veranta-reference.test.ts`): the app's open-fee rule and liquidation price against the SDK's own `compute.pairOpenMakerTakerFeeP` and `compute.estimateLiquidationPrice` on random inputs and every recorded pair's real open interest.
+- E2E (`tests/e2e/veranta.spec.ts`, desktop + mobile) against `tests/mock/veranta.ts`: picker and honesty text, the default above the minimum, mainnet disabled, the full practice flow with exact approvals, no wallet signature at all, Disconnect revoking the key and leaving allowance 0.
+
+### Not verified for Veranta
+- Anything on **mainnet** (not built: it would need the user's own wallet on Base and is shown as coming soon).
+- Liquidations, funding and borrowing fees over time, TP/SL actually triggering, and the faucet fallback path (the SDK faucet worked on every run so far).
 
 ## Trading safety
 
@@ -97,11 +118,12 @@ npm run test:live      # opt-in, real testnet orders, see below
 npm run check:mainnet  # read-only mainnet signature check (order_debug only): ETH spread + ETH-PERP market and post-only; needs env
 npm run record:perps   # re-record the public perp fixtures (mainnet + testnet)
 npm run record:mainnet # re-record the read-only mainnet fixtures
+npm run test:live:browser # opt-in: Veranta testnet in Chromium through the UI (production build)
 ```
 
 - **Property tests** (`tests/unit`): probability bounds and monotonicity, strike bracketing, never using dead instruments, cost ≥ 0, size on step and ≥ minimum, tick-aligned limits, max loss = debit + fees, payoff ≤ width − debit, Confirm never enabled without a live price / with a short balance / in the wrong universe, ticker parsing round-trips and never throws, EIP-712 typed data hashes to the exchange digest, leg-2 failure always leaves you flat or flagged.
 - **Differential tests** (`tests/diff`): the app's maths against independent references: perp sizing, P&L and liquidation against an exact-rational reference (`perp-reference`), Hyperliquid rounding, liquidation and funding against the official SDK formula and docs (`hl-reference`), and the old single-file prototype's pricing code is extracted verbatim from `tests/fixtures/old-prototype.html` and compared with the new modules on thousands of random inputs. Intentional differences are asserted and documented in the test file.
-- **E2E** (`tests/e2e`): real user flows in Chromium (desktop and mobile) against `tests/mock/server.ts` (Derive) and `tests/mock/venues-server.ts` (Hyperliquid, port 8788), which replay frames recorded from testnet (`npm run record`) and verifies every login and order signature. An injected EIP-1193 mock wallet signs with a fixed test key.
+- **E2E** (`tests/e2e`): real user flows in Chromium (desktop and mobile) against `tests/mock/server.ts` (Derive) and `tests/mock/venues-server.ts` (Hyperliquid and Veranta, port 8788), which replay frames recorded from testnet (`npm run record`) and verifies every login and order signature. An injected EIP-1193 mock wallet signs with a fixed test key.
 - **Live smoke** (`tests/live`, never in CI): logs in on testnet, places a minimum-size ETH call spread on subaccount 87139 (or `DERIVE_SUBACCOUNT_ID`), checks fills and positions, then closes it.
 
   ```bash
@@ -119,6 +141,11 @@ npm run record:mainnet # re-record the read-only mainnet fixtures
 
   ```bash
   DERIVE_PRIVATE_KEY=0x… DERIVE_SUBACCOUNT_ID=87142 npm run test:live -- tests/live/perps.test.ts
+  ```
+- **Live Veranta in the browser** (`tests/live/veranta.browser.ts`, never in CI): the production build in Chromium (`playwright.live.config.ts`) trades Veranta's real testnet through the UI only: practice account, long with TP/SL, Close ½, Flip, Close, short, Close, limit placed and cancelled, history, flat, Disconnect (allowance 0, session key revoked, both checked with the SDK). Writes `docs/live-veranta-testnet.json`.
+
+  ```bash
+  npm run test:live:browser
   ```
 - **Mainnet fixtures** (`tests/fixtures/mainnet-public.json`, recorded read-only): risk-universe mapping, USDC route, per-instrument minimum / step / tick, fee rules and chain-1 signing are unit-tested against real mainnet frames.
 
@@ -168,4 +195,5 @@ See "Funding mainnet" in `docs/qa-mainnet.md` sections 5–7. In short: hold USD
 - Perp liquidation price is an estimate from the subaccount's maintenance headroom assuming only that perp moves; options and other perps in the same subaccount move it too. Derive's own figure is shown in Portfolio when it reports one.
 - Take-profit / stop-loss always need a wallet signature (Derive requires 30–90-day trigger signatures).
 - Hyperliquid is wired but not live-tested (see above).
+- Veranta runs on testnet with a practice account only; mainnet is coming soon (see above).
 - The wallet must own the Derive v3 account, or be a session key registered for it on derive.xyz (enter the owner address in the sign-in sheet).

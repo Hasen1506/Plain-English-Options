@@ -18,10 +18,13 @@
     "record": "node --experimental-strip-types scripts/record-fixtures.ts",
     "check:mainnet": "node --experimental-strip-types --no-warnings scripts/check-mainnet.ts",
     "record:mainnet": "node --experimental-strip-types --no-warnings scripts/record-mainnet.ts",
-    "record:perps": "node --experimental-strip-types --no-warnings scripts/record-perps.ts"
+    "record:perps": "node --experimental-strip-types --no-warnings scripts/record-perps.ts",
+    "test:live:browser": "playwright test -c playwright.live.config.ts"
   },
   "dependencies": {
-    "ethers": "^6.13.4"
+    "ethers": "^6.13.4",
+    "veranta-sdk": "0.3.1",
+    "viem": "2.57.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",

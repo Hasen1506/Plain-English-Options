@@ -26,7 +26,7 @@ test.describe("perps: markets and the plain-English builder", () => {
     await expect(page.locator("#perpMarkets tbody tr").nth(1)).toContainText("BTC");
     await expect(page.locator("#perpMarkets")).toContainText("/h");
     await expect(page.locator("#perpMarkets")).toContainText("/yr");
-    await expect(page.locator("#venuePick button")).toHaveCount(2); // Derive + Hyperliquid
+    await expect(page.locator("#venuePick button")).toHaveCount(3); // Derive + Hyperliquid + Veranta
     await expect(page.locator("#perpLiveTxt")).toContainText("Live · Derive testnet");
     await pill(page, "risk", "100");
     await pill(page, "lev", "5");
@@ -177,11 +177,18 @@ test.describe("perps: trading", () => {
     // leverage cap 2× (default 5×)
     await page.locator("[data-view=portfolio]").click();
     await page.locator("#levCapIn").fill("2");
+    // Opening Portfolio reloads subaccounts and triggers, and each answer re-renders the card.
+    // Force that re-render between typing and saving: the typed value must survive it
+    // (it used to be reset to 5×, which made this test flaky in CI).
+    await page.locator("[data-view=portfolio]").click();
+    await expect(page.locator("#levCapIn")).toHaveValue("2");
     await page.locator("#levCapSave").click();
     await expect(page.locator("#portStep")).toContainText("capped at 2×");
+    await expect(page.locator("#levCapIn")).toHaveValue("2");
     expect((await state(page)).leverageCap).toBe(2);
     await page.locator("#maxCostIn").fill("50");
     await page.locator("#maxCostSave").click();
+    await expect(page.locator("#portStep")).toContainText("limited to $50");
     await page.locator("[data-view=perps]").click();
     await expect(page.locator("#perpReal")).toBeVisible();
     await pill(page, "risk", "100");
@@ -194,6 +201,7 @@ test.describe("perps: trading", () => {
     await page.locator("[data-view=portfolio]").click();
     await page.locator("#maxCostIn").fill("500");
     await page.locator("#maxCostSave").click();
+    await expect(page.locator("#portStep")).toContainText("limited to $500");
     await page.locator("[data-view=perps]").click();
     await page.locator("#perpAgree").check();
     await expect(page.locator("#perpConfirm")).toHaveAttribute("data-reason", "phrase");

@@ -64,6 +64,18 @@ wallet that has deposited at least 5 USDC on Hyperliquid mainnet (or used it bef
 - [ ] Check order (no trade) → "Hyperliquid recovered our signature exactly … nothing was traded.". History shows the fills.
 - [ ] Disconnect → the agent is revoked. Withdraw 5 → one `HyperliquidTransaction:Withdraw` signature; $1 fee.
 
+## 4d. Veranta on Base (testnet practice account)
+No wallet is involved: Veranta's testnet is a copy of Base with the same chain id, so the app
+never asks your wallet to sign there. Everything below happens in a practice account the app
+creates in the tab (gone when you reload).
+- [ ] Perps → venue picker shows **Veranta (testnet practice account)**; the banner says your wallet is never asked to sign and states what has and has not been tested. The comparison table lists ETH on Veranta ($100 minimum position, 0.045% / 0.01%).
+- [ ] Pick Veranta → chip **Live · Veranta testnet**. The default order is at least $100 × leverage; "$5 at 1×" is sized up to the $100 minimum with "Smallest order is …".
+- [ ] **Start a Veranta testnet practice account** → progress messages (faucet, 30-day one-tap key), then the card shows about $1,000 test USDC, the practice address and the one-tap key ("30 days, revoked on Disconnect"). MetaMask never opens.
+- [ ] ETH goes UP, $50 at 5× with TP and SL → "Approving exactly … USDC for this trade (never unlimited)", then **Filled** with "2 TP/SL set on the position"; the card shows the position, liquidation price and the two triggers.
+- [ ] Close ½ → Flip → Close → "No perp positions.". Short $25 → Close. Limit 15% below → resting in Open orders → Cancel removes it.
+- [ ] History shows ETH-PERP fills and P&L. **Disconnect** → back to "Start a Veranta testnet practice account".
+- [ ] Switch to **Mainnet** → Veranta is greyed out as **coming soon** and the tab falls back to Derive.
+
 ## 5. Mainnet without money (free)
 - [ ] Tap **Mainnet**. The banner says orders use real money; the pill has a red **REAL MONEY** chip and a red outline.
 - [ ] Signing in with an unfunded wallet opens **Open your Derive mainnet account** (risk universe 1, PRIME, minimum $5). Close it without depositing.
@@ -79,6 +91,9 @@ wallet that has deposited at least 5 USDC on Hyperliquid mainnet (or used it bef
 - [ ] Do not fund Hyperliquid mainnet for trading until section 4c has passed end to end; until then the app correctly says "not live-tested".
 - [ ] Mainnet deposit (Arbitrum One USDC `0xaf88…5831`, CctpExtension `0xA95d…4fcE`): the button stays disabled until you type **REAL MONEY**; minimum 5 USDC; Circle's fee ~0.20 USDC; a brand-new Hyperliquid account also pays Hyperliquid's one-time 1 USDC activation fee on its first outbound action.
 - [ ] Check order (no trade) on mainnet first. Confirm needs **REAL MONEY**; the per-trade limit and leverage cap apply.
+
+## 6c. Veranta mainnet — not available
+- [ ] Veranta mainnet is "coming soon" in the app: it cannot be picked and nothing can be signed or sent there. Nothing to check until it is built.
 
 ## 7. Mainnet first trade (real money, after funding)
 - [ ] Review → **Check order (no trade)** first → "Derive verified both signatures on mainnet. No order was sent." Same in Perps for ETH-PERP.

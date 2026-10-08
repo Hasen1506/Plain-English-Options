@@ -1,0 +1,140 @@
+{
+ "how": "Node script with veranta-sdk 0.3.1 on Veranta's testnet (a fork of Base, chain id 8453), 2026-10-08: the same calls the app's src/venues/veranta/api.ts makes, run before the in-browser test. Practice trader key + 30-day session key generated for the run and discarded; test USDC from the fork faucet.",
+ "explorer": "https://devnet-explorer.veranta.xyz",
+ "at": "2026-10-08T05:46:15.423Z",
+ "trader": "0xdB26D5a06b87fb5D8708476926C1E78Eb260E7cA",
+ "session": "0x9354D83637CDE8dD08C823123d7ff8309FDb098D",
+ "log": [
+  {
+   "step": "usdc before",
+   "value": 999.897899
+  },
+  {
+   "step": "allowance before",
+   "value": "{\"trader\":\"0xdB26D5a06b87fb5D8708476926C1E78Eb260E7cA\",\"spender\":\"0x8a311D7048c35985aa31C131B9A13e03a5f7422d\",\"allowance\":\"41000000\",\"balance\":\"999897899\",\"allowanceUsdc\":41,\"balanceUsdc\":999.897899}"
+  },
+  {
+   "step": "register session key (30 d)",
+   "route": "relayer-passthrough",
+   "txHash": "0xcf76d2361e436f118255eb45bf9f00a78e2275399e8dcc99ca15db3587169d28",
+   "requestId": "266d48ac-72a1-4fce-8f79-2344b195f316"
+  },
+  {
+   "step": "delegation status",
+   "value": "{\"trader\":\"0xdB26D5a06b87fb5D8708476926C1E78Eb260E7cA\",\"delegate\":\"0x9354D83637CDE8dD08C823123d7ff8309FDb098D\",\"isEnabled\":true,\"expiry\":\"1794030314\",\"expiryIso\":\"2026-11-07T05:45:14.000Z\",\"canDelegatedAction\":true,\"canSignIntents\":true}"
+  },
+  {
+   "step": "eth price",
+   "value": 2567.97939858
+  },
+  {
+   "step": "allowance",
+   "value": 41
+  },
+  {
+   "step": "market long 40 x5 TP/SL",
+   "route": "batched-market",
+   "txHash": "0xba3051b6a54a88d7b79e1924b62cb56dcff9a0752120f59473ab51fae3c588a7",
+   "trackingId": "e7242c5d-112a-46b5-a134-86d7184c26cb",
+   "orderId": 6445226
+  },
+  {
+   "step": "long position",
+   "value": "{\"index\":0,\"collateral\":\"39910000\",\"leverage\":\"50000000000\",\"openPrice\":\"25679793985800\",\"tp\":\"30820000000000\",\"sl\":\"21830000000000\",\"liq\":\"21314229008214\"}"
+  },
+  {
+   "step": "partial close 20",
+   "route": "batched-market",
+   "txHash": "0x168836d558521b30273f7a16ef6b4d49159b8fa6d17ea1bbc22036d93424dcf1",
+   "trackingId": "67de4b19-44f3-46a5-b89d-8f08df002d2c",
+   "orderId": 6445227
+  },
+  {
+   "step": "after partial",
+   "value": "{\"collateral\":\"19910000\"}"
+  },
+  {
+   "step": "close rest",
+   "route": "batched-market",
+   "txHash": "0x5e07a4e12952e5c72f3a3cf9f1cc3d113a1d5a2262776ef5aaf076dcfa267f9b",
+   "trackingId": "1aace5cf-e615-497e-ab8a-b7fd1d0e22fe",
+   "orderId": 6445228
+  },
+  {
+   "step": "approve exact 30 USDC",
+   "route": "relayer-passthrough",
+   "txHash": "0x776d4c9b913c63f942412ea24472ac45cad9fb94098b4dc5f588394da5021b28",
+   "requestId": "4059630a-1076-49be-a862-858e3737acda"
+  },
+  {
+   "step": "allowance",
+   "value": 30
+  },
+  {
+   "step": "market short 30 x5",
+   "route": "batched-market",
+   "txHash": "0xe3570a3d56acbe1220ab8a5481fa56d9124e6bd6ad928f867eadc222dac05d86",
+   "trackingId": "39980f4d-2234-4039-932f-13c790842e4e",
+   "orderId": 6445229
+  },
+  {
+   "step": "short position",
+   "value": "{\"index\":0,\"collateral\":\"29985000\",\"openPrice\":\"25684048235000\"}"
+  },
+  {
+   "step": "close short",
+   "route": "batched-market",
+   "txHash": "0x9818836adb8f4680d7270ab5e4d07ac7592c071a0fb0ff04c193cc874502dec0",
+   "trackingId": "d8799443-61a3-41c6-8d4b-0231f527d536",
+   "orderId": 6445230
+  },
+  {
+   "step": "approve exact 25 USDC",
+   "route": "relayer-passthrough",
+   "txHash": "0x5c0a485902ab6dc9b3a65d70f9ebc198b4e33770e1c8e49cb3491c0410960d38",
+   "requestId": "288a75e0-2f47-4bf3-9191-619382838c4c"
+  },
+  {
+   "step": "allowance",
+   "value": 25
+  },
+  {
+   "step": "limit long 25 x5 @ -15%",
+   "route": "relayer-passthrough",
+   "txHash": "0x91c044d321539d10b74b6c073ce60ab5f83f9afc641e19edacfa1daba0a864f5",
+   "requestId": "de6518c2-e2a6-4968-808c-808bde840613"
+  },
+  {
+   "step": "limit order",
+   "value": "{\"index\":0,\"price\":\"21830000000000\",\"collateral\":\"25000000\"}"
+  },
+  {
+   "step": "cancel limit",
+   "route": "relayer-passthrough",
+   "txHash": "0xbcad946347a77b80f9ddcdb939b7c4332adb35152edf1bbd9bc0f98dff706cae",
+   "requestId": "9aa33f15-cc99-472c-ae9c-a2085c366adf"
+  },
+  {
+   "step": "final",
+   "value": "{\"positions\":0,\"limitOrders\":0}"
+  },
+  {
+   "step": "usdc after",
+   "value": 999.724233
+  },
+  {
+   "step": "allowance after",
+   "value": 0
+  },
+  {
+   "step": "revoke session key",
+   "route": "relayer-passthrough",
+   "txHash": "0xd8e44cf69303e0499f483b151abbe9863ed73b3e0c492fdb667aef8f49b343e9",
+   "requestId": "581c212c-e726-4566-b337-4fe1df49d3e8"
+  },
+  {
+   "step": "delegation after revoke",
+   "value": "{\"trader\":\"0xdB26D5a06b87fb5D8708476926C1E78Eb260E7cA\",\"delegate\":\"0x9354D83637CDE8dD08C823123d7ff8309FDb098D\",\"isEnabled\":false,\"expiry\":\"1791438374\",\"expiryIso\":\"2026-10-08T05:46:14.000Z\",\"canDelegatedAction\":false,\"canSignIntents\":false}"
+  }
+ ]
+}

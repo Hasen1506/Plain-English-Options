@@ -31,9 +31,9 @@ test.describe("hyperliquid: markets, comparison, sizing", () => {
   test("venue picker + side-by-side comparison; Hyperliquid sizes in whole-number leverage with the $10 minimum @mobile", async ({ page }) => {
     await openApp(page);
     await page.locator("[data-view=perps]").click();
-    await expect(page.locator("#venuePick button")).toHaveCount(2);
-    // the comparison lists ETH on both venues with price, funding and fees
-    await expect(page.locator("#venueCompare tbody tr")).toHaveCount(2, { timeout: 15_000 });
+    await expect(page.locator("#venuePick button")).toHaveCount(3); // Derive, Hyperliquid, Veranta
+    // the comparison lists ETH on every venue with price, funding and fees
+    await expect(page.locator("#venueCompare tbody tr")).toHaveCount(3, { timeout: 15_000 });
     await expect(page.locator("#venueCompare tr[data-cmp='1']")).toContainText("Hyperliquid", { timeout: 15_000 });
     await expect(page.locator("#venueCompare tr[data-cmp='1']")).toContainText("0.045% / 0.015%", { timeout: 15_000 });
     await expect(page.locator("#venueCompare tr[data-cmp='1']")).toContainText("$10");

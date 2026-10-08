@@ -54,6 +54,8 @@ export interface PerpPanelModel {
   ticker: PerpTicker | null;
   asset: string;
   venueName: string;
+  /** Label of the venue's own connect button (default "Connect wallet to <venue>"). */
+  connectLabel?: string;
   netName: string;
   mainnet: boolean;
   connected: boolean;
@@ -83,7 +85,7 @@ export function perpPanelHtml(m: PerpPanelModel): string {
   const modeRow = m.marginModes && m.marginModes.length > 1 ? `<div><dt><label for="perpMode">Margin</label></dt><dd><select id="perpMode" class="x-pick">${m.marginModes.map((x) => `<option value="${h(x)}"${x === m.marginMode ? " selected" : ""}>${x === "cross" ? "Cross (whole account backs it)" : "Isolated (only this margin at risk)"}</option>`).join("")}</select></dd></div>` : "";
   const subRow0 = !m.connected
     ? m.canConnect
-      ? `<div><dt>${h(label)}</dt><dd><button type="button" class="x-edit x-small" id="perpVenueConnect">Connect wallet to ${h(m.venueName)}</button></dd></div>`
+      ? `<div><dt>${h(label)}</dt><dd><button type="button" class="x-edit x-small" id="perpVenueConnect">${h(m.connectLabel ?? `Connect wallet to ${m.venueName}`)}</button></dd></div>`
       : `<div><dt>${h(label)}</dt><dd>Connect your wallet</dd></div>`
     : m.accounts.length
       ? m.canConnect
@@ -109,7 +111,7 @@ export function perpPanelHtml(m: PerpPanelModel): string {
     `<div><dt>${q.orderType === "market" ? "Expected entry" : "Limit price"}</dt><dd id="perpEntry">${h(perpPrice(q.entry))}${q.orderType === "market" ? ` · ${q.side === "buy" ? "ask" : "bid"} now` : q.tif === "post_only" ? " · post-only (maker)" : " · good till cancelled"}</dd></div>` +
     (q.orderType === "market" ? `<div><dt>Price protection</dt><dd>Never fills worse than ${h(perpPrice(Number(q.limitPrice)))} (${pctSigned(Number(q.limitPrice) / q.entry - 1, 2)})</dd></div>` : "") +
     `<div><dt>Liquidation</dt><dd id="perpLiq"${q.liqPrice !== null && Math.abs(q.liqMove ?? 1) < 0.1 ? ' class="x-dn"' : ""}>${q.liqPrice === null ? (m.connected ? `None at this size (${m.marginMode === "isolated" ? "isolated" : "cross"} margin)` : "Connect to see") : `${h(perpPrice(q.liqPrice))} (${pctSigned(q.liqMove)})`}</dd></div>` +
-    `<div><dt>Est. fees</dt><dd id="perpFee">${h(usd2(q.estFee))} ${q.orderType === "limit" && q.tif === "post_only" ? "maker" : "taker"} · ${(q.orderType === "limit" ? q.inst.makerFeeRate : q.inst.takerFeeRate) * 100}% + ${h(usd2(q.inst.baseFee))}</dd></div>` +
+    `<div><dt>Est. fees</dt><dd id="perpFee">${h(feeWords(q))}</dd></div>` +
     `<div><dt>Funding</dt><dd id="perpFunding">${h(fundingText(q.fundingRate))}${fundingHr !== null ? ` · you ${fundingHr >= 0 ? "receive" : "pay"} ≈ ${h(usd2(Math.abs(fundingHr)))}/h` : ""}</dd></div>` +
     `<div><dt>Margin used</dt><dd>${h(usd2(q.marginUsed))} initial (${(q.inst.imReq * 100).toFixed(1)}% of size)</dd></div>` +
     (q.takeProfit ? `<div><dt>Take-profit</dt><dd class="x-up">${h(perpPrice(Number(q.takeProfit)))} · ≈ +${h(usd2(Math.max(0, q.gainAtTp ?? 0)))}</dd></div>` : "") +
@@ -230,8 +232,8 @@ export interface VenueAccountModel {
 export function venueAccountHtml(m: VenueAccountModel): string {
   const a = m.account;
   const head =
-    `<p class="x-step" id="venueWho">${h(m.venue)} ${h(m.netName.toLowerCase())} · <span class="x-mono">${h(m.address.slice(0, 6) + "…" + m.address.slice(-4))}</span>` +
-    (m.oneTapKey ? ` · one-tap key <span class="x-mono">${h(m.oneTapKey.slice(0, 6) + "…" + m.oneTapKey.slice(-4))}</span> (${h(m.oneTapWords)})` : " · no one-tap key yet (your first order asks for one signature)") +
+    `<p class="x-step" id="venueWho">${h(m.venue)} ${h(m.netName.toLowerCase())} · <span class="x-mono" data-address="${h(m.address)}">${h(m.address.slice(0, 6) + "…" + m.address.slice(-4))}</span>` +
+    (m.oneTapKey ? ` · one-tap key <span class="x-mono" data-session="${h(m.oneTapKey)}">${h(m.oneTapKey.slice(0, 6) + "…" + m.oneTapKey.slice(-4))}</span> (${h(m.oneTapWords)})` : " · no one-tap key yet (your first order asks for one signature)") +
     `</p>`;
   const orders = m.orders.length
     ? `<table class="x-tbl" id="venueOrders"><thead><tr><th>Open order</th><th>Side</th><th>Limit</th><th></th></tr></thead><tbody>${m.orders
@@ -288,4 +290,13 @@ export function compareHtml(asset: string, rows: CompareRow[]): string {
       .join("") +
     `</tbody></table><p class="x-step">Funding is per hour (positive: longs pay shorts). Fees are each venue's base rates; your own tier can be lower.</p></div>`
   );
+}
+
+/** "$0.14 taker · 0.045% + $0.10": the rate is read back from the fee the quote charges, so a venue
+ *  that prices its own fee (Veranta: by open-interest skew) is described as it is charged. */
+export function feeWords(q: Pick<PerpQuote, "estFee" | "notional" | "inst">): string {
+  const r = q.notional > 0 ? Math.max(0, q.estFee - q.inst.baseFee) / q.notional : 0;
+  const near = (x: number) => Math.abs(r - x) < 1e-9;
+  const kind = near(q.inst.takerFeeRate) ? "taker" : near(q.inst.makerFeeRate) ? "maker" : "maker/taker blend";
+  return `${usd2(q.estFee)} ${kind} · ${+(r * 100).toFixed(4)}% + ${usd2(q.inst.baseFee)}`;
 }
