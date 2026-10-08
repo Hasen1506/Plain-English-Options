@@ -18,13 +18,24 @@ export function chartSvg(q: SpreadQuote): { svg: string; pts: { x: number; pl: n
   const H = 160, mid = H * (maxUp / (maxUp + maxDn)), bw = 600 / pts.length;
   const bars = pts
     .map((p, i) => {
-      const hgt = Math.max(2, p.pl >= 0 ? (p.pl / maxUp) * (mid - 6) : (-p.pl / maxDn) * (H - mid - 6));
+      const hgt = Math.max(3, p.pl >= 0 ? (p.pl / maxUp) * (mid - 6) : (-p.pl / maxDn) * (H - mid - 6));
       const y = p.pl >= 0 ? mid - hgt : mid;
-      return `<rect data-i="${i}" x="${(i * bw + 4).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 8).toFixed(1)}" height="${hgt.toFixed(1)}" rx="6" fill="${p.pl >= 0 ? "#5BD08A" : "#F2A39B"}"><title>${h(price(p.x))} · ${h(signedMoney(p.pl))}</title></rect>`;
+      return `<rect data-i="${i}" style="--i:${i}" x="${(i * bw + 4).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 8).toFixed(1)}" height="${hgt.toFixed(1)}" rx="7" class="${p.pl >= 0 ? "is-up" : "is-dn"}"><title>${h(price(p.x))} · ${h(signedMoney(p.pl))}</title></rect>`;
     })
     .join("");
   const svg = `<svg viewBox="0 0 600 ${H}" role="img" aria-label="Profit or loss by price at expiry">${bars}<line x1="0" x2="600" y1="${mid.toFixed(1)}" y2="${mid.toFixed(1)}" stroke="#151515" stroke-width="2"/></svg>`;
   return { svg, pts, from: pts[0]!.x, to: pts[pts.length - 1]!.x };
+}
+
+/** Price labels under the chart, placed under the bars they describe: the range ends and both strikes. */
+export function axisHtml(q: SpreadQuote, from: number, to: number, n = 14): string {
+  const lo = Math.min(q.legs.K1, q.legs.K2), hi = Math.max(q.legs.K1, q.legs.K2);
+  const at = (x: number) => ((((x - from) / (to - from)) * (n - 1) + 0.5) / n) * 100;
+  return (
+    `<div class="x-axis" aria-hidden="true"><span style="left:0">${h(price(from))}</span>` +
+    `<span class="is-mid" style="left:${at(lo).toFixed(1)}%">${h(price(lo))}</span><span class="is-mid" style="left:${at(hi).toFixed(1)}%">${h(price(hi))}</span>` +
+    `<span style="right:0">${h(price(to))}</span></div>`
+  );
 }
 
 export interface ReviewModel {
@@ -44,7 +55,13 @@ export interface ReviewModel {
   createUrl: string;
   oneTap?: boolean; // orders signed by the one-tap session key
   maxCost?: number | null; // optional mainnet per-trade limit
+  wallet?: string | null; // the Derive wallet address, when connected
 }
+
+const shortAddr = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
+const UP_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>';
+const DN_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l6 6 4-4 8 8M15 17h6v-6"/></svg>';
+const MID_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg>';
 
 export function reviewHtml(m: ReviewModel): string {
   const q = m.q, up = q.legs.dir === "up", spec = specOf(q);
@@ -53,7 +70,7 @@ export function reviewHtml(m: ReviewModel): string {
   const li = q.legs.long.instrument.name, si = q.legs.short.instrument.name;
   const inRU = m.subs.filter((s) => s.riskUniverse === m.assetRU);
   const subRow = !m.connected
-    ? `<div><dt>Subaccount</dt><dd>Connect your wallet</dd></div>`
+    ? `<div><dt>Subaccount</dt><dd class="x-muted">Connect your wallet</dd></div>`
     : inRU.length
       ? `<div><dt><label for="subPick">Subaccount</label></dt><dd><select id="subPick" class="x-pick">${inRU
           .map((s) => `<option value="${s.id}"${s.id === m.selectedSub ? " selected" : ""}>#${s.id} · ${h(usd2(s.value))}</option>`)
@@ -70,31 +87,41 @@ export function reviewHtml(m: ReviewModel): string {
     : "";
   const short = m.balance !== null && m.balance < q.worstLoss;
   const after = m.connected && m.balance !== null ? `<div data-bal><dt>Balance after</dt><dd${short ? ' class="x-dn"' : ""}>${short ? "Not enough collateral" : h(usd2(m.balance - q.maxLoss))}</dd></div>` : "";
-  return (
-    `<div class="x-review"><div class="x-card"><div class="x-card__top"><span>Your position</span><button type="button" class="x-edit" id="edit">Edit</button></div>` +
-    `<p class="x-rh">Make <mark style="background:#F3DE9A">${h(money(q.maxProfit))}</mark> if ${h(m.asset)} ends ${up ? "above" : "below"} <mark style="background:#BDEFCB">${h(price(q.legs.K2))}</mark> by <mark style="background:#D9D6FB">${h(m.dateLong)}</mark></p>` +
-    `<div class="x-outs"><div class="x-out"><i style="background:#BDEFCB">${up ? "↗" : "↘"}</i>Ends ${up ? "above" : "below"} ${h(price(q.legs.K2))}<b class="x-up">${h(signedMoney(q.maxProfit))}</b></div>` +
-    `<div class="x-out"><i style="background:#EEEDEA">→</i>Ends at ${h(price(midP))}<b${profitAt(spec, midP) < 0 ? ' class="x-dn"' : ""}>${h(signedMoney(profitAt(spec, midP)))}</b></div>` +
-    `<div class="x-out"><i style="background:#F7C6BC">${up ? "↘" : "↗"}</i>Ends ${up ? "below" : "above"} ${h(price(q.legs.K1))}<b class="x-dn">${h(signedMoney(-q.maxLoss))}</b></div></div>` +
-    `<p class="x-chcap">Profit or loss by ${h(m.asset)} price on ${h(m.dateLong)} · tap the bars</p><div class="x-chart" id="chart">${ch.svg}<span class="x-tip" id="tip" hidden></span></div>` +
-    `<div class="x-axis"><span>${h(price(ch.from))}</span><span>${h(price((ch.from + ch.to) / 2))}</span><span>${h(price(ch.to))}</span></div></div>` +
-    `<div><div class="x-card"><dl class="x-rows">` +
-    `<div><dt>Contracts</dt><dd>Buy ${h(q.amount)} <span class="x-mono">${h(li)}</span> @ ${h(usd2(Number(q.longPrice)))} ask<br>Sell ${h(q.amount)} <span class="x-mono">${h(si)}</span> @ ${h(usd2(Number(q.shortPrice)))} bid</dd></div>` +
+  const midPl = profitAt(spec, midP);
+  const slip = Math.round((Number(q.longLimit) / Number(q.longPrice) - 1) * 100);
+  const left =
+    `<div class="x-card x-pos-card"><div class="x-card__top"><span>Your position</span><button type="button" class="x-edit" id="edit">Edit</button></div>` +
+    `<p class="x-rh">Make <mark class="x-m-amt">${h(money(q.maxProfit))}</mark> if ${h(m.asset)} ends ${up ? "above" : "below"} <mark class="x-m-tgt">${h(price(q.legs.K2))}</mark> by <mark class="x-m-date">${h(m.dateLong)}</mark></p>` +
+    `<div class="x-outs">` +
+    `<div class="x-out"><i class="is-up">${up ? UP_IC : DN_IC}</i>Ends ${up ? "above" : "below"} ${h(price(q.legs.K2))}<b class="x-up">${h(signedMoney(q.maxProfit))}</b></div>` +
+    `<div class="x-out"><i class="is-mid">${MID_IC}</i>Ends at ${h(price(midP))}<b${midPl < 0 ? ' class="x-dn"' : ""}>${h(signedMoney(midPl))}</b></div>` +
+    `<div class="x-out"><i class="is-dn">${up ? DN_IC : UP_IC}</i>Ends ${up ? "below" : "above"} ${h(price(q.legs.K1))}<b class="x-dn">${h(signedMoney(-q.maxLoss))}</b></div></div>` +
+    `<p class="x-chcap">Profit or loss by ${h(m.asset)} price on ${h(m.dateLong)} · hover or tap the bars</p><div class="x-chart" id="chart">${ch.svg}<span class="x-tip" id="tip" role="status" hidden></span></div>` +
+    axisHtml(q, ch.from, ch.to) +
+    `<details class="x-ctr" id="contracts"><summary>Contracts<i aria-hidden="true"></i></summary>` +
+    `<dl class="x-rows x-rows--tight"><div><dt>Buy</dt><dd>${h(q.amount)} <span class="x-mono">${h(li)}</span> @ ${h(usd2(Number(q.longPrice)))} ask</dd></div>` +
+    `<div><dt>Sell</dt><dd>${h(q.amount)} <span class="x-mono">${h(si)}</span> @ ${h(usd2(Number(q.shortPrice)))} bid</dd></div>` +
+    `<div><dt>Orders</dt><dd>Two fill-or-kill limit orders, one per leg</dd></div>` +
+    `<div><dt>Price protection</dt><dd>Fills at the best book price, never above ${h(usd2(q.worstLoss))} (${slip}% slippage cap)</dd></div></dl></details></div>`;
+  const rows =
+    `<div><dt>Wallet</dt><dd${m.connected && m.wallet ? ' class="x-mono x-addr"' : ' class="x-muted"'}>${m.connected && m.wallet ? h(shortAddr(m.wallet)) : "Not connected"}</dd></div>` +
+    subRow +
+    `<div><dt>Contracts</dt><dd>${h(q.amount)} per leg</dd></div>` +
     `<div><dt>Premium (net debit)</dt><dd>${h(usd2(q.cost))}</dd></div>` +
-    `<div><dt>Derive fees</dt><dd>${h(usd2(q.fees))} · taker, both legs</dd></div>` +
-    `<div><dt>Maximum loss</dt><dd class="x-dn">${h(usd2(q.maxLoss))}</dd></div>` +
-    `<div><dt>Price protection</dt><dd>Fills at the best book price, never above ${h(usd2(q.worstLoss))} (${Math.round((Number(q.longLimit) / Number(q.longPrice) - 1) * 100)}% slippage cap)</dd></div>` +
     `<div><dt>Maximum profit</dt><dd class="x-up">${h(usd2(q.maxProfit))}</dd></div>` +
+    `<div><dt>Maximum loss</dt><dd class="x-dn">${h(usd2(q.maxLoss))}</dd></div>` +
+    `<div><dt>Derive fees</dt><dd>${h(usd2(q.fees))} · taker, both legs</dd></div>` +
     `<div><dt>Breakeven</dt><dd>${h(price(q.breakeven))}</dd></div>` +
     `<div><dt>Chance it happens</dt><dd>${m.probability === null ? "—" : h(pct(m.probability))} · at ${h(price(m.target))}</dd></div>` +
     (q.belowMinimum ? `<div><dt>Size</dt><dd>Exchange minimum (${h(q.amount)} contracts), so the payout is ${h(money(q.maxProfit))}</dd></div>` : "") +
     `<div><dt>Expires</dt><dd>${h(m.dateLong)} · 08:00 UTC</dd></div>` +
-    subRow +
     (m.connected ? `<div><dt>Signed by</dt><dd id="signedBy">${m.oneTap ? "One-tap key (no wallet prompt)" : "Your wallet (3 prompts)"}</dd></div>` : "") +
     (m.mainnet && m.maxCost ? `<div><dt>Your limit</dt><dd>${h(money(m.maxCost))} per mainnet trade</dd></div>` : "") +
     pre +
     after +
-    `<div><dt>Settlement</dt><dd>Cash settled · Derive margin rules</dd></div></dl>${noSubHint}</div>` +
+    `<div><dt>Settlement</dt><dd>Cash settled · Derive margin rules</dd></div>`;
+  return (
+    `<div class="x-review">${left}<div class="x-rcol"><div class="x-card x-det-card"><dl class="x-rows">${rows}</dl>${noSubHint}</div>` +
     (m.mainnet
       ? `<div class="x-real" role="alert">Real money on Derive mainnet. Type <b>REAL MONEY</b> to enable Confirm.<input id="realIn" autocomplete="off" spellcheck="false" aria-label="Type REAL MONEY to confirm"></div>`
       : "") +
@@ -103,6 +130,13 @@ export function reviewHtml(m: ReviewModel): string {
     (m.connected ? `<div class="x-sheet__btns" style="justify-content:center;margin-top:10px"><button type="button" class="x-edit x-small" id="checkOrder">Check order (no trade)</button></div><p class="x-step" id="checkStep" role="status"></p>` : "") +
     `</div></div>`
   );
+}
+
+/** The countdown ring inside Confirm: how long until the quote refreshes. */
+export function ringHtml(secs: number, total = 10): string {
+  const C = 2 * Math.PI * 11;
+  const off = C * (1 - Math.max(0, Math.min(total, secs)) / total);
+  return `<span class="x-ring" aria-label="Quote refreshes in ${secs} seconds"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11" class="x-ring__bg"/><circle cx="13" cy="13" r="11" class="x-ring__fg" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"/></svg><b>${secs}</b></span>`;
 }
 
 function legRow(label: string, o: OrderOutcome | null): string {
@@ -142,20 +176,46 @@ export function pairSpreads(pos: Position[]): { pairs: [Position, Position][]; s
   return { pairs, singles: left };
 }
 
+const WALLET_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7V5.5A1.5 1.5 0 0 0 18.5 4h-13A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V17"/><path d="M15 9h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-5a3 3 0 0 1 0-8z"/><circle cx="15.5" cy="13" r="1"/></svg>';
+
+/** One empty state for Portfolio and History before a wallet is connected. */
+export function connectEmptyHtml(what: "portfolio" | "history", netName: string): string {
+  const [title, body] =
+    what === "portfolio"
+      ? ["Your positions live here", `Connect a wallet to see your Derive ${h(netName.toLowerCase())} positions, open orders and safety settings.`]
+      : ["Your trade history lives here", `Connect a wallet to see closed spreads, trades and orders on Derive ${h(netName.toLowerCase())}.`];
+  return `<div class="x-card x-emptycard" id="${what}Empty"><span class="x-emptyic">${WALLET_IC}</span><h2>${title}</h2><p class="x-empty">${body}</p><button type="button" class="x-buy" data-connect>Connect wallet <span class="x-arr">→</span></button></div>`;
+}
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "ETH-20261127-2500-C" → { asset ETH, date "Nov 27", strike 2500, type C }; null for other names. */
+export function describeOption(name: string): { asset: string; date: string; strike: number; type: "C" | "P" } | null {
+  const m = /^([A-Z0-9]+)-(\d{4})(\d{2})(\d{2})-([\d_.]+)-([CP])$/.exec(name);
+  if (!m) return null;
+  const mo = MON[Number(m[3]) - 1];
+  if (!mo) return null;
+  return { asset: m[1]!, date: `${mo} ${Number(m[4])}`, strike: Number(m[5]!.replace("_", ".")), type: m[6] as "C" | "P" };
+}
+
 export function portfolioHtml(sub: SubaccountInfo | null, netName: string, connected: boolean, o: { mainnet?: boolean; maxCost?: number | null; leverageCap?: number; leverageMax?: number; hasPositions?: boolean } = {}): string {
-  if (!connected) return `<div class="x-card"><h2>Portfolio</h2><p class="x-empty">Connect your wallet to see positions and open orders on ${h(netName)}.</p></div>`;
+  if (!connected) return connectEmptyHtml("portfolio", netName);
   if (!sub) return `<div class="x-card"><h2>Portfolio</h2><p class="x-empty">No subaccount selected.</p></div>`;
   const { pairs, singles } = pairSpreads(sub.positions);
-  const posRow = (p: Position, close: boolean) =>
-    `<tr><td><span class="x-mono">${h(p.instrument)}</span></td><td class="n">${p.amount}</td><td class="n">${h(usd2(p.averagePrice))}</td><td class="n">${h(usd2(p.markPrice))}</td><td class="n${p.unrealizedPnl < 0 ? " x-dn" : " x-up"}">${h(usd2(p.unrealizedPnl))}</td><td>${close ? `<button type="button" class="x-edit x-small" data-close="${h(p.instrument)}">Close</button>` : ""}</td></tr>`;
-  const rows =
-    pairs
-      .map(
-        ([a, b]) =>
-          posRow(a, false) +
-          posRow(b, false).replace("<td></td></tr>", `<td><button type="button" class="x-edit x-small" data-close-spread="${h(a.instrument)}|${h(b.instrument)}">Close spread</button></td></tr>`),
-      )
-      .join("") + singles.map((p) => posRow(p, true)).join("");
+  const pnlB = (v: number) => `<b class="${v < 0 ? "x-dn" : "x-up"}">${h(v < 0 ? usd2(v) : "+" + usd2(v))}</b>`;
+  const leg = (p: Position) =>
+    `<div class="x-leg" data-leg><span><span class="x-mono">${h(p.instrument)}</span><small>${p.amount > 0 ? "Long" : "Short"} ${Math.abs(p.amount)} · avg ${h(usd2(p.averagePrice))} · mark ${h(usd2(p.markPrice))}</small></span>${pnlB(p.unrealizedPnl)}</div>`;
+  const spreadCard = ([a, b]: [Position, Position]) => {
+    const da = describeOption(a.instrument), db = describeOption(b.instrument);
+    const name = da && db ? `${h(da.asset)} ${da.type === "C" ? "call" : "put"} spread · ${h(price(da.strike))} → ${h(price(db.strike))}` : "Spread";
+    const pl = a.unrealizedPnl + b.unrealizedPnl;
+    return `<article class="x-pos"><header><span><b>${name}</b><small>${da ? "Expires " + h(da.date) : ""} · ${Math.abs(a.amount)} per leg</small></span>${pnlB(pl)}</header>${leg(a)}${leg(b)}<div class="x-pos__acts"><button type="button" class="x-edit x-small" data-close-spread="${h(a.instrument)}|${h(b.instrument)}">Close spread</button></div></article>`;
+  };
+  const singleCard = (p: Position) => {
+    const d = describeOption(p.instrument);
+    const name = d ? `${h(d.asset)} ${h(price(d.strike))} ${d.type === "C" ? "call" : "put"}` : h(p.instrument);
+    return `<article class="x-pos"><header><span><b>${name}</b><small>${d ? "Expires " + h(d.date) : ""}</small></span>${pnlB(p.unrealizedPnl)}</header>${leg(p)}<div class="x-pos__acts"><button type="button" class="x-edit x-small" data-close="${h(p.instrument)}">Close</button></div></article>`;
+  };
+  const rows = pairs.map(spreadCard).join("") + singles.map(singleCard).join("");
   const orders = sub.openOrders.length
     ? `<table class="x-tbl" id="orders"><thead><tr><th>Instrument</th><th>Side</th><th>Filled</th><th>Limit</th><th></th></tr></thead><tbody>${sub.openOrders
         .map(
@@ -167,7 +227,7 @@ export function portfolioHtml(sub: SubaccountInfo | null, netName: string, conne
   return (
     `<div class="x-card"><h2>Positions · #${sub.id} · ${h(netName)}</h2>` +
     (sub.positions.length
-      ? `<table class="x-tbl" id="positions"><thead><tr><th>Instrument</th><th>Size</th><th>Avg</th><th>Mark</th><th>P/L</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+      ? `<div class="x-poslist" id="positions">${rows}</div>`
       : `<p class="x-empty">No open positions.</p>`) +
     `</div><div class="x-card"><h2>Open orders</h2>${orders}<div class="x-sheet__btns" style="margin-top:10px;flex-wrap:wrap"><button type="button" class="x-edit x-kill" id="cancelAll">Cancel all orders</button><button type="button" class="x-edit x-kill" id="closeAllPos"${o.hasPositions ? "" : " disabled"}>Close all positions</button></div><p class="x-step">Cancel all also removes take-profits and stop-losses. Close all cancels everything first, then closes every option and perp position with reduce-only orders.</p></div>` +
     `<div class="x-card"><h2>Safety</h2><label for="maxCostIn">Optional limit per mainnet trade (USD). Empty = no limit. For perps it limits the money you put in.</label><input id="maxCostIn" class="x-in" inputmode="decimal" autocomplete="off" value="${o.maxCost ? h(String(o.maxCost)) : ""}" placeholder="No limit"><div class="x-sheet__btns" style="margin-top:8px"><button type="button" class="x-edit" id="maxCostSave">Save limit</button></div>` +
@@ -183,7 +243,7 @@ const when = (ms: number) => (ms > 0 ? new Date(ms).toISOString().slice(0, 16).r
 const pnlCls = (v: number) => (v >= 0 ? "x-pnl-pos" : "x-pnl-neg");
 
 export function historyHtml(m: { connected: boolean; netName: string; subId: number | null; spreads: ClosedSpread[]; closedSingles: LegSummary[]; trades: TradeRow[]; orders: OrderRow[]; loading: boolean; error: string | null }): string {
-  if (!m.connected) return `<div class="x-card"><h2>History</h2><p class="x-empty">Connect your wallet to see past orders and trades on ${h(m.netName)}.</p></div>`;
+  if (!m.connected) return connectEmptyHtml("history", m.netName);
   if (m.subId === null) return `<div class="x-card"><h2>History</h2><p class="x-empty">No subaccount selected.</p></div>`;
   const total = m.spreads.reduce((s, x) => s + x.pnl, 0);
   const spreads = m.spreads.length
