@@ -54,6 +54,8 @@ export interface PerpPanelModel {
   ticker: PerpTicker | null;
   asset: string;
   venueName: string;
+  /** Label of the venue's own connect button (default "Connect wallet to <venue>"). */
+  connectLabel?: string;
   netName: string;
   mainnet: boolean;
   connected: boolean;
@@ -83,7 +85,7 @@ export function perpPanelHtml(m: PerpPanelModel): string {
   const modeRow = m.marginModes && m.marginModes.length > 1 ? `<div><dt><label for="perpMode">Margin</label></dt><dd><select id="perpMode" class="x-pick">${m.marginModes.map((x) => `<option value="${h(x)}"${x === m.marginMode ? " selected" : ""}>${x === "cross" ? "Cross (whole account backs it)" : "Isolated (only this margin at risk)"}</option>`).join("")}</select></dd></div>` : "";
   const subRow0 = !m.connected
     ? m.canConnect
-      ? `<div><dt>${h(label)}</dt><dd><button type="button" class="x-edit x-small" id="perpVenueConnect">Connect wallet to ${h(m.venueName)}</button></dd></div>`
+      ? `<div><dt>${h(label)}</dt><dd><button type="button" class="x-edit x-small" id="perpVenueConnect">${h(m.connectLabel ?? `Connect wallet to ${m.venueName}`)}</button></dd></div>`
       : `<div><dt>${h(label)}</dt><dd>Connect your wallet</dd></div>`
     : m.accounts.length
       ? m.canConnect
@@ -230,7 +232,7 @@ export interface VenueAccountModel {
 export function venueAccountHtml(m: VenueAccountModel): string {
   const a = m.account;
   const head =
-    `<p class="x-step" id="venueWho">${h(m.venue)} ${h(m.netName.toLowerCase())} · <span class="x-mono">${h(m.address.slice(0, 6) + "…" + m.address.slice(-4))}</span>` +
+    `<p class="x-step" id="venueWho">${h(m.venue)} ${h(m.netName.toLowerCase())} · <span class="x-mono" data-address="${h(m.address)}">${h(m.address.slice(0, 6) + "…" + m.address.slice(-4))}</span>` +
     (m.oneTapKey ? ` · one-tap key <span class="x-mono">${h(m.oneTapKey.slice(0, 6) + "…" + m.oneTapKey.slice(-4))}</span> (${h(m.oneTapWords)})` : " · no one-tap key yet (your first order asks for one signature)") +
     `</p>`;
   const orders = m.orders.length
