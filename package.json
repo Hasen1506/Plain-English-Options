@@ -15,7 +15,9 @@
     "test:diff": "vitest run --project diff",
     "test:e2e": "playwright test",
     "test:live": "vitest run --project live",
-    "record": "node --experimental-strip-types scripts/record-fixtures.ts"
+    "record": "node --experimental-strip-types scripts/record-fixtures.ts",
+    "check:mainnet": "node --experimental-strip-types --no-warnings scripts/check-mainnet.ts",
+    "record:mainnet": "node --experimental-strip-types --no-warnings scripts/record-mainnet.ts"
   },
   "dependencies": {
     "ethers": "^6.13.4"
