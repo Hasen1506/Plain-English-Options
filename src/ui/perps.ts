@@ -641,7 +641,7 @@ export function createPerps(d: PerpDeps) {
     d.venues.forEach((v) => {
       const c = cmp.get(v.id) ?? { insts: [], tk: {}, at: 0, busy: false, failed: false };
       cmp.set(v.id, c);
-      if (v === venue() || c.busy || (!force && d.now() - c.at < 30_000)) return;
+      if (v === venue() || v.status?.usable === false || c.busy || (!force && d.now() - c.at < 30_000)) return;
       c.busy = true;
       Promise.all([c.insts.length ? Promise.resolve(c.insts) : v.markets(), v.tickers()])
         .then(([i, t]) => {
@@ -663,6 +663,8 @@ export function createPerps(d: PerpDeps) {
     const cur = inst()?.currency ?? P.name.replace(/-PERP$/, "");
     return d.venues.map((v, idx) => {
       const own = v === venue();
+      if (v.status?.usable === false)
+        return { venueIdx: idx, venue: v.name, listed: false, loading: false, comingSoon: true, mark: null, fundingRate: null, taker: null, maker: null, maxLeverage: null, minOrder: null, selected: false, note: v.status.detail };
       const c = cmp.get(v.id);
       const list = own ? insts : (c?.insts ?? []);
       const ticks = own ? tk : (c?.tk ?? {});
@@ -680,7 +682,7 @@ export function createPerps(d: PerpDeps) {
         maxLeverage: m?.maxLeverage ?? null,
         minOrder: m ? (m.minNotional ? `$${m.minNotional}` : `${m.minAmount} ${m.currency}`) : null,
         selected: own,
-        note: c?.failed && !own ? "prices unavailable right now" : undefined,
+        note: [v.status?.tag, c?.failed && !own ? "prices unavailable right now" : ""].filter(Boolean).join(" · ") || undefined,
       };
     });
   }
@@ -692,7 +694,7 @@ export function createPerps(d: PerpDeps) {
   }
 
   function pickVenue(i: number) {
-    if (i === venueIdx || !d.venues[i]) return;
+    if (i === venueIdx || !d.venues[i] || d.venues[i].status?.usable === false) return;
     venueIdx = i;
     gen++;
     acctData = null;
@@ -717,8 +719,18 @@ export function createPerps(d: PerpDeps) {
     const box = $("venuePick");
     box.hidden = d.venues.length < 2; // one venue: no picker
     if (box.hidden) return;
-    box.innerHTML = d.venues.map((v, i) => `<button type="button" data-venue="${i}" aria-pressed="${i === venueIdx}">${h(v.name)}</button>`).join("");
-    box.querySelectorAll<HTMLButtonElement>("[data-venue]").forEach((b) => (b.onclick = () => pickVenue(Number(b.dataset.venue))));
+    box.innerHTML = d.venues
+      .map((v, i) =>
+        v.status && !v.status.usable
+          ? `<button type="button" data-venue="${i}" aria-pressed="false" disabled title="${h(v.status.detail)}">${h(v.name)} <small>(${h(v.status.tag)})</small></button>`
+          : `<button type="button" data-venue="${i}" aria-pressed="${i === venueIdx}"${v.status ? ` title="${h(v.status.detail)}"` : ""}>${h(v.name)}${v.status ? ` <small>(${h(v.status.tag)})</small>` : ""}</button>`,
+      )
+      .join("");
+    box.querySelectorAll<HTMLButtonElement>("[data-venue]:not([disabled])").forEach((b) => (b.onclick = () => pickVenue(Number(b.dataset.venue))));
+    const st = $("venueStatus");
+    const vs = venue().status;
+    st.hidden = !vs;
+    st.textContent = vs ? `${venue().name} is ${vs.tag}: ${vs.detail}` : "";
   }
 
   // ---------- wiring ----------
