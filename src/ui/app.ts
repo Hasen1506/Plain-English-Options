@@ -47,6 +47,7 @@ interface TkEntry {
 
 export interface AppOptions {
   wsOverride?: string | null; // e2e builds only
+  hlOverride?: string | null; // e2e builds only: Hyperliquid mock base URL
   now?: () => number;
   ethereum?: Eip1193 | null;
 }
@@ -1454,8 +1455,19 @@ export function startApp(opts: AppOptions = {}) {
     if (W.st === "on" && !R.busy) void loadSubs();
   }, 30_000);
 
-  // perp venues: Derive shares this app's connection, wallet, one-tap key and deposits
+  // perp venues: Derive shares this app's connection, wallet, one-tap key and deposits;
+  // Hyperliquid (and Veranta) connect the same injected wallet on their own
+  let venueChanged = () => {};
   const venues = createVenues({
+    hyperliquid: {
+      net: () => net,
+      now,
+      eth,
+      apiOverride: () => (opts.hlOverride ? opts.hlOverride.replace("{net}", net) : null),
+      apiOverrideFor: (n) => (opts.hlOverride ? opts.hlOverride.replace("{net}", n) : null),
+      sheet: { open: (html) => openSheet(html), close: () => closeSheet() },
+      changed: () => venueChanged(),
+    },
     derive: {
       client: () => client,
       net: () => net,
@@ -1484,6 +1496,7 @@ export function startApp(opts: AppOptions = {}) {
   });
   derive = venues.find((v) => v.id === "derive")!;
   const perps = createPerps({ venues, now, settings: () => settings, toast });
+  venueChanged = () => perps.venueChanged();
 
   connect();
   renderBal();

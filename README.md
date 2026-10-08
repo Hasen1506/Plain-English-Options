@@ -39,7 +39,29 @@ Concept: the @rightclcksaveas video. Not financial advice.
 - **Risk universe:** a perp trades only from a subaccount whose manager lists it (`public/get_risk_universes`; ETH-PERP and BTC-PERP are universe 1, PRIME). The tab lists only those subaccounts, with Deposit / Withdraw buttons and "Deposit into a new one" when there is none.
 - **Margin:** Derive subaccounts are cross-margined. Liquidation price is estimated from the subaccount's own maintenance headroom (exact for a one-perp account, shown as "near" otherwise); before Confirm, `private/get_margin` simulates the trade on the exchange. Fees = notional × taker (or maker) rate + base fee.
 - **Portfolio:** perp positions with size, entry, mark, uPnL, funding (settled + pending), liquidation price (Derive's own figure), take-profit / stop-loss triggers with Cancel, Close / Close ½ / Flip, and a margin-usage warning from 50% (danger from 80%). **History:** per perp market, the number of trades, average-cost realised P&L, fees, funding and the net; the total equals Derive's own `realized_pnl` (checked on live testnet fills).
-- **Venue adapters:** the Perps tab, Portfolio and History only talk to the `PerpVenue` interface (`src/venues/types.ts`: markets/tickers, account routing, sizing rules via `PerpMarket`, open/close/flip/triggers/cancel-all, history, one-tap signer, deposit/withdraw, dry run). Derive is the first adapter (`src/venues/derive.ts`); Hyperliquid and a Base-chain venue plug in by implementing it and registering in `src/venues/index.ts`.
+- **Venue adapters:** the Perps tab, Portfolio and History only talk to the `PerpVenue` interface (`src/venues/types.ts`: markets/tickers, account routing, sizing rules via `PerpMarket`, open/close/flip/triggers/cancel-all, history, one-tap signer, deposit/withdraw, dry run). Adapters: Derive (`src/venues/derive.ts`) and Hyperliquid (`src/venues/hyperliquid/`), registered in `src/venues/index.ts`. A venue picker and a side-by-side comparison table (price, funding, taker/maker fee, max leverage, minimum order) appear once there are two. Each adapter carries an honest `status`: a venue that has not completed a real testnet round trip is labelled in the picker, the comparison table and a banner.
+
+## Hyperliquid (not live-tested yet)
+
+Status: **built and tested against a mock exchange and Hyperliquid's own signature check, but no real Hyperliquid order has been placed by this app yet, not even on testnet.** The app labels Hyperliquid "not live-tested" in the venue picker, the comparison table and a banner. See "What is verified" below.
+
+- **API:** `POST https://api.hyperliquid.xyz/info` and `/exchange` (testnet `api.hyperliquid-testnet.xyz`), CORS open, called straight from the browser. Order books per market from `l2Book`.
+- **One-tap agent key:** Connect asks the wallet for one EIP-712 `HyperliquidTransaction:ApproveAgent` signature for a fresh key generated in the tab (named `peo valid_until <ms>`, 24 h). Orders, cancels and leverage changes are L1 actions (msgpack + phantom-agent EIP-712) signed by that key with no wallet prompt. The key cannot withdraw. Disconnect revokes it: the wallet approves a throwaway key under the same agent name (which replaces the old key) that expires a minute later.
+- **Orders:** market = IOC limit 0.5% through the touch, rounded to Hyperliquid's 5-significant-figure / `szDecimals` rules; limit = GTC or post-only (ALO, blocked before signing if it would cross); TP/SL = reduce-only trigger orders placed in the same `normalTpsl` group as the entry. Close / Close ½ = reduce-only IOC; Flip = close, then open the other side only after a full close. Leverage is whole-number (2.5× becomes 2×), cross or isolated.
+- **Minimums and fees (official docs):** $10 minimum order notional; base fees 0.045% taker / 0.015% maker (your own tier is read from `userFees`).
+- **Deposit:** USDC on Arbitrum through Circle CCTP v2 (`CctpExtension.batchDepositForBurnWithAuth`, the route Hyperliquid's docs recommend): one EIP-3009 `ReceiveWithAuthorization` for the exact amount (no ERC-20 approval ever), one transaction, Circle's ~0.20 USDC forwarding fee, minimum 5 USDC. On **testnet** the app first asks Hyperliquid mainnet whether the address has an account and refuses the deposit if not, because Hyperliquid testnet only opens accounts for addresses that exist on mainnet and anything else is lost (it happened to our own test deposit, below).
+- **Withdraw:** a wallet-signed `withdraw3` to the same address on Arbitrum; Hyperliquid charges $1.
+- **Dry run (Check order):** signs the exact order with a throwaway key that has no account and sends it to `/exchange`; Hyperliquid answers "User or API Wallet 0x… does not exist" with the address it recovered. A match proves our hashing and signing are byte-exact; nothing can trade.
+
+### What is verified for Hyperliquid
+- Signature dry run against the **real** testnet and mainnet `/exchange` (`npm run test:live -- tests/live/hyperliquid.test.ts`): passed 2026-10-08 on both.
+- Sign vectors, rounding against the official SDK's formula (600 samples), liquidation and funding against the documented formulas, parsers on recorded mainnet and testnet frames (unit + differential tests).
+- E2E against `tests/mock/hyperliquid.ts`, which verifies every agent approval, L1 order signature and withdraw3 signature.
+
+### Not verified for Hyperliquid
+- **No real order, TP/SL, close, flip or cancel has been sent with a funded account.** The live round trip in `tests/live/hyperliquid.test.ts` needs a funded testnet key (`HL_TESTNET_KEY_FILE`).
+- Our test address `0xEAA4…7D81` sent a 19 USDC CCTP deposit on 2026-10-08 (Arbitrum Sepolia tx `0x65c15cbd…7a7e`, HyperEVM forward tx `0xfa6018b4…09d6`). Circle minted and forwarded 18.8 USDC to the CoreDepositWallet, but Hyperliquid testnet never created the account (`userRole: missing`, `coreUserExists` false), the known testnet behaviour in hyperliquid-dex/node#138. Unlocking testnet needs that address to have a Hyperliquid **mainnet** account (a ≥5 USDC mainnet deposit), which this project's rules do not allow. Details: `docs/live-hyperliquid-testnet.json`.
+- The deposit and withdraw flows have only run against the mock (the deposit's Arbitrum Sepolia transaction did go through on-chain).
 
 ## Trading safety
 
@@ -78,8 +100,8 @@ npm run record:mainnet # re-record the read-only mainnet fixtures
 ```
 
 - **Property tests** (`tests/unit`): probability bounds and monotonicity, strike bracketing, never using dead instruments, cost ≥ 0, size on step and ≥ minimum, tick-aligned limits, max loss = debit + fees, payoff ≤ width − debit, Confirm never enabled without a live price / with a short balance / in the wrong universe, ticker parsing round-trips and never throws, EIP-712 typed data hashes to the exchange digest, leg-2 failure always leaves you flat or flagged.
-- **Differential tests** (`tests/diff`): the old single-file prototype's pricing code is extracted verbatim from `tests/fixtures/old-prototype.html` and compared with the new modules on thousands of random inputs. Intentional differences are asserted and documented in the test file.
-- **E2E** (`tests/e2e`): real user flows in Chromium (desktop and mobile) against `tests/mock/server.ts`, which replays frames recorded from testnet (`npm run record`) and verifies every login and order signature. An injected EIP-1193 mock wallet signs with a fixed test key.
+- **Differential tests** (`tests/diff`): the app's maths against independent references: perp sizing, P&L and liquidation against an exact-rational reference (`perp-reference`), Hyperliquid rounding, liquidation and funding against the official SDK formula and docs (`hl-reference`), and the old single-file prototype's pricing code is extracted verbatim from `tests/fixtures/old-prototype.html` and compared with the new modules on thousands of random inputs. Intentional differences are asserted and documented in the test file.
+- **E2E** (`tests/e2e`): real user flows in Chromium (desktop and mobile) against `tests/mock/server.ts` (Derive) and `tests/mock/venues-server.ts` (Hyperliquid, port 8788), which replay frames recorded from testnet (`npm run record`) and verifies every login and order signature. An injected EIP-1193 mock wallet signs with a fixed test key.
 - **Live smoke** (`tests/live`, never in CI): logs in on testnet, places a minimum-size ETH call spread on subaccount 87139 (or `DERIVE_SUBACCOUNT_ID`), checks fills and positions, then closes it.
 
   ```bash
@@ -128,7 +150,7 @@ src/
   lib/history.ts       order/trade history and realised P&L per closed spread
   lib/perp.ts          perp parsers, sizing, fees, funding, liquidation, the order builder
   lib/perpHistory.ts   perp realised P&L (average cost), fees, funding
-  venues/              PerpVenue interface + the Derive adapter
+  venues/              PerpVenue interface, the Derive adapter, hyperliquid/ (client, signing, msgpack, orders, rules, parse, deposit)
   ui/                  DOM controller and HTML views
 tests/                 unit, diff, e2e, live, mock server, recorded fixtures
 ```
@@ -145,5 +167,5 @@ See "Funding mainnet" in `docs/qa-mainnet.md` sections 5–7. In short: hold USD
 - RFQ execution is not used: testnet makers do not quote RFQs. `private/rfq_get_best_quote` is used as a no-signature margin and fee check before you confirm.
 - Perp liquidation price is an estimate from the subaccount's maintenance headroom assuming only that perp moves; options and other perps in the same subaccount move it too. Derive's own figure is shown in Portfolio when it reports one.
 - Take-profit / stop-loss always need a wallet signature (Derive requires 30–90-day trigger signatures).
-- Only Derive is wired as a perp venue so far.
+- Hyperliquid is wired but not live-tested (see above).
 - The wallet must own the Derive v3 account, or be a session key registered for it on derive.xyz (enter the owner address in the sign-in sheet).

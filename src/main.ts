@@ -5,6 +5,8 @@ import { startApp } from "./ui/app.ts";
 // the published app: pointing a real wallet at an untrusted server would let it
 // collect valid Derive order signatures.
 const params = new URLSearchParams(location.search);
-const wsOverride = import.meta.env.VITE_E2E === "1" ? params.get("ws") : null;
+const e2e = import.meta.env.VITE_E2E === "1";
+const wsOverride = e2e ? params.get("ws") : null;
+const hlOverride = e2e ? params.get("hl") : null;
 
-startApp({ wsOverride });
+startApp({ wsOverride, hlOverride });

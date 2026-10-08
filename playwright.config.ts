@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const MOCK_PORT = 8787;
 const WEB_PORT = 4174;
+const VENUES_PORT = 8788;
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -29,6 +30,11 @@ export default defineConfig({
     {
       command: `node --experimental-strip-types --no-warnings tests/mock/server.ts ${MOCK_PORT}`,
       port: MOCK_PORT,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: `node --experimental-strip-types --no-warnings tests/mock/venues-server.ts ${VENUES_PORT}`,
+      port: VENUES_PORT,
       reuseExistingServer: !process.env.CI,
     },
     {

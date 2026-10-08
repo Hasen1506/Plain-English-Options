@@ -1,0 +1,24 @@
+{
+ "status": "blocked: no live round trip yet",
+ "checked_at": "2026-10-08T05:40:00Z",
+ "address": "0xEAA409Dca3F98a1697759DA3FB93A9D416Ed7D81",
+ "signature_dry_run": {
+  "testnet": "passed 2026-10-08 (exchange recovered our throwaway signer)",
+  "mainnet": "passed 2026-10-08 (exchange recovered our throwaway signer)",
+  "command": "npm run test:live -- tests/live/hyperliquid.test.ts"
+ },
+ "deposit_attempt": {
+  "amount_usdc": "19",
+  "route": "Circle CCTP v2, Arbitrum Sepolia CctpExtension 0x8E4e3d0E95C1bEC4F3eC7F69aa48473E0Ab6eB8D -> HyperEVM testnet CctpForwarder 0x02e39ECb8368b41bF68FF99ff351aC9864e5E2a2 -> CoreDepositWallet 0x0B80659a4076E9E93C7DbE0f10675A16a3e5C206",
+  "arbitrum_sepolia_burn_tx": "0x65c15cbd42dcb5b34744aaece09e483e57a35bb8f22e2a610907aa5a85287a7e",
+  "hyperevm_forward_tx": "0xfa6018b4c756348eb15347aea8df4714c38b9ffb99ce3b7b4f53baf0807409d6",
+  "circle_iris": "status complete, forwardState COMPLETE, feeExecuted 0.20 USDC, 18.80 USDC minted to the forwarder",
+  "hypercore": "18.8 USDC credited to the CoreDepositWallet's own HyperCore spot balance (spotTransfer, 2026-10-08 05:21:27Z); the CoreWriter send of 18.79 USDC to the user never executed",
+  "user_state_after": "userRole missing, clearinghouseState 0, spot balances empty, coreUserExists precompile 0x…0810 = false",
+  "cause": "Hyperliquid testnet does not create HyperCore accounts for addresses with no Hyperliquid mainnet account (testnet faucet docs; github.com/hyperliquid-dex/node/issues/138). The address has userRole missing on mainnet too.",
+  "recoverable_within_rules": false,
+  "fix": "the address needs a Hyperliquid mainnet account (>= 5 USDC mainnet deposit), which the project's no-mainnet-deposit rule forbids; or run the round trip with a wallet that already has one",
+  "app_change": "the deposit sheet now asks Hyperliquid mainnet userRole first on testnet and refuses with 'Deposit was not sent' when the address is missing"
+ },
+ "round_trip": null
+}

@@ -1,11 +1,14 @@
 import { expect, type Page } from "@playwright/test";
-import { getBytes, isHexString, Interface, TypedDataEncoder, Wallet } from "ethers";
+import { getBytes, isHexString, Interface, TypedDataEncoder, Wallet, verifyTypedData, Signature } from "ethers";
+import { CCTP_EXTENSION_ABI, RECEIVE_WITH_AUTH_TYPES } from "../../src/venues/hyperliquid/deposit.ts";
 import WebSocket from "ws";
 import pub from "../fixtures/testnet-public.json" with { type: "json" };
 
 export const TEST_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // Hardhat #1, test-only
 export const RECORDED_AT = pub.recordedAt;
 const MOCK = "ws://127.0.0.1:8787/ws";
+export const VENUES = "http://127.0.0.1:8788";
+const CCTP = new Interface(CCTP_EXTENSION_ABI);
 
 export interface WalletOpts {
   wallet?: boolean;
@@ -21,7 +24,10 @@ export async function openApp(page: Page, scenario = "default", opts: WalletOpts
   await page.clock.install({ time: RECORDED_AT + 60_000 });
   const w = opts.wallet !== false ? await injectWallet(page, sid, opts) : null;
   const ws = `${MOCK}?scenario=${scenario}&sid=${sid}`;
-  await page.goto(`/?ws=${encodeURIComponent(ws)}`);
+  const hl = `${VENUES}/hl/{net}/${sid}`;
+  // Circle's fee API (CORS open in real life): the recorded answer of 2026-10-08
+  await page.route(/iris-api(-sandbox)?\.circle\.com/, (r) => r.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify([{ finalityThreshold: 1000, minimumFee: 0, forwardFee: { low: 200000, med: 200000, high: 200000 } }, { finalityThreshold: 2000, minimumFee: 0, forwardFee: { low: 200000, med: 200000, high: 200000 } }]) }));
+  await page.goto(`/?ws=${encodeURIComponent(ws)}&hl=${encodeURIComponent(hl)}`);
   await expect(page.locator("#liveTxt")).toContainText("Live · Derive testnet", { timeout: 15_000 });
   return { sid, wallet: w, mock: (method: string, params: object = {}) => mockCall(sid, scenario, method, params, w?.address) };
 }
@@ -111,6 +117,11 @@ export async function injectWallet(page: Page, sid: string, opts: WalletOpts = {
       }
       case "eth_call": {
         const data = String((params[0] as { data: string }).data);
+        if (data.startsWith("0x3644e515")) {
+          // DOMAIN_SEPARATOR() of a Circle USDC ("USD Coin", version 2) on the current chain
+          const to = String((params[0] as { to: string }).to);
+          return TypedDataEncoder.hashDomain({ name: "USD Coin", version: "2", chainId: parseInt(chainId, 16), verifyingContract: to });
+        }
         const d = ERC20.parseTransaction({ data });
         if (d?.name === "balanceOf") return "0x" + usdc.toString(16);
         if (d?.name === "allowance") return "0x" + allowance.toString(16);
@@ -129,6 +140,20 @@ export async function injectWallet(page: Page, sid: string, opts: WalletOpts = {
       case "eth_sendTransaction": {
         const tx = params[0] as { to: string; data: string };
         const hash = "0x" + (++nonce).toString(16).padStart(64, "0");
+        const cctp = tx.data.startsWith(CCTP.getFunction("batchDepositForBurnWithAuth")!.selector) ? CCTP.parseTransaction({ data: tx.data }) : null;
+        if (cctp) {
+          // CctpExtension: the authorization must be the wallet's own, for exactly the burned amount, to this contract
+          const [auth, burn] = cctp.args as unknown as [{ amount: bigint; authValidAfter: bigint; authValidBefore: bigint; authNonce: string; v: bigint; r: string; s: string }, { amount: bigint; maxFee: bigint }];
+          const usdcAddr = parseInt(chainId, 16) === 421614 ? "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d" : "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+          const signer = verifyTypedData({ name: "USD Coin", version: "2", chainId: parseInt(chainId, 16), verifyingContract: usdcAddr }, RECEIVE_WITH_AUTH_TYPES, { from: w.address, to: tx.to, value: auth.amount, validAfter: auth.authValidAfter, validBefore: auth.authValidBefore, nonce: auth.authNonce }, Signature.from({ v: Number(auth.v), r: auth.r, s: auth.s }));
+          if (signer !== w.address || auth.amount !== burn.amount || auth.amount > usdc) throw new Error("execution reverted");
+          usdc -= auth.amount;
+          const net = parseInt(chainId, 16) === 421614 ? "testnet" : "mainnet";
+          await fetch(`${VENUES}/hl/${net}/${sid}/mock/credit`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: w.address, usdc: Number(burn.amount - burn.maxFee) / 1e6 }) });
+          receipts.set(hash, 0);
+          calls.push("cctp:" + String(auth.amount));
+          return hash;
+        }
         const e = ERC20.parseTransaction({ data: tx.data });
         if (e?.name === "approve") allowance = e.args[1] as bigint;
         const a = AM.parseTransaction({ data: tx.data });

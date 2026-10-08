@@ -35,6 +35,8 @@ export interface PerpMarket {
   maxLeverage: number;
   maxRatePerHour: number | null;
   minRatePerHour: number | null;
+  /** Smallest order value the venue accepts, USD (Hyperliquid: $10). */
+  minNotional?: number;
 }
 
 /** Derive v3's perp instrument: a PerpMarket plus what its order signature needs. */
@@ -357,8 +359,12 @@ export function quotePerp(i: PerpInput): { ok: true; quote: PerpQuote } | { ok: 
       problems.push(`Post-only ${side} must be ${side === "buy" ? "below the ask" : "above the bid"} (${touch}) or it would be rejected`);
     } else if (crosses) warnings.push("This limit crosses the book, so it fills now as a taker");
   }
-  const sized = sizePerp(i.risk, i.leverage, entry, inst);
+  let sized = sizePerp(i.risk, i.leverage, entry, inst);
   if (!sized) return { ok: false, reason: "bad-amount" };
+  if (inst.minNotional && !sized.tooLarge && Number(sized.amount) * entry < inst.minNotional) {
+    // venue minimum order value: the smallest size at or above it, flagged like the size minimum
+    sized = { amount: alignUp((inst.minNotional * 1.005) / entry, inst.amountStep), belowMinimum: true, tooLarge: false };
+  }
   if (sized.tooLarge) return { ok: false, reason: "too-large" };
   const n = Number(sized.amount);
   const notional = n * entry;
@@ -451,16 +457,16 @@ const trimLev = (x: number) => String(Math.floor(x * 100) / 100);
 const money2 = (v: number) => (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(2);
 
 /** The sentence under the builder: what can go wrong, in plain words. */
-export function maxLossWords(q: PerpQuote, asset: string, subValue: number | null): string {
+export function maxLossWords(q: PerpQuote, asset: string, subValue: number | null, venue = "Derive", account = "subaccount"): string {
   const pctMove = Math.abs(q.riskPrice / q.entry - 1) * 100;
   const way = q.dir === "long" ? "falls" : "rises";
   const own = `If ${asset} ${way} ${pctMove.toFixed(1)}% to ${px(q.riskPrice)}, you have lost the ${money2(q.putIn)} you put in.`;
-  if (q.liqPrice === null) return own + (subValue === null ? " Connect a wallet to see where Derive would liquidate." : " Your subaccount has enough collateral that this position alone would not be liquidated.");
+  if (q.liqPrice === null) return own + (subValue === null ? " Connect a wallet to see where ${venue} would liquidate." : ` Your ${account} has enough collateral that this position alone would not be liquidated.`);
   const liqPct = Math.abs((q.liqMove ?? 0) * 100);
   const beyond = q.dir === "long" ? q.liqPrice < q.riskPrice : q.liqPrice > q.riskPrice;
   return (
     own +
-    ` Your whole subaccount${subValue !== null ? ` (${money2(subValue)})` : ""} backs this trade, so Derive liquidates near ${px(q.liqPrice)} (${liqPct.toFixed(1)}% away)` +
+    ` Your whole ${account}${subValue !== null ? ` (${money2(subValue)})` : ""} backs this trade, so ${venue} liquidates near ${px(q.liqPrice)} (${liqPct.toFixed(1)}% away)` +
     (beyond ? "; losses can run past what you put in until then." : ".") +
     (q.stopLoss ? ` Your stop-loss at ${px(Number(q.stopLoss))} closes it first, losing about ${money2(Math.max(0, q.lossAtSl ?? 0) + q.estFee)}.` : " Add a stop-loss to cap it.")
   );
