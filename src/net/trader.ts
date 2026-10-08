@@ -167,16 +167,16 @@ export async function placeSpread(ctx: Ctx, q: SpreadQuote, onStep?: (s: string)
   const idx = L.ticker.index || S.ticker.index;
   onStep?.("Sign the orders in your wallet (3 signatures)");
   const longOrder = await signOrder(
-    { inst: L.instrument, direction: "buy", amount: q.amount, limitPrice: q.longPrice, maxFee: maxFeePerUnit(L.instrument, idx, Number(q.longPrice)), tif: "fok" },
+    { inst: L.instrument, direction: "buy", amount: q.amount, limitPrice: q.longLimit, maxFee: maxFeePerUnit(L.instrument, idx, Number(q.longLimit), q.n), tif: "fok" },
     ctx,
   );
   const shortOrder = await signOrder(
-    { inst: S.instrument, direction: "sell", amount: q.amount, limitPrice: q.shortPrice, maxFee: maxFeePerUnit(S.instrument, idx, Number(q.shortPrice)), tif: "fok" },
+    { inst: S.instrument, direction: "sell", amount: q.amount, limitPrice: q.shortLimit, maxFee: maxFeePerUnit(S.instrument, idx, Number(q.shortLimit), q.n), tif: "fok" },
     ctx,
   );
   const unwindPx = protectiveLimit("sell", L.ticker, L.instrument);
   const unwindOrder = await signOrder(
-    { inst: L.instrument, direction: "sell", amount: q.amount, limitPrice: unwindPx, maxFee: maxFeePerUnit(L.instrument, idx, Number(unwindPx)), tif: "ioc", label: "peo-unwind" },
+    { inst: L.instrument, direction: "sell", amount: q.amount, limitPrice: unwindPx, maxFee: maxFeePerUnit(L.instrument, idx, Number(unwindPx), q.n), tif: "ioc", label: "peo-unwind" },
     ctx,
   );
 
@@ -206,7 +206,7 @@ export async function placeSpread(ctx: Ctx, q: SpreadQuote, onStep?: (s: string)
 async function unwindLong(ctx: Ctx, inst: Instrument, t: Ticker, amount: number, idx: number): Promise<OrderOutcome> {
   const px = protectiveLimit("sell", t, inst);
   const o = await signOrder(
-    { inst, direction: "sell", amount: alignDown(amount, inst.amountStep), limitPrice: px, maxFee: maxFeePerUnit(inst, idx, Number(px)), tif: "ioc", label: "peo-unwind" },
+    { inst, direction: "sell", amount: alignDown(amount, inst.amountStep), limitPrice: px, maxFee: maxFeePerUnit(inst, idx, Number(px), amount), tif: "ioc", label: "peo-unwind" },
     ctx,
   );
   return sendOrder(ctx.rpc, o);
@@ -235,7 +235,7 @@ export async function closePosition(ctx: Ctx, inst: Instrument, t: Ticker, amoun
   const side = amount > 0 ? "sell" : "buy";
   const px = protectiveLimit(side, t, inst);
   const o = await signOrder(
-    { inst, direction: side, amount: alignDown(Math.abs(amount), inst.amountStep), limitPrice: px, maxFee: maxFeePerUnit(inst, t.index, Number(px)), tif: "ioc", reduceOnly: true, label: "peo-close" },
+    { inst, direction: side, amount: alignDown(Math.abs(amount), inst.amountStep), limitPrice: px, maxFee: maxFeePerUnit(inst, t.index, Number(px), Math.abs(amount)), tif: "ioc", reduceOnly: true, label: "peo-close" },
     ctx,
   );
   return sendOrder(ctx.rpc, o);

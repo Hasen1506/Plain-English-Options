@@ -1,0 +1,91 @@
+{
+ "at": "2026-10-08T01:30:53.007Z",
+ "network": "testnet",
+ "subaccount": 87139,
+ "balanceBefore": 1991.186407047954,
+ "legs": [
+  "ETH-20261016-2500-C",
+  "ETH-20261016-2700-C"
+ ],
+ "amount": "0.1",
+ "quoted": {
+  "longAsk": "114.9",
+  "shortBid": "18.8",
+  "debit": 96.10000000000001,
+  "estFees": 1.154716,
+  "maxLoss": 10.764716000000002
+ },
+ "preTrade": {
+  "valid": true,
+  "reason": null,
+  "estFee": 0.577367258141,
+  "estCost": 9.110387222451
+ },
+ "open": {
+  "status": "filled",
+  "message": "Both legs filled.",
+  "fees": 1.154734516282,
+  "netDebit": 9.610000000000001,
+  "orders": [
+   {
+    "id": "ab6e7c4e-4d72-4a9e-b380-4673ab0bca32",
+    "instrument": "ETH-20261016-2500-C",
+    "side": "buy",
+    "status": "filled",
+    "filled": 0.1,
+    "avgPrice": 114.9,
+    "fee": 0.577367258141,
+    "fills": [
+     {
+      "tradeId": "7a47e7b6-f169-41c3-877f-9ad45230d7a2",
+      "price": 114.9,
+      "amount": 0.1,
+      "fee": 0.577367258141
+     }
+    ],
+    "error": null
+   },
+   {
+    "id": "4c2c5892-9663-4f82-8fcb-c54dc841ebf1",
+    "instrument": "ETH-20261016-2700-C",
+    "side": "sell",
+    "status": "filled",
+    "filled": 0.1,
+    "avgPrice": 18.8,
+    "fee": 0.577367258141,
+    "fills": [
+     {
+      "tradeId": "e6514549-a01e-4f1d-82ec-9bf4a7ba2bc5",
+      "price": 18.8,
+      "amount": 0.1,
+      "fee": 0.577367258141
+     }
+    ],
+    "error": null
+   }
+  ]
+ },
+ "close": [
+  {
+   "id": "f01cf825-3723-4506-84ce-ecd24ace9110",
+   "instrument": "ETH-20261016-2700-C",
+   "side": "buy",
+   "status": "filled",
+   "filled": 0.1,
+   "avgPrice": 22.8,
+   "fee": 0.577366972108,
+   "error": null
+  },
+  {
+   "id": "a614404f-8d35-4300-b26c-0cb2c87d758b",
+   "instrument": "ETH-20261016-2500-C",
+   "side": "sell",
+   "status": "filled",
+   "filled": 0.1,
+   "avgPrice": 110.9,
+   "fee": 0.577369465835,
+   "error": null
+  }
+ ],
+ "balanceAfter": 1988.11379814819
+}

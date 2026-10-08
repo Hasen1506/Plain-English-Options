@@ -47,7 +47,7 @@ describe("Black-Scholes", () => {
 describe("probabilityAt", () => {
   it("is in [0,1]", () => {
     fc.assert(
-      fc.property(fc.constantFrom("up", "down" as const), fwd, fwd, T, smileArb, (dir, F, K, t, sm) => {
+      fc.property(fc.constantFrom("up" as const, "down" as const), fwd, fwd, T, smileArb, (dir, F, K, t, sm) => {
         const p = probabilityAt(dir, F, K, t, sm);
         return p !== null && p >= 0 && p <= 1;
       }),

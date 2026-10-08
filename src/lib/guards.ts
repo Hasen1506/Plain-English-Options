@@ -32,7 +32,7 @@ export function confirmState(i: ConfirmInput): ConfirmState {
   if (q.priced !== "book") return no("mark-only", "No live order book for one leg");
   if (!i.connected) return no("wallet", "Connect wallet to trade");
   if (i.assetRU === null || i.subaccountRU === null || i.subaccountRU !== i.assetRU) return no("wrong-universe", "Pick a subaccount for this asset");
-  if (i.balance === null || !(i.balance >= q.maxLoss)) return no("balance", "Not enough collateral");
+  if (i.balance === null || !(i.balance >= q.worstLoss)) return no("balance", "Not enough collateral");
   if (!q.depthOk) return no("depth", "Not enough size on the book. Lower the amount");
   if (!i.agreed) return no("agree", "Tick the box to continue");
   if (i.network === "mainnet" && i.typed.trim().toUpperCase() !== MAINNET_PHRASE) return no("phrase", `Type ${MAINNET_PHRASE} to confirm`);

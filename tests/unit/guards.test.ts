@@ -6,6 +6,7 @@ import type { SpreadQuote } from "../../src/lib/spread.ts";
 
 const quoteArb = fc.record({
   maxLoss: fc.double({ min: 0.01, max: 1e6, noNaN: true }),
+  worstLoss: fc.double({ min: 0.01, max: 1.1e6, noNaN: true }),
   priced: fc.constantFrom("book" as const, "mark" as const),
   depthOk: fc.boolean(),
 });
@@ -37,7 +38,7 @@ describe("confirm guard (property)", () => {
         expect(q.priced).toBe("book");
         expect(i.quoteAgeMs).not.toBeNull();
         expect(i.quoteAgeMs!).toBeLessThanOrEqual(QUOTE_MAX_AGE_MS);
-        expect(i.balance!).toBeGreaterThanOrEqual(q.maxLoss);
+        expect(i.balance!).toBeGreaterThanOrEqual(q.worstLoss);
         expect(i.subaccountRU).not.toBeNull();
         expect(i.subaccountRU).toBe(i.assetRU);
         expect(i.connected && i.agreed && !i.busy && q.depthOk).toBe(true);
@@ -48,11 +49,11 @@ describe("confirm guard (property)", () => {
     );
   });
   it("is enabled when everything is in order", () => {
-    const base = { quote: { maxLoss: 100, priced: "book", depthOk: true }, quoteAgeMs: 1000, connected: true, balance: 2000, subaccountRU: 1, assetRU: 1, agreed: true, network: "testnet", typed: "", busy: false };
+    const base = { quote: { maxLoss: 100, worstLoss: 102, priced: "book", depthOk: true }, quoteAgeMs: 1000, connected: true, balance: 2000, subaccountRU: 1, assetRU: 1, agreed: true, network: "testnet", typed: "", busy: false };
     expect(confirmState(cast(base))).toMatchObject({ enabled: true, label: "Confirm and pay $100" });
     expect(confirmState(cast({ ...base, network: "mainnet" })).reason).toBe("phrase");
     expect(confirmState(cast({ ...base, network: "mainnet", typed: "real money" }))).toMatchObject({ enabled: true, label: "Pay real money: $100" });
-    expect(confirmState(cast({ ...base, balance: 99.99 })).reason).toBe("balance");
+    expect(confirmState(cast({ ...base, balance: 101 })).reason).toBe("balance"); // covers the cost but not the slippage cap
     expect(confirmState(cast({ ...base, subaccountRU: 0 })).reason).toBe("wrong-universe");
     expect(confirmState(cast({ ...base, quoteAgeMs: QUOTE_MAX_AGE_MS + 1 })).reason).toBe("stale");
   });

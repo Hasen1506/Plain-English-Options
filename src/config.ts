@@ -45,5 +45,7 @@ export const TICKER_REFRESH_MS = 10_000;
 export const QUOTE_MAX_AGE_MS = 60_000;
 /** Expiries closer than this are hidden (too little time for a "by <date>" view). */
 export const MIN_EXPIRY_MS = 2 * 86_400_000;
+/** Price protection on entry orders: fill-or-kill limits are this much worse than the quoted book. */
+export const SLIPPAGE = 0.02;
 /** Typed phrase required to confirm a mainnet trade. */
 export const MAINNET_PHRASE = "REAL MONEY";

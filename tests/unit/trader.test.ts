@@ -35,7 +35,11 @@ function mockRpc(plan: Behaviour[]) {
       if (b === "error") throw new Error("Order would not fully fill");
       const amt = Number(p.amount);
       const filled = b === "fill" ? amt : b === "partial" ? Math.round(amt * 50) / 100 : 0;
-      const px = Number(p.limit_price);
+      // fills happen at the book (price improvement vs the slippage-capped limit)
+      const lim = Number(p.limit_price);
+      const book = p.direction === "buy" ? (inst === L ? 233.7 : 60) : inst === L ? 230 : 58.3;
+      if (p.direction === "buy" ? lim < book : lim > book) throw new Error("limit does not cross the book");
+      const px = p.time_in_force === "fok" ? book : lim;
       return {
         order: { order_id: "oid-" + sent.length, order_status: filled === amt ? "filled" : "cancelled", filled_amount: String(filled), average_price: String(filled ? px : 0) },
         trades: filled ? [{ trade_id: "t" + sent.length, trade_price: String(px), trade_amount: String(filled), trade_fee: "1.27" }] : [],

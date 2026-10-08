@@ -70,6 +70,11 @@ describe("spread quote (property)", () => {
         expect(toE18(q.amount) >= toE18(s.legs.long.instrument.minAmount)).toBe(true);
         expect(isAligned(q.longPrice, s.legs.long.instrument.tickSize)).toBe(true);
         expect(isAligned(q.shortPrice, s.legs.short.instrument.tickSize)).toBe(true);
+        expect(isAligned(q.longLimit, s.legs.long.instrument.tickSize)).toBe(true);
+        expect(isAligned(q.shortLimit, s.legs.short.instrument.tickSize)).toBe(true);
+        expect(Number(q.longLimit)).toBeGreaterThanOrEqual(Number(q.longPrice));
+        expect(Number(q.shortLimit)).toBeLessThanOrEqual(Number(q.shortPrice));
+        expect(q.worstLoss).toBeGreaterThanOrEqual(q.maxLoss - 1e-9);
         expect(q.maxLoss).toBeCloseTo(q.n * q.debit + q.fees, 6);
         expect(Math.abs(q.cost - q.n * (Number(q.longPrice) - Number(q.shortPrice)))).toBeLessThan(1e-6 * Math.max(1, q.cost));
         // the user gets at least what they asked for (fees included), unless the exchange minimum forced a bigger size
@@ -145,11 +150,13 @@ describe("helpers", () => {
       { numRuns: 3000 },
     );
   });
-  it("maxFeePerUnit covers the actual per-unit taker fee", () => {
+  it("maxFeePerUnit covers the exchange's minimum (2 × rate × max(index, price) + base fee ÷ amount)", () => {
+    // testnet: amount 0.1 @ index 2581 required ≥ 6.548 per unit
+    expect(Number(maxFeePerUnit(mkInst({ strike: 1, type: "C" }), 2581.6, 113.8, 0.1))).toBeGreaterThanOrEqual(6.548);
     fc.assert(
-      fc.property(fc.double({ min: 0.01, max: 2e5, noNaN: true }), fc.double({ min: 0, max: 1e4, noNaN: true }), (idx, px) => {
+      fc.property(fc.double({ min: 0.01, max: 2e5, noNaN: true }), fc.double({ min: 0, max: 1e4, noNaN: true }), fc.double({ min: 0.01, max: 1e4, noNaN: true }), (idx, px, amt) => {
         const inst = mkInst({ strike: 1, type: "C" });
-        return Number(maxFeePerUnit(inst, idx, px)) >= Math.min(inst.takerFeeRate * idx, inst.markFeeCap * px) + inst.baseFee;
+        return Number(maxFeePerUnit(inst, idx, px, amt)) >= 2 * inst.takerFeeRate * Math.max(idx, px) + inst.baseFee / amt;
       }),
       { numRuns: 2000 },
     );

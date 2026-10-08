@@ -7,6 +7,7 @@
 import type { Instrument, Ticker } from "./ticker.ts";
 import type { Direction } from "./pricing.ts";
 import { alignDown, alignUp, toE18, fromE18 } from "./units.ts";
+import { SLIPPAGE } from "../config.ts";
 
 export interface Leg {
   instrument: Instrument;
@@ -73,8 +74,11 @@ export interface SpreadQuote {
   legs: SpreadLegs;
   amount: string; // contracts per leg, multiple of amount_step, >= minimum_amount
   n: number;
-  longPrice: string; // tick-aligned limit for the buy leg
-  shortPrice: string; // tick-aligned limit for the sell leg
+  longPrice: string; // tick-aligned book price of the buy leg (ask)
+  shortPrice: string; // tick-aligned book price of the sell leg (bid)
+  longLimit: string; // fill-or-kill limit actually signed: ask + slippage
+  shortLimit: string; // bid − slippage
+  worstLoss: number; // n × (longLimit − shortLimit) + fees: the most Confirm can cost
   debit: number; // per spread, = longPrice - shortPrice
   cost: number; // n × debit (premium paid)
   fees: number; // estimated Derive taker fees, both legs
@@ -113,7 +117,7 @@ export function sizeContracts(x: number, inst: Instrument): { amount: string; be
   return { amount: fromE18(toE18(floored)), belowMinimum: false };
 }
 
-export function quoteSpread(legs: SpreadLegs, profitWanted: number): { ok: true; quote: SpreadQuote } | { ok: false; reason: QuoteFail } {
+export function quoteSpread(legs: SpreadLegs, profitWanted: number, slippage = SLIPPAGE): { ok: true; quote: SpreadQuote } | { ok: false; reason: QuoteFail } {
   const l = legPrice(legs.long), s = legPrice(legs.short);
   if (!(l.px > 0) || !(s.px >= 0)) return { ok: false, reason: "no-price" };
   const li = legs.long.instrument, si = legs.short.instrument;
@@ -136,6 +140,11 @@ export function quoteSpread(legs: SpreadLegs, profitWanted: number): { ok: true;
   const cost = n * debit;
   const fees = takerFee(li, idx, Number(longPrice), n) + (hasShort ? takerFee(si, idx, Number(shortPrice), n) : 0);
   const per = (cost + fees) / n;
+  const lt = legs.long.ticker, st = legs.short.ticker;
+  const longLimit = alignUp(Math.min(Number(longPrice) * (1 + slippage), lt.maxPrice ?? Infinity), li.tickSize);
+  const shortLimit = hasShort ? alignDown(Math.max(Number(shortPrice) * (1 - slippage), st.minPrice ?? 0, Number(si.tickSize)), si.tickSize) : "0";
+  const worstFees = takerFee(li, idx, Number(longLimit), n) + (hasShort ? takerFee(si, idx, Number(shortLimit), n) : 0);
+  const worstLoss = Math.max(cost + fees, n * (Number(longLimit) - Number(shortLimit)) + worstFees);
   return {
     ok: true,
     quote: {
@@ -144,6 +153,9 @@ export function quoteSpread(legs: SpreadLegs, profitWanted: number): { ok: true;
       n,
       longPrice,
       shortPrice,
+      longLimit: toE18(longLimit) < toE18(longPrice) ? longPrice : longLimit,
+      shortLimit: hasShort && toE18(shortLimit) > toE18(shortPrice) ? shortPrice : shortLimit,
+      worstLoss,
       debit,
       cost,
       fees,
@@ -159,9 +171,14 @@ export function quoteSpread(legs: SpreadLegs, profitWanted: number): { ok: true;
 
 const maxDec = (a: string, b: string): string => (toE18(a) >= toE18(b) ? a : b);
 
-/** Per-unit max fee to sign (derive-ts default: 3 × (max(index, price) × taker rate + base fee)). */
-export function maxFeePerUnit(inst: Instrument, index: number, price: number): string {
-  const v = 3 * (Math.max(index, price) * inst.takerFeeRate + inst.baseFee);
+/**
+ * Per-unit max fee to sign. The exchange requires at least
+ * 2 × taker rate × max(index, price) + base fee ÷ amount (the base fee is per
+ * order, so it weighs more per unit on small orders; testnet rejected 0.1-lot
+ * orders signed without the ÷ amount term). Signed with 2× headroom.
+ */
+export function maxFeePerUnit(inst: Instrument, index: number, price: number, amount: number): string {
+  const v = 2 * (2 * Math.max(index, price) * inst.takerFeeRate + inst.baseFee / Math.max(amount, 1e-9));
   return alignUp(v, "0.000001");
 }
 

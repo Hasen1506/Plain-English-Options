@@ -65,7 +65,8 @@ export function reviewHtml(m: ReviewModel): string {
       ? `<div><dt>Exchange check</dt><dd class="x-ok">Passes margin${m.preTrade.estFee !== null ? " · fee ≈ " + h(usd2(m.preTrade.estFee)) : ""}</dd></div>`
       : `<div><dt>Exchange check</dt><dd class="x-dn">${h(m.preTrade.reason || "Would be rejected")}</dd></div>`
     : "";
-  const after = m.connected && m.balance !== null ? `<div data-bal><dt>Balance after</dt><dd${m.balance < q.maxLoss ? ' class="x-dn"' : ""}>${m.balance < q.maxLoss ? "Not enough collateral" : h(usd2(m.balance - q.maxLoss))}</dd></div>` : "";
+  const short = m.balance !== null && m.balance < q.worstLoss;
+  const after = m.connected && m.balance !== null ? `<div data-bal><dt>Balance after</dt><dd${short ? ' class="x-dn"' : ""}>${short ? "Not enough collateral" : h(usd2(m.balance - q.maxLoss))}</dd></div>` : "";
   return (
     `<div class="x-review"><div class="x-card"><div class="x-card__top"><span>Your position</span><button type="button" class="x-edit" id="edit">Edit</button></div>` +
     `<p class="x-rh">Make <mark style="background:#F3DE9A">${h(money(q.maxProfit))}</mark> if ${h(m.asset)} ends ${up ? "above" : "below"} <mark style="background:#BDEFCB">${h(price(q.legs.K2))}</mark> by <mark style="background:#D9D6FB">${h(m.dateLong)}</mark></p>` +
@@ -79,6 +80,7 @@ export function reviewHtml(m: ReviewModel): string {
     `<div><dt>Premium (net debit)</dt><dd>${h(usd2(q.cost))}</dd></div>` +
     `<div><dt>Derive fees</dt><dd>${h(usd2(q.fees))} · taker, both legs</dd></div>` +
     `<div><dt>Maximum loss</dt><dd class="x-dn">${h(usd2(q.maxLoss))}</dd></div>` +
+    `<div><dt>Price protection</dt><dd>Fills at the best book price, never above ${h(usd2(q.worstLoss))} (${Math.round((Number(q.longLimit) / Number(q.longPrice) - 1) * 100)}% slippage cap)</dd></div>` +
     `<div><dt>Maximum profit</dt><dd class="x-up">${h(usd2(q.maxProfit))}</dd></div>` +
     `<div><dt>Breakeven</dt><dd>${h(price(q.breakeven))}</dd></div>` +
     `<div><dt>Chance it happens</dt><dd>${m.probability === null ? "—" : h(pct(m.probability))} · at ${h(price(m.target))}</dd></div>` +
