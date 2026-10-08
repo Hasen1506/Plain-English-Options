@@ -141,3 +141,31 @@ body.is-mainnet .x-bal { box-shadow: 0 0 0 2px #b3261e; }
 .x-card label { display: block; font: 500 13px/1.4 var(--sans); color: #555; margin: 4px 0 6px; }
 .x-hist { margin-top: 24px; display: grid; gap: 14px; }
 .x-hist h2 { font: 600 22px/1.3 var(--sans); letter-spacing: -0.02em; margin: 0 0 10px; }
+/* ---------- perps ---------- */
+.x-perps { position: relative; }
+.x-perps > .x-card { margin-top: 14px; }
+.x-perps h2 { font: 600 20px/1.3 var(--sans); letter-spacing: -0.02em; margin: 0 0 10px; }
+.x-pill.is-down { background: #F7C6BC; }
+.x-order { display: grid; gap: 10px; }
+.x-order .x-seg { justify-self: start; background: #F2F1EE; }
+.x-order details summary { cursor: pointer; font: 600 14px/1.4 var(--sans); min-height: 32px; display: flex; align-items: center; }
+.x-order details label { margin-top: 10px; }
+.x-order .x-step { text-align: left; font-size: 13px; }
+.x-chk { display: flex !important; gap: 10px; align-items: center; font: 400 14px/1.4 var(--sans) !important; color: #151515 !important; margin-top: 10px !important; cursor: pointer; }
+.x-chk input { width: 20px; height: 20px; accent-color: #151515; margin: 0; flex: none; }
+.x-loss { font: 500 15px/1.5 var(--sans); margin: 0 0 6px; }
+.x-notes { margin: 6px 0 4px; padding-left: 18px; font: 500 13px/1.45 var(--sans); color: #7a4f00; }
+.x-warn-t { color: #a06400; }
+.x-link { border: 0; background: none; padding: 6px 0; min-height: 36px; font: 500 14px/1 var(--sans); color: #151515; cursor: pointer; display: inline-flex; gap: 1px; align-items: baseline; }
+#perpMarkets tr.is-sel { background: #F2F1EE; }
+#perpMarkets td, #perpPositions td { white-space: nowrap; }
+.x-acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+#perpPositions small, #perpPnl small { color: #666; font-size: 12px; }
+.x-perps #perpConfirmBox { margin-top: 14px; }
+.x-port .x-card, .x-hist .x-card, .x-perps .x-card { overflow-x: auto; }
+@media (max-width: 640px) {
+  #perpPop { position: fixed; left: 12px !important; right: 12px; top: auto !important; bottom: 12px; width: auto; }
+  .x-hide-s { display: none; }
+  #perpMarkets td, #perpMarkets th { padding: 8px 4px; font-size: 13px; }
+}
+.x-seg[hidden] { display: none; }
