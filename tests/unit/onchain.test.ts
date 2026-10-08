@@ -142,8 +142,8 @@ describe("deposit plans", () => {
     const plan = await planDeposit(p, net, owner, route.collateral, 1, "10", { kind: "new", managerId: 1, owner });
     const g = await estimateDepositGas(p, plan);
     expect(g.approximate).toBe(true);
-    expect(g.perStep).toEqual([60_000n, 250_000n]);
-    expect(g.totalWei).toBe(310_000n * 1_000_000_000n);
+    expect(g.perStep).toEqual([60_000n, 400_000n]);
+    expect(g.totalWei).toBe(460_000n * 1_000_000_000n);
   });
 
   it("waits for a receipt and fails loudly on a reverted transaction", async () => {
