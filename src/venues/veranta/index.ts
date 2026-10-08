@@ -170,7 +170,12 @@ export function createVerantaVenue(host: VerantaHost) {
     },
     async disconnect() {
       try {
-        if (practice) await A().endPractice();
+        if (practice) {
+          // leave nothing approved behind: any unused USDC allowance goes back to 0
+          const u = await A().usdc().catch(() => null);
+          if (u && u.allowance > 0) await A().approveExact("0");
+          await A().endPractice();
+        }
       } finally {
         practice = null;
         positions = [];
