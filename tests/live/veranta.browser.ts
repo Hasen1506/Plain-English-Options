@@ -46,7 +46,9 @@ test("Veranta testnet in the browser: practice account → long with TP/SL → c
   await expect(page.locator("#perpAcct")).toContainText(/\$1,0\d\d|\$99\d/, { timeout: 180_000 });
   const who = await page.locator("#venueWho").innerText();
   const trader = await page.locator("#venueWho [data-address]").getAttribute("data-address");
+  const session = await page.locator("#venueWho [data-session]").getAttribute("data-session");
   expect(trader).toBeTruthy();
+  expect(session).toBeTruthy();
   steps.push({ step: "practice account", said: who.trim(), at: new Date().toISOString() });
 
   // 2. market long $50 × 5 with TP/SL, signed by the session key
@@ -111,13 +113,18 @@ test("Veranta testnet in the browser: practice account → long with TP/SL → c
   expect(ud.positions.length).toBe(0);
   expect(ud.limitOrders.length).toBe(0);
 
-  // 7. disconnect revokes the session key
+  // 7. disconnect revokes the session key and leaves no USDC allowance
   await card.locator("#venueDisconnect").click();
   await expect(page.locator("#perpVenueConnect")).toBeVisible({ timeout: 120_000 });
   expect(errors).toEqual([]);
+  const ro = new Veranta({ network: "testnet", trader: trader as `0x${string}`, env: {} });
+  const allowance = (await ro.account.allowance()) as { allowance?: string; balance?: string };
+  const delegation = (await ro.account.delegationStatus(session as `0x${string}`)) as { isEnabled?: boolean; canSignIntents?: boolean };
+  expect(Number(allowance.allowance)).toBe(0);
+  expect(delegation.canSignIntents).toBe(false);
 
   writeFileSync(
     new URL("../../docs/live-veranta-testnet.json", import.meta.url),
-    JSON.stringify({ at: new Date().toISOString(), how: "npm run test:live:browser (production build in Chromium, veranta-sdk 0.3.1, Veranta testnet fork of Base)", practiceTrader: trader, ui: steps, veranta: hist.trades.map((t) => ({ type: t.type, side: t.side, orderId: t.orderId, txHash: t.txHash, collateral: t.collateral, leverage: t.leverage, openPrice: t.openPrice, closePrice: t.closePrice, netPnl: t.netPnl, partial: t.isPartialClose })), flatAfter: { positions: ud.positions.length, limitOrders: ud.limitOrders.length } }, null, 1),
+    JSON.stringify({ at: new Date().toISOString(), how: "npm run test:live:browser (production build in Chromium, veranta-sdk 0.3.1, Veranta testnet fork of Base)", practiceTrader: trader, ui: steps, veranta: hist.trades.map((t) => ({ type: t.type, side: t.side, orderId: t.orderId, txHash: t.txHash, collateral: t.collateral, leverage: t.leverage, openPrice: t.openPrice, closePrice: t.closePrice, netPnl: t.netPnl, partial: t.isPartialClose })), flatAfter: { positions: ud.positions.length, limitOrders: ud.limitOrders.length }, afterDisconnect: { usdcAllowance: Number(allowance.allowance), usdcBalance: Number(allowance.balance) / 1e6, session, sessionCanSign: delegation.canSignIntents ?? null } }, null, 1),
   );
 });
