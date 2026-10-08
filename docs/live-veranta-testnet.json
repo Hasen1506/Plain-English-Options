@@ -1,0 +1,148 @@
+{
+ "at": "2026-10-08T07:07:55.937Z",
+ "how": "npm run test:live:browser (production build in Chromium, veranta-sdk 0.3.1, Veranta testnet fork of Base)",
+ "practiceTrader": "0x131F9749f18Ea7caeeB40C24734056ACd31f2EC5",
+ "ui": [
+  {
+   "step": "practice account",
+   "said": "Veranta testnet · 0x131F…2EC5 · one-tap key 0x9a07…8E0D (can trade, cannot withdraw or approve · 30 days, revoked on Disconnect)",
+   "at": "2026-10-08T07:06:18.880Z"
+  },
+  {
+   "step": "market long + TP/SL",
+   "said": "Filled 0.097403 ETH at 2560.87 · order 6445257 · 2 TP/SL set on the position · order 6445257, take-profit, stop-loss",
+   "at": "2026-10-08T07:06:35.983Z"
+  },
+  {
+   "step": "close half",
+   "said": "filled: 0.048701539085533214 of 0.048701539085533214 · order 6445259",
+   "at": "2026-10-08T07:06:44.712Z"
+  },
+  {
+   "step": "flip",
+   "said": "Flipped: closed 0.048702, opened 0.048591 short · orders 6445261, 6445262",
+   "at": "2026-10-08T07:07:06.679Z"
+  },
+  {
+   "step": "close flipped short",
+   "said": "filled: 0.048591154387963575 of 0.048591154387963575 · order 6445263",
+   "at": "2026-10-08T07:07:14.110Z"
+  },
+  {
+   "step": "market short",
+   "said": "Filled 0.097403 ETH at 2560.87 · order 6445257 · 2 TP/SL set on the position · order 6445257, take-profit, stop-loss",
+   "at": "2026-10-08T07:07:14.419Z"
+  },
+  {
+   "step": "close short",
+   "said": "filled: 0.04869394862324728 of 0.04869394862324728 · order 6445265",
+   "at": "2026-10-08T07:07:34.064Z"
+  },
+  {
+   "step": "limit long",
+   "said": "Limit order resting at 2178 · order 0:0 · tx 0xd4d1bcfe79a5ca851deb22514a47cf9af94da8c9f3033e44e78ad984e7ca2209 · order 0:0",
+   "at": "2026-10-08T07:07:43.735Z"
+  },
+  {
+   "step": "cancel limit",
+   "said": "Order cancelled",
+   "at": "2026-10-08T07:07:50.011Z"
+  }
+ ],
+ "veranta": [
+  {
+   "type": "MARKET_CLOSE",
+   "side": "short",
+   "orderId": 6445265,
+   "txHash": "0x5a2d94b62f33e551f53ceea2ce0a92a841e20935b9e79113db9ace9044240a24",
+   "collateral": 24.987006,
+   "leverage": 5,
+   "openPrice": 2565.71983855,
+   "closePrice": 2565.69918355,
+   "netPnl": -0.05521200000000093,
+   "partial": false
+  },
+  {
+   "type": "MARKET_OPEN",
+   "side": "short",
+   "orderId": 6445264,
+   "txHash": "0xd53e7797f84475527ca67549ef88277b3e91ce97b5170a6637f8ec99187a5bd6",
+   "collateral": 24.987006,
+   "leverage": 5,
+   "openPrice": 2565.71983855,
+   "closePrice": null,
+   "netPnl": null,
+   "partial": false
+  },
+  {
+   "type": "MARKET_CLOSE",
+   "side": "short",
+   "orderId": 6445263,
+   "txHash": "0x8747bf6dbc67f449a01e42e1357604890471be6c345e63ed8b8029208c33f1df",
+   "collateral": 24.931201,
+   "leverage": 5,
+   "openPrice": 2565.4053,
+   "closePrice": 2565.19782539,
+   "netPnl": -0.046011000000000024,
+   "partial": false
+  },
+  {
+   "type": "MARKET_OPEN",
+   "side": "short",
+   "orderId": 6445262,
+   "txHash": "0x0c82f7d4f46333b2017cd0fb7b936d1528c66f9d0c0a69825c6e95c444af804a",
+   "collateral": 24.931201,
+   "leverage": 5,
+   "openPrice": 2565.4053,
+   "closePrice": null,
+   "netPnl": null,
+   "partial": false
+  },
+  {
+   "type": "MARKET_CLOSE",
+   "side": "long",
+   "orderId": 6445261,
+   "txHash": "0x45899e6668decd1e30a9130f18a66972db97597fbe8e6b5e017b4dc9a72a435c",
+   "collateral": 24.943672,
+   "leverage": 5,
+   "openPrice": 2560.87101849,
+   "closePrice": 2564.01581542,
+   "netPnl": 0.14067000000000007,
+   "partial": false
+  },
+  {
+   "type": "MARKET_CLOSE",
+   "side": "long",
+   "orderId": 6445259,
+   "txHash": "0x6cd347023b78d7ce0abf4927c2f43d6c0d6c2c86fca6ab8d1a00cc2a2fd89eab",
+   "collateral": 24.943672,
+   "leverage": 5,
+   "openPrice": 2560.87101849,
+   "closePrice": 2562.13700922,
+   "netPnl": 0.04917700000000025,
+   "partial": false
+  },
+  {
+   "type": "MARKET_OPEN",
+   "side": "long",
+   "orderId": 6445257,
+   "txHash": "0xc48898faa466b7771619c01ed9f981fab590c3a3fa0ac736cbb4efd08e70323d",
+   "collateral": 49.887344,
+   "leverage": 5,
+   "openPrice": 2560.87101849,
+   "closePrice": null,
+   "netPnl": null,
+   "partial": false
+  }
+ ],
+ "flatAfter": {
+  "positions": 0,
+  "limitOrders": 0
+ },
+ "afterDisconnect": {
+  "usdcAllowance": 0,
+  "usdcBalance": 999.951155,
+  "session": "0x9a07b2d653cA5335869d5fac2Ac31d17CEE78E0D",
+  "sessionCanSign": false
+ }
+}
