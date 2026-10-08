@@ -24,7 +24,9 @@ function hlState(net: Net, sid: string): HlMockState {
   if (!st) {
     st = newHlState(net, () => HL_RECORDED_AT + 60_000 + (Date.now() - started));
     // scenario from the sid prefix: "hlempty-…" = no Hyperliquid account yet (deposit first)
-    if (!sid.startsWith("hlempty")) hlCredit(st, TEST_ADDRESS, TEST_START_USDC);
+    // "hlnomain-…" = no account anywhere, not even on mainnet (testnet deposits must be refused)
+    if (sid.startsWith("hlnomain")) st.noMainnet = true;
+    else if (!sid.startsWith("hlempty")) hlCredit(st, TEST_ADDRESS, TEST_START_USDC);
     hl.set(k, st);
   }
   return st;
