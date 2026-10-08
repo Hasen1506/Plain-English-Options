@@ -9,6 +9,7 @@ import mainnet from "../fixtures/veranta/mainnet.json" with { type: "json" };
 import { historyFrom, limitsFrom, marketsFrom, openFeeRate, positionsFrom, tickFor, usdc6, verantaLiqPrice, verantaName, type VHistoryRow, type VPair, type VerantaMarket } from "../../src/venues/veranta/rules.ts";
 import { VERANTA_LIQ_THRESHOLD } from "../../src/venues/veranta/config.ts";
 import { quotePerp, type PerpInput } from "../../src/lib/perp.ts";
+import { historyPage } from "../../src/venues/veranta/api.ts";
 import { feeWords } from "../../src/ui/perpViews.ts";
 
 const NOW = 1_791_000_000_000;
@@ -256,5 +257,18 @@ describe("positions, limit orders and history (raw SDK / API shapes)", () => {
         expect(Math.sign(p!.amount)).toBe(buy ? 1 : -1);
       }),
     );
+  });
+});
+
+describe("history API paging (seen live: page 0 is an error, not an empty list)", () => {
+  it("asks for page 1 and returns its trades", async () => {
+    const calls: [string, number, number][] = [];
+    const info = { tradeHistory: async (t: string, p: number, n: number) => (calls.push([t, p, n]), { success: true, trades: [{ type: "MARKET_OPEN" }], count: 1, pageCount: 1 }) };
+    expect(await historyPage(info, "0xabc")).toEqual([{ type: "MARKET_OPEN" }]);
+    expect(calls).toEqual([["0xabc", 1, 100]]);
+  });
+  it("a {success:false} answer is an error the card shows, never 'no trades'", async () => {
+    const info = { tradeHistory: async () => ({ success: false, errorMessage: "Unable to get the trade history." }) };
+    await expect(historyPage(info, "0xabc")).rejects.toThrow("Unable to get the trade history.");
   });
 });
