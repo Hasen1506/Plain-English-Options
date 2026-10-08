@@ -342,6 +342,8 @@ export function quotePerp(i: PerpInput): { ok: true; quote: PerpQuote } | { ok: 
     entry = touch;
     limitPrice = lim;
     tif = "ioc";
+    // the exchange band can sit inside the touch on a thin book: the protected IOC then cannot fill
+    if (side === "buy" ? Number(lim) < touch : Number(lim) > touch) warnings.push("The best price is outside the price band Derive allows right now, so a market order would not fill. Try again in a moment or use a limit");
   } else {
     const s = snapLimit(side, i.limitPrice ?? NaN, t, inst.tickSize);
     if (!s) return { ok: false, reason: "bad-limit" };
