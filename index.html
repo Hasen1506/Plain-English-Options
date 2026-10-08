@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Say what you think a coin will do, in plain English, and get a defined-risk options spread on Derive." />
+    <meta name="description" content="Say what you think a coin will do, in plain English: a defined-risk options spread or a perpetual on Derive." />
     <title>Plain English Options</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,6 +41,46 @@
         <div class="x-pop" id="pop" role="dialog" hidden></div>
       </section>
 
+      <section class="x-builder x-perps" id="perps" aria-label="Trade perpetuals" hidden>
+        <div class="x-tags">
+          <span class="x-seg" role="group" aria-label="Venue" id="venuePick" hidden></span>
+          <span class="x-tag x-tag--dark">Perpetual</span>
+          <span class="x-tag"><b>●</b> <span id="perpSpot">…</span></span>
+          <span class="x-tag is-sim" id="perpLive" role="status"><b>●</b> <span id="perpLiveTxt">Connecting…</span></span>
+          <span class="x-seg" role="group" aria-label="Network"><button type="button" data-net="testnet" aria-pressed="true">Testnet</button><button type="button" data-net="mainnet" aria-pressed="false">Mainnet</button></span>
+        </div>
+        <p class="x-amber" id="perpNetNote" role="note" hidden>Mainnet: orders use real money.</p>
+        <h1 class="x-sent">
+          I think
+          <button type="button" class="x-pill x-lav" data-ppop="market" aria-haspopup="dialog" aria-label="Market"><span id="ppMarket">ETH</span></button>
+          <button type="button" class="x-pill x-sal" id="ppDir"><span id="ppDirT">goes up</span></button>
+          risking
+          <button type="button" class="x-pill x-amt" data-ppop="risk" aria-haspopup="dialog" aria-label="Money put in"><span id="ppRisk">$100</span></button>
+          at
+          <button type="button" class="x-pill x-mint" data-ppop="lev" aria-haspopup="dialog" aria-label="Leverage"><span id="ppLev">3×</span></button>
+        </h1>
+        <div class="x-quote">
+          <span class="x-cost" id="ppSummary">…</span>
+          <span class="x-grey" id="ppSub"></span>
+        </div>
+        <div class="x-pop" id="perpPop" role="dialog" hidden></div>
+        <div class="x-card x-order">
+          <span class="x-seg" role="group" aria-label="Order type"><button type="button" data-otype="market" aria-pressed="true">Market</button><button type="button" data-otype="limit" aria-pressed="false">Limit</button></span>
+          <div id="ppLimitRow" hidden>
+            <label for="ppLimit">Limit price (USD)</label><input id="ppLimit" class="x-in" inputmode="decimal" autocomplete="off">
+            <label class="x-chk"><input type="checkbox" id="ppPostOnly"> Post-only: only rest on the book as a maker (cheaper fee), never take</label>
+          </div>
+          <details id="ppTpsl"><summary>Take-profit / stop-loss (optional)</summary>
+            <label for="ppTp">Take-profit when the mark reaches</label><input id="ppTp" class="x-in" inputmode="decimal" autocomplete="off" placeholder="none">
+            <label for="ppSl">Stop-loss when the mark reaches</label><input id="ppSl" class="x-in" inputmode="decimal" autocomplete="off" placeholder="none">
+            <p class="x-step">They close the position with a reduce-only market order. Derive keeps them for 30 days, so your wallet signs them even with one-tap on.</p>
+          </details>
+        </div>
+        <div id="perpPanel"></div>
+        <div id="perpConfirmBox"></div>
+        <div class="x-card"><h2>All perpetuals</h2><div id="perpMarketsBox"></div></div>
+      </section>
+
       <section id="review" hidden></section>
       <section id="done" class="x-done" hidden></section>
       <section id="portfolio" class="x-port" hidden></section>
@@ -48,11 +88,12 @@
 
       <div class="x-scrim" id="sheet" hidden><div class="x-sheet" role="dialog" aria-modal="true" aria-label="Wallet" id="sheetBody"></div></div>
 
-      <p class="x-foot">Live Derive v3 quotes · orders are signed by your own wallet or a one-tap key it authorises · not financial advice · concept by @rightclcksaveas · <a href="https://github.com/Hasen1506/Plain-English-Options">source</a></p>
+      <p class="x-foot">Live Derive v3 options and perps · orders are signed by your own wallet or a one-tap key it authorises · not financial advice · concept by @rightclcksaveas · <a href="https://github.com/Hasen1506/Plain-English-Options">source</a></p>
     </main>
 
     <nav class="x-dock" aria-label="App">
       <button type="button" class="x-ic is-on" data-view="build" aria-label="Build"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></button>
+      <button type="button" class="x-ic" data-view="perps" aria-label="Perps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M17 4v16M3 8l4-4 4 4M13 16l4 4 4-4"/></svg></button>
       <button type="button" class="x-ic" data-view="portfolio" aria-label="Portfolio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M6 20V12h4v8M10 20V6h4v14M14 20v-9h4v9"/></svg></button>
       <button type="button" class="x-ic" data-view="history" aria-label="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
       <span class="x-toast" id="toast" role="status" hidden></span>
