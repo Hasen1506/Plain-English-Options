@@ -16,7 +16,7 @@ import type { VenueTrigger } from "../venues/types.ts";
 import { parseFunding, perpHistoryRows, type PerpHistoryRow } from "../lib/perpHistory.ts";
 import { createPerps } from "./perps.ts";
 import { fillRange, popIn, popOut, reducedMotion, setText } from "./motion.ts";
-import { indexChartParams, parseIndexChart, sparkSvg } from "../lib/spark.ts";
+import { changeText, indexChartParams, parseIndexChart, sparkSvg } from "../lib/spark.ts";
 import { httpVerantaApi } from "../venues/veranta/api.ts";
 import { createVenues, type PerpVenue } from "../venues/index.ts";
 import { perpHistoryHtml, perpPositionsHtml } from "./perpViews.ts";
@@ -363,7 +363,7 @@ export function startApp(opts: AppOptions = {}) {
   function assetRow(a: Asset): string {
     const ch = change24Any(a);
     const has = ch !== null && Number.isFinite(ch);
-    const chTxt = has ? (ch! > 0 ? "+" : "") + (ch! * 100).toFixed(1) + "%" : "";
+    const chTxt = has ? changeText(ch!) : "";
     return `<span class="x-arow"><b>${a}</b><small>${h(price(spotFor(a)))}</small></span><em class="${has ? (ch! >= 0 ? "x-up" : "x-dn") : ""}" data-chg="${a}">${chTxt}</em><span class="x-sparkbox" data-spark="${a}">${sparkSvg(spark[a] ?? [])}</span>`;
   }
   function paintAssetPop() {
@@ -373,8 +373,10 @@ export function startApp(opts: AppOptions = {}) {
       if (b && !b.firstChild) b.innerHTML = sparkSvg(spark[a] ?? []);
       const c = pop.querySelector<HTMLElement>(`[data-chg="${a}"]`);
       const ch = change24Any(a);
-      if (c && !c.textContent && ch !== null && Number.isFinite(ch)) {
-        c.textContent = (ch > 0 ? "+" : "") + (ch * 100).toFixed(1) + "%";
+      if (c && ch !== null && Number.isFinite(ch)) {
+        // the candles can arrive after the row was drawn with a flat (0.0%) perp figure
+        const t = changeText(ch);
+        if (c.textContent !== t) c.textContent = t;
         c.className = ch >= 0 ? "x-up" : "x-dn";
       }
     }
@@ -1546,6 +1548,7 @@ export function startApp(opts: AppOptions = {}) {
           loadCurrencies();
           loadUniverses();
           ASSETS.forEach(loadPerp);
+          ASSETS.forEach(loadSpark); // asset-list sparklines and the 24h fallback, ready before the list opens
           if (!inst[S.asset]) loadInstruments(S.asset);
           if (S.expiryKey) fetchTk(S.asset, S.expiryKey, true);
           if (W.st === "on" && W.session) void loadSubs();

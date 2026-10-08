@@ -44,3 +44,10 @@ export const indexChartParams = (currency: string, nowMs: number) => {
   const end = Math.floor(nowMs / 1000);
   return { currency, start_timestamp: end - 86_400, end_timestamp: end, period: 3600 };
 };
+
+/** "+1.2%" / "−0.7%" / "0.0%": a 24h change as a one-decimal percent, no sign on a flat 0.0. */
+export function changeText(ch: number): string {
+  const r = (ch * 100).toFixed(1);
+  const v = Number(r);
+  return v > 0 ? "+" + r + "%" : v < 0 ? r + "%" : "0.0%";
+}

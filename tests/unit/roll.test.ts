@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { canRoll, easeOut, parseNumText, rollText } from "../../src/lib/roll.ts";
-import { parseIndexChart, sparkPath, sparkSvg, indexChartParams } from "../../src/lib/spark.ts";
+import { changeText, parseIndexChart, sparkPath, sparkSvg, indexChartParams } from "../../src/lib/spark.ts";
 import rec from "../fixtures/index-chart-testnet.json" with { type: "json" };
 
 describe("number roll", () => {
@@ -57,6 +57,12 @@ describe("sparklines", () => {
     }
     expect(sparkSvg([1, 2])).toContain("#22a45a");
     expect(sparkSvg([2, 1])).toContain("#d0453a");
+  });
+  it("formats the 24h change without a sign on a flat 0.0", () => {
+    expect(changeText(0.0123)).toBe("+1.2%");
+    expect(changeText(-0.007)).toBe("-0.7%");
+    expect(changeText(0.0001)).toBe("0.0%");
+    expect(changeText(-0.0001)).toBe("0.0%");
   });
   it("asks for the last 24 h of hourly candles in seconds", () => {
     expect(indexChartParams("ETH", 1_791_451_828_000)).toEqual({ currency: "ETH", start_timestamp: 1_791_365_428, end_timestamp: 1_791_451_828, period: 3600 });

@@ -3,6 +3,8 @@
 // two-column review, empty states, and the perps venue picker. Against the mock exchange.
 import { expect, test, type Page } from "@playwright/test";
 import { connectWallet, openApp, toReview } from "./helpers.ts";
+import { changeText, parseIndexChart } from "../../src/lib/spark.ts";
+import rec from "../fixtures/index-chart-testnet.json" with { type: "json" };
 
 /** Every text #id showed during `ms` after `act` (to see a count-up happen). */
 async function textsDuring(page: Page, id: string, act: () => Promise<void>, ms = 900): Promise<string[]> {
@@ -43,6 +45,10 @@ test.describe("builder popovers", () => {
     await expect(rows.first()).toContainText("-1.6%");
     await expect(page.locator("#pop .x-spark")).toHaveCount(7);
     await expect(page.locator('#pop [aria-current="true"]')).toContainText("ETH");
+    // a flat (0.0%) testnet perp falls back to the 24h change of the index candles the sparkline draws
+    const sol = parseIndexChart((rec.series as Record<string, unknown>).SOL);
+    const ch = sol[sol.length - 1]! / sol[0]! - 1;
+    await expect(page.locator('#pop [data-chg="SOL"]')).toHaveText(changeText(ch));
 
     // switching token rolls the numbers to the new spot
     const seen = await textsDuring(page, "spotTag", () => page.locator("#pop button", { hasText: "BTC" }).click());
