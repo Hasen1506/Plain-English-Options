@@ -9,6 +9,10 @@
 //   wrongru   · the wallet only has the RU0 subaccount
 //   openorder · 87139 starts with one resting order
 //   noaccount · the wallet has no Derive account until a deposit arrives
+//   perppos   · 87139 starts with an ETH-PERP long, a stop-loss trigger and an option
+// Perps (tests/mock/perps.ts): recorded perp markets per network, market/IOC,
+// GTC, post-only, reduce-only, trigger orders (30–90 day signatures, as live),
+// a standard-manager margin model, get_margin, funding history.
 // State is shared per ?sid=… so the mock wallet (Playwright side) can report
 // on-chain deposits through the side channel method mock/deposit.
 //
@@ -27,6 +31,9 @@ import mainnetPublic from "../fixtures/mainnet-public.json" with { type: "json" 
 const mainnetUniverses = (mainnetPublic as { frames: { method: string; result: unknown }[] }).frames.find((f) => f.method === "public/get_risk_universes")!.result;
 type NetId = "testnet" | "mainnet";
 import { parseInstruments, parseTickers, type Instrument, type Ticker } from "../../src/lib/ticker.ts";
+import { PERPS, isPerp, perpPublic, perpReqs, type PerpPos } from "./perps.ts";
+import { applyFill, liquidationPrice, perpFee } from "../../src/lib/perp.ts";
+import { isAligned } from "../../src/lib/units.ts";
 
 type Frame = { method: string; params: Record<string, unknown>; result: unknown };
 const pub = JSON.parse(readFileSync(new URL("../fixtures/testnet-public.json", import.meta.url), "utf8")) as { recordedAt: number; frames: Frame[] };
@@ -91,33 +98,71 @@ interface Sub {
   orders: Record<string, unknown>[];
   trades: Record<string, unknown>[];
   history: Record<string, unknown>[];
+  perps: Map<string, PerpPos>;
+  triggers: Record<string, unknown>[];
+  perpTraded: Set<string>;
 }
 
 function makeState(scenario: string): Map<number, Sub> {
   const subs = new Map<number, Sub>();
-  const mk = (id: number, ru: number, cash: number) => subs.set(id, { id, ru, cash, positions: new Map(), orders: [], trades: [], history: [] });
+  const mk = (id: number, ru: number, cash: number) => subs.set(id, newSub(id, ru, cash));
   if (scenario === "noaccount") return subs;
   if (scenario !== "wrongru") mk(87139, 1, scenario === "poor" ? 5 : 2000);
   mk(87138, 0, 0);
+  if (scenario === "perppos") {
+    const s = subs.get(87139)!;
+    const m = PERPS.testnet.tk.get("ETH-PERP")!.mark;
+    s.perps.set("ETH-PERP", { amount: 0.5, avg: Math.round(m * 0.98 * 100) / 100, funding: -0.42 });
+    s.perpTraded.add("ETH-PERP");
+    s.triggers.push({ order_id: "trig-1", instrument_name: "ETH-PERP", direction: "sell", amount: "0.5", limit_price: String(Math.round(m * 0.85)), trigger_type: "stoploss", trigger_price: String(Math.round(m * 0.88)), trigger_price_type: "mark", order_status: "untriggered", order_type: "market", time_in_force: "gtc" });
+    s.positions.set("ETH-20261127-2500-C", { amount: 1, avg: 100 });
+  }
   if (scenario === "openorder") {
     subs.get(87139)!.orders.push({ order_id: "resting-1", instrument_name: "ETH-20261127-2500-C", direction: "buy", amount: "1", filled_amount: "0", limit_price: "100", order_status: "open", time_in_force: "gtc" });
   }
   return subs;
 }
 
-const subValue = (s: Sub) => s.cash + [...s.positions.entries()].reduce((v, [n, p]) => v + p.amount * (tickers.get(n)?.mark ?? 0), 0);
-function subJson(s: Sub) {
+function newSub(id: number, ru: number, cash: number): Sub {
+  return { id, ru, cash, positions: new Map(), orders: [], trades: [], history: [], perps: new Map(), triggers: [], perpTraded: new Set() };
+}
+const optValue = (s: Sub) => [...s.positions.entries()].reduce((v, [n, p]) => v + p.amount * (tickers.get(n)?.mark ?? 0), 0);
+const subValue = (s: Sub, net: NetId = "testnet") => s.cash + optValue(s) + perpReqs(net, s.perps).upnl;
+/** Net margins: options are fully cash-paid in the mock, perps carry im/mm fractions of notional. */
+function margins(s: Sub, net: NetId, perps = s.perps) {
+  const r = perpReqs(net, perps);
+  const base = s.cash + r.upnl;
+  return { im: base - r.im, mm: base - r.mm };
+}
+function perpJson(s: Sub, net: NetId) {
+  const mm = margins(s, net).mm;
+  return [...s.perps.entries()]
+    .filter(([, p]) => p.amount !== 0)
+    .map(([n, p]) => {
+      const t = PERPS[net].tk.get(n), i = PERPS[net].inst.get(n)?.inst;
+      const mark = t?.mark ?? p.avg;
+      const liq = i ? liquidationPrice({ size: p.amount, price: mark, headroom: mm, mmReq: i.mmReq }) : null;
+      return { instrument_name: n, instrument_type: "perp", amount: String(p.amount), average_price: String(p.avg), mark_price: String(mark), unrealized_pnl: String(p.amount * (mark - p.avg)), total_fees: "0", liquidation_price: liq === null ? null : String(liq), cumulative_funding: String(p.funding), pending_funding: "-0.01", leverage: String((Math.abs(p.amount) * mark) / Math.max(1e-9, subValue(s, net))), realized_pnl: "0" };
+    });
+}
+function subJson(s: Sub, net: NetId = "testnet") {
+  const mg = margins(s, net);
   return {
     subaccount_id: s.id,
     risk_universe_id: s.ru,
     manager_id: s.ru, // SM manager ids equal their universe ids (1–4) on Derive v3
     margin_type: "SM",
-    subaccount_value: String(subValue(s)),
+    subaccount_value: String(subValue(s, net)),
     collaterals_value: String(s.cash),
-    initial_margin: String(s.cash),
-    positions: [...s.positions.entries()]
-      .filter(([, p]) => p.amount !== 0)
-      .map(([n, p]) => ({ instrument_name: n, instrument_type: "option", amount: String(p.amount), average_price: String(p.avg), mark_price: String(tickers.get(n)?.mark ?? 0), unrealized_pnl: String(p.amount * ((tickers.get(n)?.mark ?? 0) - p.avg)), total_fees: "0" })),
+    initial_margin: String(mg.im),
+    maintenance_margin: String(mg.mm),
+    is_under_liquidation: false,
+    positions: [
+      ...[...s.positions.entries()]
+        .filter(([, p]) => p.amount !== 0)
+        .map(([n, p]) => ({ instrument_name: n, instrument_type: "option", amount: String(p.amount), average_price: String(p.avg), mark_price: String(tickers.get(n)?.mark ?? 0), unrealized_pnl: String(p.amount * ((tickers.get(n)?.mark ?? 0) - p.avg)), total_fees: "0" })),
+      ...perpJson(s, net),
+    ],
     open_orders: s.orders,
     collaterals: [{ asset_name: "USDC", amount: String(s.cash) }],
   };
@@ -135,17 +180,17 @@ interface SessionKeyRec {
 }
 
 /** Who may sign an order for `owner`: the owner, or an unexpired session key with an order scope on this subaccount. */
-function authorised(ctx: Conn, signer: string, subId: number): boolean {
+function authorised(ctx: Conn, signer: string, subId: number, product: "option" | "perp" = "option"): boolean {
   if (!ctx.wallet) return false;
   if (getAddress(signer) === ctx.wallet) return true;
   const k = ctx.st.keys.get(getAddress(signer));
   if (!k || k.expiry * 1000 <= RECORDED_AT) return false;
-  if (!k.scopes.some((x) => ["trade:orderbook:option", "trade:orderbook:all", "trade:all", "admin"].includes(x))) return false;
+  if (!k.scopes.some((x) => [`trade:orderbook:${product}`, "trade:orderbook:all", "trade:all", "admin"].includes(x))) return false;
   return !k.subaccountIds.length || k.subaccountIds.includes(subId);
 }
 
 function orderDigest(p: Record<string, unknown>, owner: string, netId: NetId = "testnet"): { d: string; it: { inst: Instrument } } {
-  const it = instruments.get(String(p.instrument_name));
+  const it = (instruments.get(String(p.instrument_name)) ?? PERPS[netId].inst.get(String(p.instrument_name))) as { inst: Instrument } | undefined;
   if (!it) throw { code: 11000, message: "Instrument not found" };
   const data = encodeTradeData({
     assetAddress: it.inst.assetAddress,
@@ -160,6 +205,7 @@ function orderDigest(p: Record<string, unknown>, owner: string, netId: NetId = "
 }
 
 function placeOrder(s: Sub, p: Record<string, unknown>, ctx: Conn) {
+  if (isPerp(String(p.instrument_name))) return placePerp(s, p, ctx);
   const owner = ctx.wallet!, scenario = ctx.scenario;
   const name = String(p.instrument_name);
   // the signature must cover exactly the order on the wire (what Derive checks)
@@ -187,7 +233,7 @@ function placeOrder(s: Sub, p: Record<string, unknown>, ctx: Conn) {
   }
   fill = Math.round(fill * 100) / 100;
   const fee = fill > 0 ? fill * Math.min(it.inst.takerFeeRate * t.index, it.inst.markFeeCap * bookPx) + it.inst.baseFee : 0;
-  if (fill > 0 && buy && fill * bookPx + fee > subValue(s)) throw { code: 11000, message: "Insufficient buying power" };
+  if (fill > 0 && buy && fill * bookPx + fee > subValue(s, ctx.net)) throw { code: 11000, message: "Insufficient buying power" };
   const id = `mock-${++orderSeq}`;
   const trades = [];
   if (fill > 0) {
@@ -206,6 +252,76 @@ function placeOrder(s: Sub, p: Record<string, unknown>, ctx: Conn) {
   if (status === "open") s.orders.push(order);
   s.history.unshift(order);
   return { order, trades };
+}
+
+const err = (code: number, message: string) => ({ code, message });
+
+function placePerp(s: Sub, p: Record<string, unknown>, ctx: Conn) {
+  const net = ctx.net, name = String(p.instrument_name);
+  const rec0 = PERPS[net].inst.get(name);
+  if (!rec0) throw err(11000, "Instrument not found");
+  const it = rec0.inst, t = PERPS[net].tk.get(name)!;
+  const { d } = orderDigest(p, ctx.wallet!, net);
+  let rec = "";
+  try {
+    rec = recoverAddress(d, String(p.signature));
+  } catch {
+    /* bad signature bytes */
+  }
+  if (rec !== getAddress(String(p.signer)) || !authorised(ctx, rec, s.id, "perp")) throw err(14014, "Invalid signature");
+  ctx.st.orderSigners.push(rec);
+  const exp = Number(p.signature_expiry_sec) - Math.floor(RECORDED_AT / 1000);
+  if (exp < 0) throw err(14015, "Signature expired");
+  const amtS = String(p.amount), limS = String(p.limit_price);
+  // live testnet filled a 0.05 reduce-only close under ETH-PERP's 0.1 minimum (2026-10-08): the minimum binds opening orders only
+  if (!isAligned(amtS, it.amountStep) || (!p.reduce_only && Number(amtS) < Number(it.minAmount))) throw err(11013, `Invalid amount: step ${it.amountStep}, minimum ${it.minAmount}`);
+  if (!isAligned(limS, it.tickSize)) throw err(11014, `Limit price must be a multiple of the tick ${it.tickSize}`);
+  const tif = String(p.time_in_force), type = String(p.order_type ?? "limit");
+  const id = `mock-${++orderSeq}`;
+  const base = { order_id: id, subaccount_id: s.id, instrument_name: name, direction: p.direction, amount: amtS, limit_price: limS, order_type: type, time_in_force: tif, label: p.label ?? "", creation_timestamp: ts(), signature_expiry_sec: p.signature_expiry_sec, signer: p.signer };
+  if (p.trigger_type) {
+    // live rule (testnet, 2026-10-08): trigger signatures must expire 30–90 days out
+    if (exp < 2_592_000 - 120 || exp > 7_776_000 + 120) throw err(11023, "Invalid signature expiry: Order signature expiry must be between 2592000 and 7776000 sec from now");
+    const o = { ...base, filled_amount: "0", average_price: "0", order_status: "untriggered", trigger_type: p.trigger_type, trigger_price: p.trigger_price, trigger_price_type: p.trigger_price_type ?? "mark", reduce_only: !!p.reduce_only };
+    s.triggers.push(o);
+    s.history.unshift(o);
+    return { order: o, trades: [] };
+  }
+  if (t.maxPrice !== null && Number(limS) > t.maxPrice + 1e-9) throw err(11015, `Limit price above the band (${t.maxPrice})`);
+  if (t.minPrice !== null && Number(limS) < t.minPrice - 1e-9) throw err(11015, `Limit price below the band (${t.minPrice})`);
+  const resting = type === "limit" && (tif === "gtc" || tif === "post_only");
+  if (p.reduce_only && resting) throw err(11016, "Reduce-only is only supported for market, IOC and FOK orders");
+  const amt = Number(amtS), lim = Number(limS), buy = p.direction === "buy";
+  const book = buy ? t.ask : t.bid, size = buy ? t.askSize : t.bidSize;
+  const crosses = book > 0 && (buy ? lim >= book : lim <= book);
+  if (tif === "post_only" && crosses) throw err(11017, "Post-only order would cross the book");
+  let fill = crosses ? Math.min(amt, size) : 0;
+  if (tif === "fok" && fill < amt) fill = 0;
+  const cur = s.perps.get(name) ?? { amount: 0, avg: 0, funding: 0 };
+  if (p.reduce_only) fill = Math.min(fill, buy ? Math.max(0, -cur.amount) : Math.max(0, cur.amount));
+  fill = Number(fill.toFixed(9));
+  const fee = perpFee(it, fill, book, false);
+  if (fill > 0) {
+    const after = new Map(s.perps);
+    const next = applyFill({ size: cur.amount, entry: cur.avg }, buy ? "buy" : "sell", fill, book);
+    after.set(name, { amount: next.pos.size, avg: next.pos.entry, funding: cur.funding });
+    const increases = Math.abs(next.pos.size) > Math.abs(cur.amount) + 1e-12;
+    if (increases && margins({ ...s, cash: s.cash - fee + next.realized }, net, after).im < 0) throw err(11000, "Insufficient margin");
+    s.perps = after;
+    s.cash += next.realized - fee;
+    s.perpTraded.add(name);
+    const tr = { trade_id: `t-${orderSeq}`, order_id: id, subaccount_id: s.id, instrument_name: name, direction: p.direction, trade_price: String(book), trade_amount: String(fill), trade_fee: String(fee), realized_pnl: String(next.realized - fee), realized_pnl_excl_fees: String(next.realized), timestamp: ts(), liquidity_role: "taker" };
+    s.trades.unshift(tr);
+    const status = fill >= amt - 1e-12 ? "filled" : resting ? "open" : "cancelled";
+    const order = { ...base, filled_amount: String(fill), average_price: String(book), order_status: status, order_fee: String(fee) };
+    if (status === "open") s.orders.push(order);
+    s.history.unshift(order);
+    return { order, trades: [tr] };
+  }
+  const order = { ...base, filled_amount: "0", average_price: "0", order_status: resting ? "open" : "cancelled", order_fee: "0" };
+  if (resting) s.orders.push(order);
+  s.history.unshift(order);
+  return { order, trades: [] };
 }
 
 function verifyAction(ctx: Conn, p: Record<string, unknown>, subaccountId: number, module: string, data: string): string {
@@ -234,7 +350,31 @@ function privateAnswer(method: string, p: Record<string, unknown>, ctx: Conn): u
     case "private/get_subaccounts":
       return { wallet: ctx.wallet, subaccount_ids: [...ctx.subs.keys()].sort() };
     case "private/get_subaccount":
-      return subJson(subOf(p.subaccount_id));
+      return subJson(subOf(p.subaccount_id), ctx.net);
+    case "private/get_margin": {
+      const s = subOf(p.subaccount_id);
+      const pre = margins(s, ctx.net);
+      const after = new Map(s.perps);
+      for (const c of (p.simulated_position_changes as { instrument_name: string; amount: string }[]) ?? []) {
+        const cur = after.get(c.instrument_name) ?? { amount: 0, avg: PERPS[ctx.net].tk.get(c.instrument_name)?.mark ?? 0, funding: 0 };
+        after.set(c.instrument_name, { ...cur, amount: cur.amount + Number(c.amount) });
+      }
+      const post = margins(s, ctx.net, after);
+      return { subaccount_id: s.id, pre_initial_margin: String(pre.im), pre_maintenance_margin: String(pre.mm), post_initial_margin: String(post.im), post_maintenance_margin: String(post.mm), is_valid_trade: post.im >= 0 };
+    }
+    case "private/get_trigger_orders":
+      return { subaccount_id: p.subaccount_id, orders: subOf(p.subaccount_id).triggers };
+    case "private/cancel_trigger_order": {
+      const s = subOf(p.subaccount_id);
+      const i = s.triggers.findIndex((o) => o.order_id === p.order_id);
+      if (i < 0) throw err(11006, "Order not found");
+      const [o] = s.triggers.splice(i, 1);
+      return { ...o, order_status: "cancelled" };
+    }
+    case "private/get_funding_history": {
+      const s = subOf(p.subaccount_id);
+      return { events: [...s.perpTraded].map((n, k) => ({ subaccount_id: s.id, instrument_name: n, funding: "-0.0123", pnl: "0", timestamp: RECORDED_AT - 3_600_000 * (k + 1), batch_status: "Settled", batch_uuid: "mock" })), pagination: { num_pages: 1, count: s.perpTraded.size } };
+    }
     case "private/get_open_orders":
       return { subaccount_id: p.subaccount_id, orders: subOf(p.subaccount_id).orders };
     case "private/get_trade_history":
@@ -257,7 +397,7 @@ function privateAnswer(method: string, p: Record<string, unknown>, ctx: Conn): u
         cost += (l.direction === "buy" ? 1 : -1) * Number(l.amount) * px;
         fee += Number(l.amount) * Math.min(it.inst.takerFeeRate * t.index, it.inst.markFeeCap * px) + it.inst.baseFee;
       }
-      const ok = s.ru === 1 && cost + fee <= subValue(s);
+      const ok = s.ru === 1 && cost + fee <= subValue(s, ctx.net);
       return { is_valid: ok, invalid_reason: ok ? null : s.ru !== 1 ? "Wrong risk universe" : "Insufficient margin", estimated_fee: String(fee), estimated_total_cost: String(cost), best_quote: null };
     }
     case "private/order":
@@ -278,6 +418,7 @@ function privateAnswer(method: string, p: Record<string, unknown>, ctx: Conn): u
       const s = subOf(p.subaccount_id);
       for (const o of s.orders) s.history.unshift({ ...o, order_status: "cancelled", creation_timestamp: ts() });
       s.orders = [];
+      if (p.cancel_trigger_orders) s.triggers = [];
       return "ok";
     }
     case "private/get_order_history":
@@ -349,9 +490,12 @@ function mockDeposit(st: Shared, p: Record<string, unknown>) {
   } else {
     const mgr = Number(p.managerId);
     const ru = (riskUniverses as { risk_universe_id: number; managers: { manager_id: number }[] }[]).find((u) => u.managers.some((m) => m.manager_id === mgr))!.risk_universe_id;
-    if (!st.subs.size) st.subs.set(st.nextSub, { id: st.nextSub++, ru: 0, cash: 0, positions: new Map(), orders: [], trades: [], history: [] }); // fallback subaccount
+    if (!st.subs.size) {
+      st.subs.set(st.nextSub, newSub(st.nextSub, 0, 0)); // fallback subaccount
+      st.nextSub++;
+    }
     const id = st.nextSub++;
-    st.subs.set(id, { id, ru, cash: amount, positions: new Map(), orders: [], trades: [], history: [] });
+    st.subs.set(id, newSub(id, ru, amount));
   }
   st.pending.push({ action_type: p.subaccountId ? "deposit" : "deposit_to_new_subaccount", amount: String(amount), status: "confirmed", tx_hash: p.txHash ?? "0x", timestamp: ts() });
   return { ok: true };
@@ -394,7 +538,10 @@ export function startMock(port: number) {
         } else if (m.method === "public/get_pending_deposits") {
           out = { id: m.id, result: { wallet: p.wallet, pending_deposits: ctx.st.pending } };
         } else if (m.method.startsWith("private/") || m.method === "mock/state") out = { id: m.id, result: privateAnswer(m.method, p, ctx) };
-        else out = { id: m.id, result: publicAnswer(m.method, p) };
+        else {
+          const pp = perpPublic(ctx.net, m.method, p);
+          out = { id: m.id, result: pp.hit ? pp.result : publicAnswer(m.method, p) };
+        }
       } catch (e) {
         const err = e as { code?: number; message?: string; data?: unknown };
         out = { id: m.id, error: { code: err.code ?? -32000, message: err.message ?? String(e), data: err.data } };
