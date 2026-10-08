@@ -21,6 +21,8 @@ const pill = async (page: Page, kind: "risk" | "lev", v: string) => {
   await page.locator("#ppIn").press("Enter");
   await page.keyboard.press("Escape");
 };
+type Q = { entry: number; notional: number; putIn: number } | null;
+const quoteOf = (page: Page) => page.evaluate(() => (window as unknown as { __peo: { state: () => { perps: { quote: Q } } } }).__peo.state().perps.quote) as Promise<Q>;
 const confirm = async (page: Page) => {
   await page.locator("#perpAgree").check();
   await expect(page.locator("#perpConfirm")).toBeEnabled({ timeout: 60_000 });
@@ -50,7 +52,11 @@ test("Veranta testnet in the browser: practice account → long with TP/SL → c
   // 2. market long $50 × 5 with TP/SL, signed by the session key
   await pill(page, "risk", "50");
   await pill(page, "lev", "5");
-  const entry = Number((await page.evaluate(() => (window as unknown as { __peo: { state: () => { perps: { quote: { entry: number } } } } }).__peo.state().perps.quote.entry)));
+  // the quote exists once the app has a live price for ETH-PERP (it says "Loading…" until then)
+  await expect.poll(() => quoteOf(page), { timeout: 60_000 }).not.toBeNull();
+  const q0 = (await quoteOf(page))!;
+  expect(q0.notional).toBeGreaterThanOrEqual(100); // Veranta's ETH minimum position
+  const entry = q0.entry;
   await page.locator("#ppTpsl summary").click();
   await page.locator("#ppTp").fill(String(Math.round(entry * 1.2)));
   await page.locator("#ppSl").fill(String(Math.round(entry * 0.85)));
