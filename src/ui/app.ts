@@ -1470,6 +1470,16 @@ export function startApp(opts: AppOptions = {}) {
       universes: () => universes,
       loadSubs: () => loadSubs(),
       newSubaccount: (ru, product) => void openDepositSheet("new", { ru, product }),
+      depositTo: (id) => {
+        W.sel = id;
+        renderBal();
+        void openDepositSheet("existing");
+      },
+      withdrawFrom: (id) => {
+        W.sel = id;
+        renderBal();
+        openWithdrawSheet();
+      },
     },
   });
   derive = venues.find((v) => v.id === "derive")!;
